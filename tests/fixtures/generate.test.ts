@@ -3,7 +3,7 @@ import { generateFixtures } from './generate';
 import { createTestDb } from '../helpers/db';
 import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from './load';
-import { invoices, transactions } from '@/server/db/schema';
+import { accounts, invoices, merchants, transactions } from '@/server/db/schema';
 import { PAYMENT_METHODS, TX_KINDS } from '@/server/domain/enums';
 
 describe('fixtures generator', () => {
@@ -25,12 +25,27 @@ describe('fixtures generator', () => {
     }
   });
 
-  it('existe ao menos 1 transação de cada kind, exceto adjustment', () => {
+  it('existe ao menos 1 transação de cada kind', () => {
     const data = generateFixtures(opts);
     const usedKinds = new Set(data.transactions.map((t) => t.kind));
     for (const k of TX_KINDS) {
-      if (k === 'adjustment') continue;
       expect(usedKinds.has(k)).toBe(true);
+    }
+  });
+
+  it('origens de categoria variadas e IA de baixa confiança sempre vai para revisão', () => {
+    const data = generateFixtures(opts);
+    const sources = new Set(data.transactions.map((t) => t.categorySource));
+    for (const s of ['merchant', 'rule', 'llm', 'provider', 'default'] as const) {
+      expect(sources.has(s)).toBe(true);
+    }
+    const lowLlm = data.transactions.filter(
+      (t) => t.categorySource === 'llm' && (t.categoryConfidence ?? 1) < 0.8,
+    );
+    expect(lowLlm.length).toBeGreaterThan(0);
+    for (const t of lowLlm) expect(t.needsReview).toBe(true);
+    for (const t of data.transactions.filter((x) => ['transfer', 'invoice_payment', 'investment'].includes(x.kind))) {
+      expect(t.categorySlug ?? null).toBeNull();
     }
   });
 
@@ -114,8 +129,35 @@ describe('fixtures generator', () => {
 
     const txRows = await db.select().from(transactions);
     const invRows = await db.select().from(invoices);
+    const accRows = await db.select().from(accounts);
+    const merchantRows = await db.select().from(merchants);
 
     expect(txRows.length).toBeGreaterThan(150);
     expect(invRows.length).toBeGreaterThan(0);
+
+    // Estabelecimentos gravados e ligados às compras com cartão/débito
+    expect(merchantRows.length).toBeGreaterThan(10);
+    expect(merchantRows.some((m) => m.defaultCategoryId !== null)).toBe(true);
+    const purchases = txRows.filter(
+      (t) => t.kind === 'expense' && ['credit_card_single', 'credit_card_installment', 'debit_card'].includes(t.paymentMethod),
+    );
+    const withMerchant = purchases.filter((t) => t.merchantId !== null);
+    expect(withMerchant.length / purchases.length).toBeGreaterThan(0.8);
+
+    // Saldo do cartão = −fatura atual (aberta de menor mês); limite disponível desconta tudo que não foi pago
+    for (const acc of accRows.filter((a) => a.type === 'credit_card')) {
+      const own = invRows.filter((i) => i.accountId === acc.id);
+      const current = own
+        .filter((i) => i.status === 'open')
+        .sort((x, y) => x.referenceMonth.localeCompare(y.referenceMonth))[0];
+      expect(acc.balanceCents).toBe(current ? -current.totalCents : 0);
+      const unpaid = own.filter((i) => i.status !== 'paid').reduce((s, i) => s + i.totalCents, 0);
+      expect(acc.availableLimitCents).toBe(acc.creditLimitCents! - unpaid);
+    }
+
+    // Contas correntes com saldo positivo na data de referência
+    for (const acc of accRows.filter((a) => a.type === 'checking')) {
+      expect(acc.balanceCents).toBeGreaterThan(0);
+    }
   });
 });

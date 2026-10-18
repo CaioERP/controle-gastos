@@ -1,4 +1,4 @@
-import type { PaymentMethod, TxKind, TxStatus } from '@/server/domain/enums';
+import type { CategorySource, PaymentMethod, TxKind, TxStatus } from '@/server/domain/enums';
 import { addDaysISO, addMonthsISO, monthEnd, monthStart } from '@/server/domain/dates';
 import { getInvoiceCycle } from '@/server/domain/invoice-cycle';
 import { MERCHANTS } from './catalog';
@@ -51,6 +51,8 @@ export type FixtureTransaction = {
     total: number;
   };
   transferKey?: string;
+  categorySource?: CategorySource;
+  categoryConfidence?: number | null;
 };
 
 export type FixtureData = {
@@ -133,6 +135,27 @@ export function generateFixtures(opts: FixtureOptions): FixtureData {
   const monthsList: string[] = [];
   for (let i = opts.months - 1; i >= 0; i--) {
     monthsList.push(monthStart(addMonthsISO(refMonthStart, -i)));
+  }
+
+  // Saldo inicial de cada conta corrente no primeiro dia do período (cobre a natureza 'adjustment')
+  const periodStart = monthsList[0]!;
+  const openingBalances: Array<[string, number]> = [
+    ['itau-cc', 500000],
+    ['nubank-conta', 200000],
+    ['mp-conta', 150000],
+  ];
+  for (const [accountKey, cents] of openingBalances) {
+    transactions.push({
+      accountKey,
+      date: periodStart,
+      amountCents: cents,
+      description: 'Saldo inicial',
+      descriptionRaw: 'SALDO ANTERIOR',
+      kind: 'adjustment',
+      paymentMethod: 'other',
+      status: 'posted',
+      needsReview: false,
+    });
   }
 
   // Eventos mensais regulares
@@ -228,6 +251,36 @@ export function generateFixtures(opts: FixtureOptions): FixtureData {
         accountKey: 'nubank-conta',
         date: transfDate,
         amountCents: 150000,
+        description: 'Transferência recebida do Itaú',
+        descriptionRaw: 'PIX RECEBIDO MESMA TITULARIDADE ITAU',
+        kind: 'transfer',
+        paymentMethod: 'pix',
+        status: 'posted',
+        needsReview: false,
+        transferKey,
+      });
+    }
+
+    // 5b. Transferência Itaú → Mercado Pago (dia 8, R$ 700,00), que paga a fatura do cartão MP
+    const transfMpDate = `${monthPrefix}-08`;
+    if (transfMpDate <= opts.referenceDate) {
+      const transferKey = `transf-itau-mp-${monthPrefix}`;
+      transactions.push({
+        accountKey: 'itau-cc',
+        date: transfMpDate,
+        amountCents: -70000,
+        description: 'Transferência para Mercado Pago',
+        descriptionRaw: 'PIX ENVIADO MESMA TITULARIDADE MERCADO PAGO',
+        kind: 'transfer',
+        paymentMethod: 'pix',
+        status: 'posted',
+        needsReview: false,
+        transferKey,
+      });
+      transactions.push({
+        accountKey: 'mp-conta',
+        date: transfMpDate,
+        amountCents: 70000,
         description: 'Transferência recebida do Itaú',
         descriptionRaw: 'PIX RECEBIDO MESMA TITULARIDADE ITAU',
         kind: 'transfer',
@@ -557,6 +610,53 @@ export function generateFixtures(opts: FixtureOptions): FixtureData {
     categorySlug: 'saude-farmacia',
     needsReview: false,
   });
+
+  // Origem e confiança das categorias, para exercitar os estados de "sugestão automática" da UI.
+  // Distribuição: ~60% merchant, ~25% rule, ~10% llm, ~5% provider.
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const reportable = new Set<TxKind>(['expense', 'income', 'refund']);
+  let reviewIndex = 0;
+  for (const t of transactions) {
+    if (!reportable.has(t.kind)) {
+      t.categorySource = 'default';
+      t.categoryConfidence = null;
+      continue;
+    }
+    if (t.needsReview && !t.categorySlug) {
+      // Das transações para revisão: as 4 primeiras sem sugestão, as 4 seguintes com sugestão da IA de baixa confiança
+      reviewIndex++;
+      if (reviewIndex > 4) {
+        t.categorySlug = rng.pick(MERCHANTS).category;
+        t.categorySource = 'llm';
+        t.categoryConfidence = round2(0.55 + rng.next() * 0.2);
+      } else {
+        t.categorySource = 'default';
+        t.categoryConfidence = null;
+      }
+      continue;
+    }
+    if (!t.categorySlug) {
+      t.categorySource = 'default';
+      t.categoryConfidence = null;
+      continue;
+    }
+    const r = rng.next();
+    if (r < 0.6) {
+      t.categorySource = 'merchant';
+      t.categoryConfidence = 0.95;
+    } else if (r < 0.85) {
+      t.categorySource = 'rule';
+      t.categoryConfidence = 1;
+    } else if (r < 0.95) {
+      t.categorySource = 'llm';
+      t.categoryConfidence = round2(0.6 + rng.next() * 0.35);
+      if (t.categoryConfidence < 0.8) t.needsReview = true;
+    } else {
+      t.categorySource = 'provider';
+      t.categoryConfidence = 0.7;
+      t.needsReview = true;
+    }
+  }
 
   // Faturas e invoiceKeys para transações de cartão
   const invoicesMap = new Map<string, FixtureInvoice>();

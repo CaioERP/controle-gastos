@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -8,6 +8,7 @@ import {
   connections,
   institutions,
   invoices,
+  merchants,
   transactions,
   transactionSources,
   transactionTags,
@@ -29,6 +30,7 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
     await tx.delete(transactionTags);
     await tx.delete(transactionSources);
     await tx.delete(transactions);
+    await tx.delete(merchants);
     await tx.delete(invoices);
     await tx.delete(cards);
     await tx.delete(accounts);
@@ -97,6 +99,32 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
       });
     }
 
+    // 5b. Estabelecimentos: um por merchantName, com os descriptionRaw vistos como aliases.
+    // Metade (ordem alfabética, índices pares) já tem categoria padrão, simulando a memória aprendida.
+    const merchantInfo = new Map<string, { aliases: Set<string>; categoryCounts: Map<string, number> }>();
+    for (const t of data.transactions) {
+      if (!t.merchantName) continue;
+      const info = merchantInfo.get(t.merchantName) ?? { aliases: new Set<string>(), categoryCounts: new Map<string, number>() };
+      info.aliases.add(t.descriptionRaw);
+      if (t.categorySlug) info.categoryCounts.set(t.categorySlug, (info.categoryCounts.get(t.categorySlug) ?? 0) + 1);
+      merchantInfo.set(t.merchantName, info);
+    }
+    const merchantMap = new Map<string, string>();
+    const merchantNames = [...merchantInfo.keys()].sort((a, b) => a.localeCompare(b));
+    for (const [i, name] of merchantNames.entries()) {
+      const info = merchantInfo.get(name)!;
+      const topSlug = [...info.categoryCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+      const defaultCategoryId = i % 2 === 0 && topSlug ? catMap.get(topSlug) ?? null : null;
+      const merchantId = randomUUID();
+      merchantMap.set(name, merchantId);
+      await tx.insert(merchants).values({
+        id: merchantId,
+        name,
+        aliases: [...info.aliases].sort(),
+        defaultCategoryId,
+      });
+    }
+
     // 6. Inserir transações e transaction_sources
     const transferGroupMap = new Map<string, string>();
     const installmentGroupMap = new Map<string, string>();
@@ -142,11 +170,13 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
         currency: 'BRL',
         descriptionRaw: t.descriptionRaw,
         description: t.description,
+        merchantId: t.merchantName ? merchantMap.get(t.merchantName) ?? null : null,
         kind: t.kind,
         paymentMethod: t.paymentMethod,
         status: t.status,
         categoryId,
-        categorySource: 'default',
+        categorySource: t.categorySource ?? 'default',
+        categoryConfidence: t.categoryConfidence ?? null,
         needsReview: t.needsReview,
         installmentGroupId,
         installmentNumber: t.installment?.number ?? null,
@@ -177,17 +207,26 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
           .set({ balanceCents: Number(res?.sum ?? 0) })
           .where(eq(accounts.id, accountId));
       } else if (a.type === 'credit_card') {
+        // Fatura atual = a aberta de menor mês de referência (as seguintes só têm parcelas projetadas)
         const [openInv] = await tx
           .select({ totalCents: invoices.totalCents })
           .from(invoices)
           .where(and(eq(invoices.accountId, accountId), eq(invoices.status, 'open')))
-          .orderBy(desc(invoices.referenceMonth))
+          .orderBy(asc(invoices.referenceMonth))
           .limit(1);
 
+        // Limite disponível = limite − tudo que ainda não foi pago (inclui parcelas futuras)
+        const [unpaid] = await tx
+          .select({ sum: sql<number>`coalesce(sum(${invoices.totalCents}), 0)` })
+          .from(invoices)
+          .where(and(eq(invoices.accountId, accountId), ne(invoices.status, 'paid')));
+
         const balance = openInv ? -openInv.totalCents : 0;
+        const availableLimitCents =
+          a.creditLimitCents !== undefined ? a.creditLimitCents - Number(unpaid?.sum ?? 0) : null;
         await tx
           .update(accounts)
-          .set({ balanceCents: balance })
+          .set({ balanceCents: balance, availableLimitCents })
           .where(eq(accounts.id, accountId));
       }
     }
