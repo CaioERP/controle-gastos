@@ -65,7 +65,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A1-03 | Motor de sincronização | A | A1-01, A1-02 | ⬜ |
 | A1-04 | Faturas e parcelas futuras | A | A1-03 | ⬜ |
 | A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ⬜ |
-| A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ⬜ |
+| A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | 🟡 Agente A (Claude) |
 | A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ⬜ |
 | A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | ⬜ |
 | A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ⬜ |
