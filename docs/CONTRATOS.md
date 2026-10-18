@@ -475,4 +475,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 
 | Data | Agente | Tarefa | Mudança |
 |---|---|---|---|
-| — | — | F0-03 | Versão inicial |
+| 2026-10-18 | Agente A | F0-03 | Versão inicial implementada |
