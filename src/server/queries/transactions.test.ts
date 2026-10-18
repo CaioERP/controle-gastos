@@ -82,6 +82,30 @@ describe('queries / transactions', () => {
     }
   });
 
+  it('cursor adulterado não gera erro: a listagem recomeça do início', async () => {
+    const f = { from: '2026-05-01', to: '2026-10-15' };
+    const first = await listTransactions(db, f, { limit: 5 });
+    const badCursors = [
+      Buffer.from('2026-10-10|nao-e-uuid').toString('base64url'),
+      Buffer.from("2026-10-10|x' or 1=1 --").toString('base64url'),
+      'lixo',
+    ];
+    for (const cursor of badCursors) {
+      const res = await listTransactions(db, f, { limit: 5, cursor });
+      expect(res.items.map((t) => t.id)).toEqual(first.items.map((t) => t.id));
+    }
+  });
+
+  it('getTransaction não expõe o payload bruto (raw) das fontes e rejeita id inválido', async () => {
+    const list = await listTransactions(db, { from: '2026-05-01', to: '2026-10-15' }, { limit: 1 });
+    const detail = await getTransaction(db, list.items[0]!.id);
+    expect(detail!.sources.length).toBeGreaterThan(0);
+    for (const s of detail!.sources) {
+      expect(Object.keys(s).sort()).toEqual(['externalId', 'fetchedAt', 'source']);
+    }
+    expect(await getTransaction(db, 'nao-e-uuid')).toBeNull();
+  });
+
   it('getReviewCount retorna o número de pendências de revisão', async () => {
     const count = await getReviewCount(db);
     expect(count).toBeGreaterThan(0);

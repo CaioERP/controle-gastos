@@ -43,9 +43,16 @@ const ACCOUNT_TYPE_SORT_ORDER: Record<AccountType, number> = {
   benefit: 6,
 };
 
+/**
+ * Contas agrupadas por instituição.
+ * - openInvoice: fatura não paga de vencimento mais próximo >= hoje (ou a vencida mais antiga).
+ * - totals.cardDebtCents: faturas fechadas/vencidas ainda não pagas + a fatura aberta atual
+ *   (a aberta de menor mês de referência). Parcelas de meses futuros não entram.
+ * - opts.today: data de referência (padrão: hoje em São Paulo). Testes devem sempre informá-la.
+ */
 export async function getAccountsOverview(
   db: Db,
-  opts: { includeHidden?: boolean } = { includeHidden: false }
+  opts: { includeHidden?: boolean; today?: string } = {}
 ): Promise<InstitutionWithAccounts[]> {
   const whereAccounts = opts.includeHidden ? undefined : eq(accounts.isHidden, false);
 
@@ -86,7 +93,7 @@ export async function getAccountsOverview(
 
   // Agrupa faturas abertas por accountId para descobrir openInvoice
   // Regra: fatura não paga de vencimento mais próximo >= hoje (ou a vencida mais antiga)
-  const todayStr = today();
+  const todayStr = opts.today ?? today();
   const invoicesByAccount = new Map<string, typeof invRows>();
   for (const inv of invRows) {
     if (!invoicesByAccount.has(inv.accountId)) invoicesByAccount.set(inv.accountId, []);
@@ -105,9 +112,20 @@ export async function getAccountsOverview(
     }
 
     // Se só tiver vencidas no passado, pega a mais antiga
-    const overdue = accountInvs.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const overdue = [...accountInvs].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     const inv = overdue[0]!;
     return { id: inv.id, totalCents: inv.totalCents, dueDate: inv.dueDate, status: inv.status };
+  }
+
+  function cardDebt(accountInvs: typeof invRows | undefined): number {
+    if (!accountInvs || accountInvs.length === 0) return 0;
+    const closedOrOverdue = accountInvs
+      .filter((i) => i.status === 'closed' || i.status === 'overdue')
+      .reduce((sum, i) => sum + Math.max(0, i.totalCents), 0);
+    const currentOpen = accountInvs
+      .filter((i) => i.status === 'open')
+      .sort((a, b) => a.referenceMonth.localeCompare(b.referenceMonth))[0];
+    return closedOrOverdue + Math.max(0, currentOpen?.totalCents ?? 0);
   }
 
   // Agrupa contas por institutionId
@@ -141,8 +159,8 @@ export async function getAccountsOverview(
       if (a.includeInTotals) {
         if (a.type !== 'credit_card') {
           totalBalanceCents += a.balanceCents;
-        } else if (openInv) {
-          totalCardDebtCents += Math.max(0, openInv.totalCents);
+        } else {
+          totalCardDebtCents += cardDebt(invoicesByAccount.get(a.id));
         }
       }
 

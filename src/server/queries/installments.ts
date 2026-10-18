@@ -10,11 +10,16 @@ export type FutureInstallmentMonth = {
   count: number;
 };
 
+/**
+ * Parcelas projetadas dos próximos 12 meses, agrupadas pelo mês de referência da fatura.
+ * opts.today: data de referência (padrão: hoje em São Paulo). Testes devem sempre informá-la.
+ */
 export async function getFutureInstallments(
   db: Db,
-  f: Pick<TxFilters, 'institutionIds' | 'accountIds'> = {}
+  f: Pick<TxFilters, 'institutionIds' | 'accountIds'> = {},
+  opts: { today?: string } = {},
 ): Promise<FutureInstallmentMonth[]> {
-  const currentMonth = monthStart(today());
+  const currentMonth = monthStart(opts.today ?? today());
   const maxMonth = monthStart(addMonthsISO(currentMonth, 12));
 
   const monthExpr = sql<string>`coalesce(${invoices.referenceMonth}::text, to_char(${transactions.date}::date, 'YYYY-MM-01'))`;

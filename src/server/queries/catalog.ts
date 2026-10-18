@@ -26,6 +26,10 @@ export type CategoryTree = {
   children: CategoryTree[];
 };
 
+/**
+ * Árvore de categorias (2 níveis, regra R8). As raízes de despesa e de receita vêm juntas;
+ * separe pelo campo `kind` de cada nó.
+ */
 export async function listCategories(db: Db): Promise<CategoryTree[]> {
   const rows = await db
     .select({
