@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginIfNeeded } from './helpers/auth';
+
+test.beforeEach(async ({ page }) => {
+  await loginIfNeeded(page);
+});
 
 const routes = [
   { href: '/', title: 'Dashboard' },
