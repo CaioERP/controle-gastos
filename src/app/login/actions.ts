@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from '@/server/auth/session';
 import { verifyPassword } from '@/server/auth/password';
+import { safeNextPath } from '@/server/auth/safe-next';
 
 export type LoginState = {
   ok?: boolean;
@@ -15,7 +16,7 @@ export type LoginState = {
 
 export async function login(_prevState: LoginState | undefined, formData: FormData): Promise<LoginState> {
   const password = formData.get('password');
-  const next = (formData.get('next') as string) || '/';
+  const next = safeNextPath(formData.get('next'));
 
   if (!password || typeof password !== 'string') {
     await new Promise((r) => setTimeout(r, 500));
@@ -26,8 +27,10 @@ export async function login(_prevState: LoginState | undefined, formData: FormDa
   const sessionSecret = process.env.SESSION_SECRET;
 
   if (!storedHash || !sessionSecret) {
-    await new Promise((r) => setTimeout(r, 500));
-    return { ok: false, error: { code: 'FORBIDDEN', message: 'Senha incorreta' } };
+    return {
+      ok: false,
+      error: { code: 'NOT_CONFIGURED', message: 'Autenticação não configurada (veja .env.example)' },
+    };
   }
 
   const valid = await verifyPassword(password, storedHash);
@@ -40,7 +43,7 @@ export async function login(_prevState: LoginState | undefined, formData: FormDa
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions);
 
-  redirect(next.startsWith('/') ? next : '/');
+  redirect(next);
 }
 
 export async function logout(): Promise<void> {

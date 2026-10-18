@@ -1,3 +1,5 @@
+// Para rodar: AUTH_DISABLED=false no .env.local, APP_PASSWORD_HASH gerado com
+// `npx tsx scripts/hash-password.ts "<senha>"` e TEST_APP_PASSWORD=<senha> no ambiente.
 import '../../scripts/load-env';
 import { test, expect } from '@playwright/test';
 
@@ -9,7 +11,8 @@ test.describe('Autenticação', () => {
     await page.fill('input[name="password"]', 'senha-errada');
     await page.click('button[type="submit"]');
 
-    const alert = page.locator('role=alert');
+    // 'form' evita pegar o anunciador de rotas do Next, que também tem role=alert
+    const alert = page.locator('form [role="alert"]');
     await expect(alert).toBeVisible();
     await expect(alert).toContainText('Senha incorreta');
   });
