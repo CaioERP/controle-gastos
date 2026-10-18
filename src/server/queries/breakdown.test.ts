@@ -3,10 +3,39 @@ import { eq } from 'drizzle-orm';
 import { createTestDb } from '../../../tests/helpers/db';
 import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from '../../../tests/fixtures/load';
-import { categories, institutions } from '@/server/db/schema';
+import { accounts, categories, institutions, transactions } from '@/server/db/schema';
 import type { Db } from '@/server/db/client';
 import { getSpendingSummary } from './summary';
 import { getBreakdown } from './breakdown';
+
+describe('breakdown com estorno maior que as compras da categoria', () => {
+  it('mantém a linha negativa: soma das linhas = gasto do resumo', async () => {
+    const fresh = await createTestDb();
+    await seedBase(fresh);
+    await loadFixtures(fresh, { referenceDate: '2026-10-15', months: 6, seed: 42 });
+    const [acc] = await fresh.select().from(accounts).where(eq(accounts.name, 'Itaú Click'));
+    const [viagem] = await fresh.select().from(categories).where(eq(categories.slug, 'viagem'));
+    await fresh.insert(transactions).values({
+      accountId: acc!.id,
+      date: '2026-10-14',
+      amountCents: 5000,
+      descriptionRaw: 'ESTORNO HOTEL',
+      description: 'Estorno hotel',
+      kind: 'refund',
+      paymentMethod: 'credit_card_single',
+      categoryId: viagem!.id,
+    });
+
+    const f = { from: '2026-10-01', to: '2026-10-31' };
+    const resumo = await getSpendingSummary(fresh, f);
+    for (const dim of ['parentCategory', 'category', 'paymentMethod', 'account'] as const) {
+      const linhas = await getBreakdown(fresh, f, dim);
+      expect(linhas.reduce((s, r) => s + r.totalCents, 0)).toBe(resumo.expenseCents);
+    }
+    const viagemLinha = (await getBreakdown(fresh, f, 'parentCategory')).find((r) => r.key === viagem!.id);
+    expect(viagemLinha?.totalCents).toBe(-5000);
+  });
+});
 
 describe('queries / breakdown', () => {
   let db: Db;

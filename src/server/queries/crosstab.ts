@@ -26,6 +26,10 @@ export type CrossTabResult = {
   cells: Record<string, Record<string, number>>;
 };
 
+/**
+ * Tabela cruzada entre duas dimensões. Células com total zero são omitidas; negativas são mantidas
+ * para que a soma das células seja igual ao total de getSpendingSummary.
+ */
 export async function getCrossTab(
   db: Db,
   f: TxFilters,
@@ -74,7 +78,7 @@ export async function getCrossTab(
 
   for (const r of dbRows) {
     const totalCents = Number(r.totalCents ?? 0);
-    if (totalCents <= 0) continue;
+    if (totalCents === 0) continue;
 
     const rowKey = r.rowKey;
     const colKey = r.colKey;

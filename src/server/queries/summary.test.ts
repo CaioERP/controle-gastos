@@ -6,6 +6,8 @@ import { loadFixtures } from '../../../tests/fixtures/load';
 import { generateFixtures } from '../../../tests/fixtures/generate';
 import { accounts } from '@/server/db/schema';
 import type { Db } from '@/server/db/client';
+import { TX_KINDS } from '@/server/domain/enums';
+import { getBreakdown } from './breakdown';
 import { getSpendingSummary, previousRange } from './summary';
 
 describe('queries / summary', () => {
@@ -69,16 +71,19 @@ describe('queries / summary', () => {
       expect(summary.previousIncomeCents).toBe(oraclePrevIncome);
     });
 
-    it('R2: pagamentos de fatura, transferências e investimentos não entram nos totais', async () => {
-      const summary = await getSpendingSummary(db, {
-        from: '2026-05-01',
-        to: '2026-10-15',
-        basis: 'accrual',
-      });
+    it('R2: pagamento de fatura, transferência, investimento e ajuste nunca entram nos totais', async () => {
+      const f = { from: '2026-05-01', to: '2026-10-15', basis: 'accrual' as const };
+      const padrao = await getSpendingSummary(db, f);
+      // Mesmo pedindo explicitamente todas as naturezas, as não reportáveis não somam no gasto nem na receita
+      const todas = await getSpendingSummary(db, { ...f, kinds: [...TX_KINDS] });
+      expect(todas.expenseCents).toBe(padrao.expenseCents);
+      expect(todas.incomeCents).toBe(padrao.incomeCents);
 
-      // Se pagamentos de fatura ou transferências tivessem entrado, os valores seriam muito maiores
-      expect(summary.expenseCents).toBeGreaterThan(0);
-      expect(summary.incomeCents).toBeGreaterThan(0);
+      const porNatureza = await getBreakdown(db, { ...f, kinds: [...TX_KINDS] }, 'kind');
+      const chaves = porNatureza.map((r) => r.key);
+      for (const k of ['invoice_payment', 'transfer', 'investment', 'adjustment']) {
+        expect(chaves).not.toContain(k);
+      }
     });
 
     it('R5: regime de caixa conta compras de cartão na data de vencimento da fatura', async () => {
@@ -93,7 +98,18 @@ describe('queries / summary', () => {
         basis: 'cash',
       });
 
-      // Em regimes diferentes os totais de competência e caixa diferem para compras em cartão
+      // Oráculo independente: compra de cartão conta no mês de vencimento da fatura; o resto, na própria data
+      const raw = generateFixtures(fixtureOpts);
+      const dueByInvoice = new Map(raw.invoices.map((i) => [i.key, i.dueDate]));
+      let oracleCash = 0;
+      for (const t of raw.transactions) {
+        if (t.status === 'projected') continue;
+        const d = t.invoiceKey && t.kind !== 'invoice_payment' ? dueByInvoice.get(t.invoiceKey)! : t.date;
+        if (d < '2026-10-01' || d > '2026-10-31') continue;
+        if (t.kind === 'expense') oracleCash += Math.abs(t.amountCents);
+        if (t.kind === 'refund') oracleCash -= Math.abs(t.amountCents);
+      }
+      expect(cash.expenseCents).toBe(oracleCash);
       expect(cash.expenseCents).not.toBe(accrual.expenseCents);
     });
 

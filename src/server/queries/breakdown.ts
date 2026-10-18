@@ -21,6 +21,11 @@ export type BreakdownItem = {
   count: number;
 };
 
+/**
+ * Quebra do gasto (ou receita) por dimensão, ordenada por total decrescente.
+ * Linhas com total zero são omitidas; linhas negativas (estornos maiores que as compras no período)
+ * são mantidas para que a soma das linhas seja sempre igual ao total de getSpendingSummary.
+ */
 export async function getBreakdown(
   db: Db,
   f: TxFilters,
@@ -62,7 +67,7 @@ export async function getBreakdown(
   const items: BreakdownItem[] = [];
   for (const r of rows) {
     const totalCents = Number(r.totalCents ?? 0);
-    if (totalCents <= 0) continue;
+    if (totalCents === 0) continue;
 
     const label = dim.mapLabel ? dim.mapLabel(r.key, r.label) : r.label;
     items.push({
