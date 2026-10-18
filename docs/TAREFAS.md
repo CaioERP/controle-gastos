@@ -48,9 +48,9 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
-| F0-01 | Criar projeto, ferramentas, Git e worktrees | A | — | 🟡 Agente A |
-| F0-02 | Banco de dados: Drizzle + PGlite, migrate, helper de testes | A | F0-01 | ⬜ |
-| F0-03 | Contratos: schema, enums, domínio, seed, stubs de comandos | A | F0-02 | ⬜ |
+| F0-01 | Criar projeto, ferramentas, Git e worktrees | A | — | ✅ |
+| F0-02 | Banco de dados: Drizzle + PGlite, migrate, helper de testes | A | F0-01 | ✅ |
+| F0-03 | Contratos: schema, enums, domínio, seed, stubs de comandos | A | F0-02 | 🟡 Agente A — PR #3: ajustes pedidos na 2ª revisão |
 | F0-04 | Gerador de dados fictícios realistas | B | F0-03 | ⬜ |
 | F0-05 | Layout base: navegação, tema, componentes, formatadores | B | F0-01 | ⬜ |
 | F0-06 | Autenticação por senha única | B | F0-05 | ⬜ |
