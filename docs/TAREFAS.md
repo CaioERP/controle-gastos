@@ -52,8 +52,8 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | F0-02 | Banco de dados: Drizzle + PGlite, migrate, helper de testes | A | F0-01 | ✅ |
 | F0-03 | Contratos: schema, enums, domínio, seed, stubs de comandos | A | F0-02 | ✅ |
 | F0-04 | Gerador de dados fictícios realistas | B | F0-03 | ⬜ |
-| F0-05 | Layout base: navegação, tema, componentes, formatadores | B | F0-01 | 🟡 Agente B |
-| F0-06 | Autenticação por senha única | B | F0-05 | ⬜ |
+| F0-05 | Layout base: navegação, tema, componentes, formatadores | B | F0-01 | 🟡 Agente B — PR #4 em revisão |
+| F0-06 | Autenticação por senha única | B | F0-05 | 🟡 Agente B |
 | F0-07 | Teste do Meu Pluggy e fixtures anonimizadas | A | F0-01, H-01, H-02 | ⬜ |
 
 ## Fase 1 — MVP · Trilha Dados · spec: [`tarefas/fase-1-dados.md`](./tarefas/fase-1-dados.md)
