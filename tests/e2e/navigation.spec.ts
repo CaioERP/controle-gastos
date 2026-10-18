@@ -47,3 +47,9 @@ test.describe('Navegação Mobile', () => {
     }
   });
 });
+
+test('aplica a fonte Geist (e não a fonte padrão do navegador)', async ({ page }) => {
+  await page.goto('/');
+  const fontFamily = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  expect(fontFamily).toContain('Geist');
+});
