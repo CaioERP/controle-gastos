@@ -1,0 +1,36 @@
+# dependências
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+
+# testes
+/coverage
+/playwright-report
+/test-results
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+
+# produção
+/build
+
+# diversos
+.DS_Store
+*.pem
+.vercel
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# dados locais (banco PGlite, dumps reais do Pluggy, amostras) — NUNCA versionar
+.data/
+
+# segredos
+.env*
+!.env.example
