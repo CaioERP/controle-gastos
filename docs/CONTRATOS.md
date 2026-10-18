@@ -452,7 +452,7 @@ type RuleInput = {
 | `dates.ts` | `TZ`, `today()`, `monthStart(d)`, `monthEnd(d)`, `addMonthsISO(d, n)`, `addDaysISO(d, n)`, `formatDateBR(d)`, `formatMonthBR(d)` |
 | `invoice-cycle.ts` | `getInvoiceCycle(date, closingDay, dueDay)` → `{ referenceMonth, closingDate, dueDate }` |
 | `filters.ts` | `Dimension`, `TxFilters`, `txFiltersSchema`, `defaultFilters()` |
-| `errors.ts` | `CommandError` |
+| `errors.ts` | `CommandError`, `toCommandError(e)` |
 | `types.ts` | tipos das linhas do banco inferidos do schema (`Transaction`, `Account`…) |
 
 Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em erro de regra de negócio e registra o campo em `user_edited_fields` quando a edição vem do usuário (R9).
@@ -475,4 +475,5 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 
 | Data | Agente | Tarefa | Mudança |
 |---|---|---|---|
-| — | — | F0-03 | Versão inicial |
+| 2026-10-18 | Agente A | F0-03 | Versão inicial implementada |
+| 2026-10-18 | Agente A | F0-03 | Adicionado helper toCommandError em domain/errors |
