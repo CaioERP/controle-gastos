@@ -76,7 +76,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 |---|---|---|---|---|
 | B1-01 | Consultas de agregação | B | F0-04 | ✅ |
 | B1-02 | Consultas de listagem | B | F0-04 | ✅ |
-| B1-03 | Filtros na URL, barra de filtros e seletor de visão | B | F0-05, B1-02 | ⬜ |
+| B1-03 | Filtros na URL, barra de filtros e seletor de visão | B | F0-05, B1-02 | 🟡 Agente B |
 | B1-04 | Dashboard | B | B1-01, B1-03 | ⬜ |
 | B1-05 | Tela de transações | B | B1-02, B1-03 | ⬜ |
 | B1-06 | Telas de contas, cartões e conexões | B | B1-02 (widget Pluggy real: A1-01) | ⬜ |
