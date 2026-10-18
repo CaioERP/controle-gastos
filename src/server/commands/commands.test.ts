@@ -144,6 +144,60 @@ describe('additional command stubs', () => {
     ).rejects.toThrow(CommandError);
   });
 
+  it('upsertCategory ao renomear mantém o slug e o seed não duplica a categoria', async () => {
+    const { db } = await setup();
+    const [alimentacao] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+    const totalAntes = (await db.select().from(categories)).length;
+
+    await upsertCategory(db, {
+      id: alimentacao!.id,
+      name: 'Comida',
+      kind: 'expense',
+      icon: alimentacao!.icon,
+      color: alimentacao!.color,
+      parentId: null,
+    });
+
+    const [renomeada] = await db.select().from(categories).where(eq(categories.id, alimentacao!.id));
+    expect(renomeada!.name).toBe('Comida');
+    expect(renomeada!.slug).toBe('alimentacao');
+
+    await seedBase(db);
+    expect((await db.select().from(categories)).length).toBe(totalAntes);
+  });
+
+  it('upsertCategory rejeita mudar a natureza de uma categoria existente', async () => {
+    const { db } = await setup();
+    const [transporte] = await db.select().from(categories).where(eq(categories.slug, 'transporte'));
+
+    const err = await upsertCategory(db, {
+      id: transporte!.id,
+      name: transporte!.name,
+      kind: 'income',
+      icon: transporte!.icon,
+      color: transporte!.color,
+      parentId: null,
+    }).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(CommandError);
+    expect((err as CommandError).code).toBe('VALIDATION');
+    const [inalterada] = await db.select().from(categories).where(eq(categories.id, transporte!.id));
+    expect(inalterada!.kind).toBe('expense');
+  });
+
+  it('upsertCategory em categoria inexistente lança NOT_FOUND', async () => {
+    const { db } = await setup();
+    const err = await upsertCategory(db, {
+      id: '00000000-0000-0000-0000-000000000000',
+      name: 'Fantasma',
+      kind: 'expense',
+      icon: 'ghost',
+      color: '#000000',
+      parentId: null,
+    }).catch((e: unknown) => e);
+    expect((err as CommandError).code).toBe('NOT_FOUND');
+  });
+
   it('upsertRule valida regex e faixa de valores', async () => {
     const { db } = await setup();
     const [cat] = await db.select().from(categories).limit(1);

@@ -1,4 +1,4 @@
-import { and, eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { categories, transactions } from '@/server/db/schema';
@@ -34,6 +34,18 @@ export async function upsertCategory(
   // 1. Categoria não pode ser pai de si mesma
   if (data.id && data.parentId && data.id === data.parentId) {
     throw new CommandError('VALIDATION', 'Categoria não pode ser pai de si mesma');
+  }
+
+  // Na edição, a natureza é imutável: filhas e transações já categorizadas ficariam incompatíveis
+  if (data.id) {
+    const [current] = await db
+      .select({ kind: categories.kind })
+      .from(categories)
+      .where(eq(categories.id, data.id));
+    if (!current) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
+    if (current.kind !== data.kind) {
+      throw new CommandError('VALIDATION', 'Não é possível mudar a natureza de uma categoria existente');
+    }
   }
 
   // 2. Validações quando parentId é informado
@@ -78,30 +90,15 @@ export async function upsertCategory(
     }
   }
 
-  // Gera slug
-  let slug = slugify(data.name);
-  if (parentSlug && !slug.startsWith(parentSlug)) {
-    slug = `${parentSlug}-${slug}`;
-  }
-
   try {
     if (data.id) {
-      // Verificar conflito de slug na edição
-      const [existingSlug] = await db
-        .select({ id: categories.id })
-        .from(categories)
-        .where(and(eq(categories.slug, slug), ne(categories.id, data.id)));
-      if (existingSlug) {
-        throw new CommandError('CONFLICT', 'Já existe uma categoria com esse nome');
-      }
-
+      // O slug é imutável depois da criação: seed, dados fictícios e mapa de categorias da fonte
+      // localizam categorias por ele. Renomear muda só o nome exibido.
       const res = await db
         .update(categories)
         .set({
           name: data.name,
-          slug,
           parentId: data.parentId,
-          kind: data.kind,
           icon: data.icon,
           color: data.color,
           ...(data.archived !== undefined ? { archived: data.archived } : {}),
@@ -111,6 +108,11 @@ export async function upsertCategory(
 
       if (res.length === 0) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
       return { id: res[0]!.id };
+    }
+
+    let slug = slugify(data.name);
+    if (parentSlug && !slug.startsWith(parentSlug)) {
+      slug = `${parentSlug}-${slug}`;
     }
 
     // Criação: verificar se slug já existe
@@ -137,7 +139,7 @@ export async function upsertCategory(
 
     return { id: created!.id };
   } catch (err) {
-    throw toCommandError(err, 'Já existe uma categoria com esse nome');
+    throw toCommandError(err);
   }
 }
 
