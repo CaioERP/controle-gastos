@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createTestDb } from '../../../tests/helpers/db';
-import { institutions, accounts, transactions, tags, transactionTags } from '../db/schema';
+import { institutions, accounts, transactions, tags, transactionTags, categories } from '../db/schema';
 import { markReviewed, recategorize, updateTransaction } from './transactions';
 import { CommandError } from '../domain/errors';
 import { seedBase } from '../db/seed';
@@ -41,8 +41,7 @@ describe('transaction commands', () => {
   it('recategorize define categoria, source=user e user_edited_fields sem duplicar', async () => {
     const { db, tx } = await setupFixture();
 
-    const { categories } = await import('../db/schema');
-    const [catRow] = await db.select().from(categories).limit(1);
+    const [catRow] = await db.select().from(categories).where(eq(categories.kind, 'expense')).limit(1);
 
     // Primeira recategorização
     const res1 = await recategorize(db, {
@@ -68,15 +67,40 @@ describe('transaction commands', () => {
     expect(updatedTx!.userEditedFields).toEqual(['category']);
   });
 
-  it('recategorize com id inexistente lança CommandError NOT_FOUND', async () => {
+  it('recategorize com id de transação inexistente lança CommandError NOT_FOUND', async () => {
     const { db } = await setupFixture();
-    const { categories } = await import('../db/schema');
     const [catRow] = await db.select().from(categories).limit(1);
 
     await expect(
       recategorize(db, {
         transactionId: '00000000-0000-0000-0000-000000000000',
         categoryId: catRow!.id,
+        scope: 'this',
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('recategorize com id de categoria inexistente lança CommandError NOT_FOUND', async () => {
+    const { db, tx } = await setupFixture();
+
+    await expect(
+      recategorize(db, {
+        transactionId: tx.id,
+        categoryId: '00000000-0000-0000-0000-000000000000',
+        scope: 'this',
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('recategorize com kind incompatível (despesa com categoria de receita) lança CommandError VALIDATION', async () => {
+    const { db, tx } = await setupFixture();
+
+    const [incomeCat] = await db.select().from(categories).where(eq(categories.kind, 'income')).limit(1);
+
+    await expect(
+      recategorize(db, {
+        transactionId: tx.id,
+        categoryId: incomeCat!.id,
         scope: 'this',
       }),
     ).rejects.toThrow(CommandError);
@@ -110,6 +134,24 @@ describe('transaction commands', () => {
     currentTags = await db.select().from(transactionTags).where(eq(transactionTags.transactionId, tx.id));
     expect(currentTags.length).toBe(1);
     expect(currentTags[0]!.tagId).toBe(tag3!.id);
+  });
+
+  it('R9: updateTransaction grava description em user_edited_fields sem duplicar ao repetir', async () => {
+    const { db, tx } = await setupFixture();
+
+    await updateTransaction(db, {
+      transactionId: tx.id,
+      patch: { description: 'Primeira alteração' },
+    });
+
+    await updateTransaction(db, {
+      transactionId: tx.id,
+      patch: { description: 'Segunda alteração' },
+    });
+
+    const [updatedTx] = await db.select().from(transactions).where(eq(transactions.id, tx.id));
+    expect(updatedTx!.description).toBe('Segunda alteração');
+    expect(updatedTx!.userEditedFields).toEqual(['description']);
   });
 
   it('markReviewed marca needs_review como false', async () => {

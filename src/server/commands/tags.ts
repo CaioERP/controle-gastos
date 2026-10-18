@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { tags } from '@/server/db/schema';
-import { CommandError } from '@/server/domain/errors';
+import { CommandError, toCommandError } from '@/server/domain/errors';
 
 const upsertTagInput = z.object({
   id: z.string().uuid().optional(),
@@ -15,24 +15,28 @@ export async function upsertTag(
   input: z.infer<typeof upsertTagInput>,
 ): Promise<{ id: string }> {
   const data = upsertTagInput.parse(input);
-  if (data.id) {
-    const res = await db
-      .update(tags)
-      .set({ name: data.name, color: data.color })
-      .where(eq(tags.id, data.id))
+  try {
+    if (data.id) {
+      const res = await db
+        .update(tags)
+        .set({ name: data.name, color: data.color })
+        .where(eq(tags.id, data.id))
+        .returning({ id: tags.id });
+      if (res.length === 0) throw new CommandError('NOT_FOUND', 'Tag não encontrada');
+      return { id: res[0]!.id };
+    }
+
+    const [created] = await db
+      .insert(tags)
+      .values({ name: data.name, color: data.color })
+      .onConflictDoUpdate({
+        target: tags.name,
+        set: { color: data.color },
+      })
       .returning({ id: tags.id });
-    if (res.length === 0) throw new CommandError('NOT_FOUND', 'Tag não encontrada');
-    return { id: res[0]!.id };
+
+    return { id: created!.id };
+  } catch (err) {
+    throw toCommandError(err);
   }
-
-  const [created] = await db
-    .insert(tags)
-    .values({ name: data.name, color: data.color })
-    .onConflictDoUpdate({
-      target: tags.name,
-      set: { color: data.color },
-    })
-    .returning({ id: tags.id });
-
-  return { id: created!.id };
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { categorizationRules } from '@/server/db/schema';
 import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
-import { CommandError } from '@/server/domain/errors';
+import { CommandError, toCommandError } from '@/server/domain/errors';
 
 export type RuleInput = {
   id?: string;
@@ -40,18 +40,38 @@ export async function upsertRule(
   input: RuleInput,
 ): Promise<{ id: string; applied: number }> {
   const data = ruleInputSchema.parse(input);
-  if (data.id) {
-    const res = await db
-      .update(categorizationRules)
-      .set(data)
-      .where(eq(categorizationRules.id, data.id))
-      .returning({ id: categorizationRules.id });
-    if (res.length === 0) throw new CommandError('NOT_FOUND', 'Regra não encontrada');
-    return { id: res[0]!.id, applied: 0 };
+
+  if (data.matchType === 'regex') {
+    try {
+      new RegExp(data.pattern);
+    } catch {
+      throw new CommandError('VALIDATION', 'Expressão regular inválida no padrão da regra');
+    }
   }
 
-  const [created] = await db.insert(categorizationRules).values(data).returning({ id: categorizationRules.id });
-  return { id: created!.id, applied: 0 };
+  if (data.amountMinCents !== null && data.amountMaxCents !== null) {
+    if (data.amountMinCents > data.amountMaxCents) {
+      throw new CommandError('VALIDATION', 'amountMinCents deve ser menor ou igual a amountMaxCents');
+    }
+  }
+
+  try {
+    if (data.id) {
+      const { id, ...fields } = data;
+      const res = await db
+        .update(categorizationRules)
+        .set(fields)
+        .where(eq(categorizationRules.id, id))
+        .returning({ id: categorizationRules.id });
+      if (res.length === 0) throw new CommandError('NOT_FOUND', 'Regra não encontrada');
+      return { id: res[0]!.id, applied: 0 };
+    }
+
+    const [created] = await db.insert(categorizationRules).values(data).returning({ id: categorizationRules.id });
+    return { id: created!.id, applied: 0 };
+  } catch (err) {
+    throw toCommandError(err);
+  }
 }
 
 const deleteRuleInput = z.object({

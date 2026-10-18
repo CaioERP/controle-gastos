@@ -2,7 +2,7 @@ import { and, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { merchants } from '@/server/db/schema';
-import { CommandError } from '@/server/domain/errors';
+import { CommandError, toCommandError } from '@/server/domain/errors';
 
 const updateMerchantInput = z.object({
   merchantId: z.string().uuid(),
@@ -28,10 +28,14 @@ export async function updateMerchant(
     }
   }
 
-  const res = await db
-    .update(merchants)
-    .set(patch)
-    .where(eq(merchants.id, merchantId))
-    .returning({ id: merchants.id });
-  if (res.length === 0) throw new CommandError('NOT_FOUND', 'Estabelecimento não encontrado');
+  try {
+    const res = await db
+      .update(merchants)
+      .set(patch)
+      .where(eq(merchants.id, merchantId))
+      .returning({ id: merchants.id });
+    if (res.length === 0) throw new CommandError('NOT_FOUND', 'Estabelecimento não encontrado');
+  } catch (err) {
+    throw toCommandError(err);
+  }
 }

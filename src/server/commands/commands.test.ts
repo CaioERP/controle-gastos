@@ -63,7 +63,127 @@ describe('additional command stubs', () => {
     expect(archived!.archived).toBe(true);
   });
 
-  it('upsertRule e deleteRule funcionam', async () => {
+  it('upsertCategory rejeita 3º nível de categorias (R8)', async () => {
+    const { db } = await setup();
+    // alimentacao-delivery é filha de alimentacao
+    const [delivery] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao-delivery'));
+    expect(delivery!.parentId).not.toBeNull();
+
+    await expect(
+      upsertCategory(db, {
+        name: 'Pizza',
+        kind: 'expense',
+        icon: 'pizza',
+        color: '#ff0000',
+        parentId: delivery!.id,
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('upsertCategory rejeita filha com kind diferente do pai', async () => {
+    const { db } = await setup();
+    const [expenseParent] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+
+    await expect(
+      upsertCategory(db, {
+        name: 'Subcategoria Invalida',
+        kind: 'income',
+        icon: 'alert',
+        color: '#ff0000',
+        parentId: expenseParent!.id,
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('upsertCategory rejeita categoria com parentId igual ao próprio id', async () => {
+    const { db } = await setup();
+    const [cat] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+
+    await expect(
+      upsertCategory(db, {
+        id: cat!.id,
+        name: cat!.name,
+        kind: cat!.kind,
+        icon: cat!.icon,
+        color: cat!.color,
+        parentId: cat!.id,
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('upsertCategory rejeita transformar categoria com filhas em filha', async () => {
+    const { db } = await setup();
+    const [parent] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+    const [otherRoot] = await db.select().from(categories).where(eq(categories.slug, 'transporte'));
+
+    await expect(
+      upsertCategory(db, {
+        id: parent!.id,
+        name: parent!.name,
+        kind: parent!.kind,
+        icon: parent!.icon,
+        color: parent!.color,
+        parentId: otherRoot!.id,
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('upsertCategory com slug existente lança CommandError CONFLICT', async () => {
+    const { db } = await setup();
+    const [alimentacao] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+
+    // Tenta criar 'Mercado' dentro de Alimentação (alimentacao-mercado já existe no seed)
+    await expect(
+      upsertCategory(db, {
+        name: 'Mercado',
+        kind: 'expense',
+        icon: 'shopping-cart',
+        color: '#ff8800',
+        parentId: alimentacao!.id,
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('upsertRule valida regex e faixa de valores', async () => {
+    const { db } = await setup();
+    const [cat] = await db.select().from(categories).limit(1);
+
+    // Regex inválido
+    await expect(
+      upsertRule(db, {
+        priority: 1,
+        matchField: 'description',
+        matchType: 'regex',
+        pattern: '[invalid',
+        accountId: null,
+        amountMinCents: null,
+        amountMaxCents: null,
+        setCategoryId: cat!.id,
+        setKind: 'expense',
+        setPaymentMethod: null,
+        enabled: true,
+      }),
+    ).rejects.toThrow(CommandError);
+
+    // amountMinCents > amountMaxCents
+    await expect(
+      upsertRule(db, {
+        priority: 1,
+        matchField: 'description',
+        matchType: 'contains',
+        pattern: 'TEST',
+        accountId: null,
+        amountMinCents: 5000,
+        amountMaxCents: 2000,
+        setCategoryId: cat!.id,
+        setKind: 'expense',
+        setPaymentMethod: null,
+        enabled: true,
+      }),
+    ).rejects.toThrow(CommandError);
+  });
+
+  it('upsertRule e deleteRule funcionam no caminho feliz', async () => {
     const { db } = await setup();
     const [cat] = await db.select().from(categories).limit(1);
     const rule = await upsertRule(db, {
@@ -72,8 +192,8 @@ describe('additional command stubs', () => {
       matchType: 'contains',
       pattern: 'UBER',
       accountId: null,
-      amountMinCents: null,
-      amountMaxCents: null,
+      amountMinCents: 1000,
+      amountMaxCents: 5000,
       setCategoryId: cat!.id,
       setKind: 'expense',
       setPaymentMethod: 'credit_card_single',
@@ -81,6 +201,23 @@ describe('additional command stubs', () => {
     });
     expect(rule.id).toBeDefined();
     expect(rule.applied).toBe(0);
+
+    // Edição sem enviar id no set
+    const edited = await upsertRule(db, {
+      id: rule.id,
+      priority: 2,
+      matchField: 'description',
+      matchType: 'contains',
+      pattern: 'UBER TRIP',
+      accountId: null,
+      amountMinCents: 1000,
+      amountMaxCents: 5000,
+      setCategoryId: cat!.id,
+      setKind: 'expense',
+      setPaymentMethod: 'credit_card_single',
+      enabled: true,
+    });
+    expect(edited.id).toBe(rule.id);
 
     await deleteRule(db, { ruleId: rule.id });
   });
