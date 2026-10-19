@@ -1,0 +1,54 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { getDb } from '@/server/db/client';
+import { recategorize, updateTransaction, upsertTag } from '@/server/commands';
+import { txFiltersSchema, type TxFilters } from '@/server/domain/filters';
+import { getInstallmentGroup, getTransaction, listTransactions } from '@/server/queries/transactions';
+import { getTransactionInvoice } from '@/server/queries/transaction-detail';
+import { CommandError } from '@/server/domain/errors';
+import { runAction } from '@/lib/action';
+
+export async function recategorizeAction(input: Parameters<typeof recategorize>[1]) {
+  const result = await runAction(() => recategorize(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function updateTransactionAction(input: Parameters<typeof updateTransaction>[1]) {
+  const result = await runAction(() => updateTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function upsertTagAction(input: Parameters<typeof upsertTag>[1]) {
+  const result = await runAction(() => upsertTag(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+const PAGE_SIZE = 100;
+
+/** Leitura: próxima página da lista. Não revalida nada (não há escrita). */
+export async function loadMoreAction(filters: TxFilters, cursor: string) {
+  return runAction(async () => {
+    const f = txFiltersSchema.parse(filters);
+    const c = z.string().min(1).max(200).parse(cursor);
+    return listTransactions(getDb(), f, { cursor: c, limit: PAGE_SIZE });
+  });
+}
+
+/** Leitura: detalhe completo para o painel lateral (sem o `raw` das fontes). */
+export async function loadTransactionDetailAction(transactionId: string) {
+  return runAction(async () => {
+    const id = z.string().uuid().parse(transactionId);
+    const db = getDb();
+    const [detail, invoice] = await Promise.all([getTransaction(db, id), getTransactionInvoice(db, id)]);
+    if (!detail) throw new CommandError('NOT_FOUND', 'Transação não encontrada');
+    const installments = detail.installment?.groupId
+      ? await getInstallmentGroup(db, detail.installment.groupId)
+      : [];
+    return { detail, invoice, installments };
+  });
+}
