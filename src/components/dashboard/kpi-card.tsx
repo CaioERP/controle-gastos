@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Money } from '@/components/format/money';
 import { formatPercentInt } from '@/components/charts/format';
-import { percentChange } from '@/server/queries/dashboard';
+import { percentChange } from '@/server/queries/stats';
 import { cn } from '@/lib/utils';
 
 export type KpiVariation = {

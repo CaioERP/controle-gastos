@@ -1,21 +1,20 @@
 import Link from 'next/link';
 import { PlugZap } from 'lucide-react';
 import { getDb } from '@/server/db/client';
-import { formatMonthBR, monthEnd } from '@/server/domain/dates';
-import type { TxFilters } from '@/server/domain/filters';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories, listTags } from '@/server/queries/catalog';
-import { getDashboardKpis, topWithOthers, trailingMonthsRange } from '@/server/queries/dashboard';
+import { getDashboardKpis, topWithOthers } from '@/server/queries/dashboard';
 import { getMonthlySeries } from '@/server/queries/monthly';
-import { previousRange } from '@/server/queries/summary';
+import { previousPeriodLabel } from '@/server/queries/period-label';
+import { categoryDimensionFor, trailingMonthsRange } from '@/server/queries/stats';
 import { getReviewCount } from '@/server/queries/transactions';
 import { parseFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
 import { buttonVariants } from '@/components/ui/button';
-import { categoryTransactionsHref } from '@/components/charts/links';
+import { categoryTransactionsHref, parentCategoryIds } from '@/components/charts/links';
 import { NEUTRAL_COLOR, seriesColor } from '@/components/charts/palette';
 import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
 import { KpiCard } from '@/components/dashboard/kpi-card';
@@ -30,14 +29,10 @@ export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-function previousLabel(f: TxFilters): string {
-  const prev = previousRange(f.from, f.to);
-  const isFullMonth = prev.from.endsWith('-01') && prev.to === monthEnd(prev.from);
-  return isFullMonth ? formatMonthBR(prev.from) : 'período anterior';
-}
-
 export default async function DashboardPage({ searchParams }: Props) {
   const filters = parseFilters(await searchParams);
+  // Com `cat` na URL, a rosca quebra por categoria exata para o link não ampliar o filtro.
+  const catDim = categoryDimensionFor(filters);
   const db = getDb();
 
   const overviewPromise = getAccountsOverview(db);
@@ -47,7 +42,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       overviewPromise.then((o) => getDashboardKpis(db, filters, { overview: o })),
       listCategories(db),
       listTags(db),
-      getBreakdown(db, filters, 'parentCategory'),
+      getBreakdown(db, filters, catDim),
       getBreakdown(db, filters, 'paymentMethod'),
       getBreakdown(db, filters, 'merchant'),
       getMonthlySeries(db, { ...filters, ...trailingMonthsRange(filters, 6) }, 'parentCategory', { top: 6 }),
@@ -72,15 +67,16 @@ export default async function DashboardPage({ searchParams }: Props) {
     );
   }
 
-  const prevLabel = previousLabel(filters);
+  const prevLabel = previousPeriodLabel(filters);
   const totalCents = kpis.expenseCents;
+  const linkOpts = catDim === 'category' ? { parentIds: parentCategoryIds(categories) } : {};
 
   const slices = topWithOthers(byCategory, 7).map((item, i) => ({
     key: item.key,
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
     totalCents: item.totalCents,
-    href: categoryTransactionsHref(filters, item.key),
+    href: categoryTransactionsHref(filters, item.key, linkOpts),
   }));
 
   return (

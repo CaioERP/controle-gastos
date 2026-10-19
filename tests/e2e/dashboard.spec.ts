@@ -28,13 +28,23 @@ test.describe('Dashboard', () => {
 
   test('clicar numa fatia da rosca leva para /transacoes com cat= e o mesmo período', async ({ page }) => {
     await page.goto('/?mes=2026-09');
-    await expect(page.locator('.recharts-pie-sector path').first()).toBeVisible();
-    // O centro da caixa de uma fatia grande cai no furo da rosca; clica num ponto do anel:
-    // a 1ª fatia (a maior) começa em 0° (3 horas) e cresce no sentido anti-horário.
-    const svg = await page.locator('[data-slot="chart"] svg.recharts-surface').first().boundingBox();
-    const r = (svg!.width / 2) * 0.8;
-    const angle = (8 * Math.PI) / 180;
-    await page.mouse.click(svg!.x + svg!.width / 2 + r * Math.cos(angle), svg!.y + svg!.height / 2 - r * Math.sin(angle));
+    // Seletor estável: cada fatia tem data-slice=<id da categoria>. O centro da caixa de uma fatia
+    // grande cai no furo da rosca, por isso o clique é disparado no próprio elemento.
+    const slice = page.locator('path[data-slice]').first();
+    await expect(slice).toBeVisible();
+    const id = await slice.getAttribute('data-slice');
+    await slice.dispatchEvent('click');
+    await expect(page).toHaveURL(new RegExp(`/transacoes\\?.*cat=${id}`));
+    expect(page.url()).toContain('mes=2026-09');
+  });
+
+  test('legenda da rosca leva para /transacoes com cat= da categoria', async ({ page }) => {
+    await page.goto('/?mes=2026-09');
+    const legend = page.getByRole('list', { name: 'Legenda: gastos por categoria' });
+    const first = legend.getByRole('link').first();
+    const href = await first.getAttribute('href');
+    expect(href).toMatch(/^\/transacoes\?.*cat=[0-9a-f-]{36}/);
+    await first.click();
     await expect(page).toHaveURL(/\/transacoes\?.*cat=[0-9a-f-]{36}/);
     expect(page.url()).toContain('mes=2026-09');
   });

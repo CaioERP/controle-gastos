@@ -15,7 +15,7 @@ const current: TxFilters = {
 
 function parse(href: string) {
   const [path, qs = ''] = href.split('?');
-  return { path, filters: parseFilters(qs, '2026-10-15') };
+  return { path, filters: parseFilters(qs, '2026-08-15') };
 }
 
 describe('links de drill-down', () => {

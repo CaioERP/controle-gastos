@@ -4,12 +4,19 @@ import { createTestDb } from '../../../tests/helpers/db';
 import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from '../../../tests/fixtures/load';
 import { generateFixtures } from '../../../tests/fixtures/generate';
-import { accounts, institutions } from '@/server/db/schema';
+import { accounts, categories, institutions } from '@/server/db/schema';
 import { addMonthsISO, monthStart } from '@/server/domain/dates';
+import type { TxFilters } from '@/server/domain/filters';
 import type { Db } from '@/server/db/client';
+import { categoryTransactionsHref, parentCategoryIds } from '@/components/charts/links';
 import { getAccountsOverview } from './accounts';
-import type { BreakdownItem } from './breakdown';
-import { getDashboardKpis, percentChange, summarizeAccounts, topWithOthers, trailingMonthsRange } from './dashboard';
+import { getBreakdown, type BreakdownItem } from './breakdown';
+import { listCategories } from './catalog';
+import { getSpendingSummary } from './summary';
+import { parseFilters } from './url-filters';
+import { categoryDimensionFor } from './stats';
+import { getDashboardKpis, summarizeAccounts, topWithOthers } from './dashboard';
+import { percentChange, trailingMonthsRange } from './stats';
 
 const TODAY = '2026-10-15';
 const fixtureOpts = { referenceDate: TODAY, months: 6, seed: 42 };
@@ -123,6 +130,49 @@ describe('queries / dashboard', () => {
     });
   });
 
+  describe('rosca por categoria: o link de cada fatia lista exatamente o valor da fatia', () => {
+    const SEP = { from: '2026-09-01', to: '2026-09-30', basis: 'accrual' as const };
+
+    async function checkSlices(f: TxFilters) {
+      const tree = await listCategories(db);
+      const dim = categoryDimensionFor(f);
+      const opts = dim === 'category' ? { parentIds: parentCategoryIds(tree) } : {};
+      const items = await getBreakdown(db, f, dim);
+      let linked = 0;
+      for (const item of items) {
+        const href = categoryTransactionsHref(f, item.key, opts);
+        if (!href) continue;
+        linked++;
+        // Data de referência dentro do período: o resultado não depende do mês em que o teste roda.
+        const target = parseFilters(href.split('?')[1] ?? '', '2026-09-15');
+        expect((await getSpendingSummary(db, target)).expenseCents).toBe(item.totalCents);
+      }
+      return { items, linked };
+    }
+
+    it('sem cat: fatias por categoria pai', async () => {
+      const { linked } = await checkSlices(SEP);
+      expect(linked).toBeGreaterThan(1);
+    });
+
+    it('cat=<subcategoria>: quebra por categoria exata (link não vira a categoria pai)', async () => {
+      const [rest] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao-delivery'));
+      const f = { ...SEP, categoryIds: [rest!.id] };
+      expect(categoryDimensionFor(f)).toBe('category');
+      const { items, linked } = await checkSlices(f);
+      expect(items.map((i) => i.key)).toEqual([rest!.id]);
+      expect(linked).toBe(1);
+    });
+
+    it('cat=<categoria pai>: subcategorias com link exato; linha do próprio pai sem link', async () => {
+      const [alim] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+      const f = { ...SEP, categoryIds: [alim!.id] };
+      await checkSlices(f);
+      const tree = await listCategories(db);
+      expect(categoryTransactionsHref(f, alim!.id, { parentIds: parentCategoryIds(tree) })).toBeNull();
+    });
+  });
+
   describe('summarizeAccounts', () => {
     it('próximas faturas: uma por cartão com fatura aberta, ordenadas por vencimento', async () => {
       const overview = await getAccountsOverview(db, { today: TODAY });
@@ -131,6 +181,19 @@ describe('queries / dashboard', () => {
       const dues = upcomingInvoices.map((i) => i.dueDate);
       expect(dues).toEqual([...dues].sort());
       for (const inv of upcomingInvoices) expect(inv.dueDate >= TODAY).toBe(true);
+    });
+
+    it('cartão fora dos totais (includeInTotals=false) não aparece nas próximas faturas', async () => {
+      const overview = await getAccountsOverview(db, { today: TODAY });
+      const hiddenId = overview.flatMap((i) => i.accounts).find((a) => a.type === 'credit_card')!.id;
+      const changed = overview.map((inst) => ({
+        ...inst,
+        accounts: inst.accounts.map((a) => (a.id === hiddenId ? { ...a, includeInTotals: false } : a)),
+      }));
+      const s = summarizeAccounts(changed);
+      expect(s.upcomingInvoices).toHaveLength(3);
+      expect(s.upcomingInvoices.some((i) => i.accountId === hiddenId)).toBe(false);
+      expect(s.cardCount).toBe(3);
     });
 
     it('lista vazia → tudo zero', () => {
@@ -156,6 +219,11 @@ describe('queries / dashboard', () => {
   });
 
   describe('trailingMonthsRange', () => {
+    it('período de vários meses: ainda exatamente 6, terminando no fim do filtro', () => {
+      const r = trailingMonthsRange({ from: '2026-07-01', to: '2026-09-30' }, 6);
+      expect(r).toEqual({ from: '2026-04-01', to: '2026-09-30' });
+    });
+
     it('6 meses terminando no fim do filtro', () => {
       expect(trailingMonthsRange({ from: '2026-10-01', to: '2026-10-31' }, 6)).toEqual({
         from: '2026-05-01',

@@ -1,22 +1,10 @@
 import type { Db } from '@/server/db/client';
-import { addMonthsISO, monthStart } from '@/server/domain/dates';
 import type { InvoiceStatus } from '@/server/domain/enums';
 import type { TxFilters } from '@/server/domain/filters';
 import { getAccountsOverview, type InstitutionWithAccounts } from './accounts';
 import type { BreakdownItem } from './breakdown';
 import { getFutureInstallments } from './installments';
 import { getSpendingSummary, type SpendingSummary } from './summary';
-
-/** Variação relativa (atual − anterior) / anterior. Anterior 0 → null (a UI mostra "—"). */
-export function percentChange(current: number, previous: number): number | null {
-  if (previous === 0) return null;
-  return (current - previous) / Math.abs(previous);
-}
-
-/** Intervalo da evolução mensal: 5 meses antes do início do filtro até o fim dele. */
-export function trailingMonthsRange(f: Pick<TxFilters, 'from' | 'to'>, months: number): { from: string; to: string } {
-  return { from: monthStart(addMonthsISO(monthStart(f.from), -(months - 1))), to: f.to };
-}
 
 export type TopItem = BreakdownItem & { isOthers: boolean };
 
@@ -99,7 +87,8 @@ export function summarizeAccounts(overview: InstitutionWithAccounts[], view: Vie
       if (a.type === 'credit_card') {
         if (counts) cardCount++;
         const inv = a.credit?.openInvoice;
-        if (inv) {
+        // Mesma regra do KPI "Faturas abertas": cartão fora dos totais não entra na lista.
+        if (inv && counts) {
           upcomingInvoices.push({
             accountId: a.id,
             accountName: a.displayName ?? a.name,
