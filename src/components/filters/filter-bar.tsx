@@ -7,7 +7,7 @@ import { ViewSelector } from './view-selector';
 import { BasisToggle } from './basis-toggle';
 import { MoreFilters } from './more-filters';
 import { ActiveFilterChips } from './active-filter-chips';
-import { parseFilters, withFilters } from '@/server/queries/url-filters';
+import { mergeFilterParams, parseFilters } from '@/server/queries/url-filters';
 import type { TxFilters } from '@/server/domain/filters';
 import type { InstitutionWithAccounts } from '@/server/queries/accounts';
 import type { CategoryTree } from '@/server/queries/catalog';
@@ -32,35 +32,29 @@ export function FilterBar({
     return parseFilters(searchParams);
   }, [searchParams]);
 
+  // Reescreve só os parâmetros de filtro; os da página (dim, cartao, fatura, aba...) são preservados
   const updateFilters = React.useCallback(
     (patch: Partial<TxFilters>) => {
-      const nextUrl = withFilters(pathname, patch, filters);
-      router.push(nextUrl);
+      const qs = mergeFilterParams(searchParams.toString(), patch, filters);
+      router.push(qs ? `${pathname}?${qs}` : pathname);
     },
-    [filters, pathname, router]
+    [filters, pathname, router, searchParams]
   );
 
+  // "Limpar" volta ao padrão preservando período e regime
   const clearExtraFilters = React.useCallback(() => {
-    const nextUrl = withFilters(
-      pathname,
-      {
-        institutionIds: undefined,
-        accountIds: undefined,
-        paymentMethods: undefined,
-        categoryIds: undefined,
-        tagIds: undefined,
-        search: undefined,
-        includeProjected: undefined,
-        needsReview: undefined,
-      },
-      {
-        from: filters.from,
-        to: filters.to,
-        basis: filters.basis,
-      }
-    );
-    router.push(nextUrl);
-  }, [filters.basis, filters.from, filters.to, pathname, router]);
+    updateFilters({
+      institutionIds: undefined,
+      accountIds: undefined,
+      kinds: undefined,
+      paymentMethods: undefined,
+      categoryIds: undefined,
+      tagIds: undefined,
+      search: undefined,
+      includeProjected: undefined,
+      needsReview: undefined,
+    });
+  }, [updateFilters]);
 
   return (
     <div className="flex flex-col gap-2.5 w-full pb-2" data-slot="filter-bar">
