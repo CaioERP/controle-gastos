@@ -77,11 +77,11 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B1-01 | Consultas de agregação | B | F0-04 | ✅ |
 | B1-02 | Consultas de listagem | B | F0-04 | ✅ |
 | B1-03 | Filtros na URL, barra de filtros e seletor de visão | B | F0-05, B1-02 | ✅ |
-| B1-04 | Dashboard | B | B1-01, B1-03 | 🟡 Agente B (Claude, agente 1) — PR #14 em revisão |
+| B1-04 | Dashboard | B | B1-01, B1-03 | ✅ |
 | B1-05 | Tela de transações | B | B1-02, B1-03 | 🟡 Agente B (Claude, agente 2) — PR #15 em revisão |
 | B1-06 | Telas de contas, cartões e conexões | B | B1-02 (widget Pluggy real: A1-01) | ✅ |
 | B1-07 | Tela de faturas | B | B1-02 | 🟡 Agente B (Claude, agente 3) — PR #13 em revisão |
-| B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | 🟡 Agente B (Claude, agente 1) — PR #17 em revisão |
+| B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | ✅ |
 | B1-09 | Tela de categorias e regras | B | B1-02 | 🟡 Agente B (Claude, agente 3) — PR #16 em revisão |
 | B1-10 | Fila de revisão | B | B1-05 | 🟡 Agente B (Claude, agente 2) — PR #18 em revisão |
 
@@ -144,4 +144,5 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18
 - ~~[B1-03] FilterBar descartava parâmetros da página (dim, cartao, fatura, aba); datas da URL dependiam do fuso~~ — resolvido no PR #19, 2026-10-19
 - [B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19
+- [B1-04/B1-08] Regra no-restricted-imports no ESLint para garantir que queries/stats.ts e queries/analysis.ts (usados no cliente) nunca importem o banco — Coordenador, 2026-10-19
 - [A1-08] archiveCategory não redireciona categorization_rules.set_category_id nem merchants.default_category_id da categoria arquivada (o motor já ignora categorias arquivadas) — Coordenador, 2026-10-19
