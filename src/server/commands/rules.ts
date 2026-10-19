@@ -1,9 +1,12 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
+import { categorizeTransactions, notUserCategorized } from '@/server/categorization/engine';
+import { ruleMatches } from '@/server/categorization/rules';
 import type { Db } from '@/server/db/client';
-import { categorizationRules } from '@/server/db/schema';
+import { categorizationRules, merchants, transactions } from '@/server/db/schema';
 import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
 import { CommandError, toCommandError } from '@/server/domain/errors';
+import type { CategorizationRule } from '@/server/domain/types';
 
 export type RuleInput = {
   id?: string;
@@ -56,22 +59,87 @@ export async function upsertRule(
   }
 
   try {
-    if (data.id) {
-      const { id, ...fields } = data;
-      const res = await db
-        .update(categorizationRules)
-        .set(fields)
-        .where(eq(categorizationRules.id, id))
-        .returning({ id: categorizationRules.id });
-      if (res.length === 0) throw new CommandError('NOT_FOUND', 'Regra não encontrada');
-      return { id: res[0]!.id, applied: 0 };
-    }
-
-    const [created] = await db.insert(categorizationRules).values(data).returning({ id: categorizationRules.id });
-    return { id: created!.id, applied: 0 };
+    return await db.transaction(async (tx) => {
+      let rule: CategorizationRule;
+      if (data.id) {
+        const { id, ...fields } = data;
+        const [updated] = await tx
+          .update(categorizationRules)
+          .set(fields)
+          .where(eq(categorizationRules.id, id))
+          .returning();
+        if (!updated) throw new CommandError('NOT_FOUND', 'Regra não encontrada');
+        rule = updated;
+      } else {
+        const [created] = await tx.insert(categorizationRules).values(data).returning();
+        rule = created!;
+      }
+      const applied = rule.enabled ? await applyRuleToExisting(tx, rule) : 0;
+      return { id: rule.id, applied };
+    });
   } catch (err) {
     throw toCommandError(err);
   }
+}
+
+type DbTx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+/**
+ * Aplica a regra nas transações existentes que casam com ela, passando pelo motor de categorização (que respeita
+ * R9, R8 e a precedência entre regras). Devolve quantas transações passaram a usar a categoria desta regra.
+ */
+async function applyRuleToExisting(tx: DbTx, rule: CategorizationRule): Promise<number> {
+  const rows = await tx
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      amountCents: transactions.amountCents,
+      description: transactions.description,
+      descriptionRaw: transactions.descriptionRaw,
+      merchantName: merchants.name,
+      categoryId: transactions.categoryId,
+      categorySource: transactions.categorySource,
+      kind: transactions.kind,
+      paymentMethod: transactions.paymentMethod,
+    })
+    .from(transactions)
+    .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
+    .where(
+      and(
+        isNull(transactions.deletedAt),
+        inArray(transactions.kind, ['expense', 'income', 'refund']),
+        notUserCategorized(),
+        rule.accountId ? eq(transactions.accountId, rule.accountId) : undefined,
+      ),
+    );
+
+  const candidates = rows.filter((r) => ruleMatches(rule, r));
+  if (candidates.length === 0) return 0;
+
+  const ids = candidates.map((c) => c.id);
+  await categorizeTransactions(tx, ids);
+
+  const after = await tx
+    .select({
+      id: transactions.id,
+      categoryId: transactions.categoryId,
+      categorySource: transactions.categorySource,
+      kind: transactions.kind,
+      paymentMethod: transactions.paymentMethod,
+    })
+    .from(transactions)
+    .where(inArray(transactions.id, ids));
+  const before = new Map(candidates.map((c) => [c.id, c]));
+
+  return after.filter((a) => {
+    const b = before.get(a.id)!;
+    const changed =
+      a.categoryId !== b.categoryId ||
+      a.categorySource !== b.categorySource ||
+      a.kind !== b.kind ||
+      a.paymentMethod !== b.paymentMethod;
+    return changed && a.categorySource === 'rule' && a.categoryId === rule.setCategoryId;
+  }).length;
 }
 
 const deleteRuleInput = z.object({

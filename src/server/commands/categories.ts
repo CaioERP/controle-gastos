@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { categories, transactions } from '@/server/db/schema';
@@ -148,29 +148,62 @@ const archiveCategoryInput = z.object({
   moveTransactionsTo: z.string().uuid().nullable(),
 });
 
+/**
+ * Arquiva a categoria (e as filhas, se for pai). Transações não excluídas na categoria ou nas filhas precisam de
+ * destino (`moveTransactionsTo`, da mesma natureza); sem destino e com transações → `CONFLICT`.
+ */
 export async function archiveCategory(
   db: Db,
   input: z.infer<typeof archiveCategoryInput>,
 ): Promise<void> {
   const { categoryId, moveTransactionsTo } = archiveCategoryInput.parse(input);
 
-  await db.transaction(async (tx) => {
-    const [cat] = await tx.select({ id: categories.id }).from(categories).where(eq(categories.id, categoryId));
-    if (!cat) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
+  try {
+    await db.transaction(async (tx) => {
+      const [cat] = await tx
+        .select({ id: categories.id, kind: categories.kind })
+        .from(categories)
+        .where(eq(categories.id, categoryId));
+      if (!cat) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
 
-    if (moveTransactionsTo) {
-      const [dest] = await tx
+      const children = await tx
         .select({ id: categories.id })
         .from(categories)
-        .where(eq(categories.id, moveTransactionsTo));
-      if (!dest) throw new CommandError('NOT_FOUND', 'Categoria de destino não encontrada');
+        .where(eq(categories.parentId, categoryId));
+      const ids = [categoryId, ...children.map((c) => c.id)];
 
-      await tx
-        .update(transactions)
-        .set({ categoryId: moveTransactionsTo })
-        .where(eq(transactions.categoryId, categoryId));
-    }
+      if (moveTransactionsTo) {
+        const [dest] = await tx
+          .select({ id: categories.id, kind: categories.kind, archived: categories.archived })
+          .from(categories)
+          .where(eq(categories.id, moveTransactionsTo));
+        if (!dest) throw new CommandError('NOT_FOUND', 'Categoria de destino não encontrada');
+        if (ids.includes(dest.id)) {
+          throw new CommandError('VALIDATION', 'O destino não pode ser a própria categoria nem uma subcategoria dela');
+        }
+        if (dest.archived) throw new CommandError('VALIDATION', 'A categoria de destino está arquivada');
+        if (dest.kind !== cat.kind) {
+          throw new CommandError('VALIDATION', 'A categoria de destino deve ter a mesma natureza');
+        }
 
-    await tx.update(categories).set({ archived: true }).where(eq(categories.id, categoryId));
-  });
+        await tx
+          .update(transactions)
+          .set({ categoryId: moveTransactionsTo })
+          .where(inArray(transactions.categoryId, ids));
+      } else {
+        const [inUse] = await tx
+          .select({ id: transactions.id })
+          .from(transactions)
+          .where(and(inArray(transactions.categoryId, ids), isNull(transactions.deletedAt)))
+          .limit(1);
+        if (inUse) {
+          throw new CommandError('CONFLICT', 'Categoria em uso: escolha para onde mover as transações');
+        }
+      }
+
+      await tx.update(categories).set({ archived: true }).where(inArray(categories.id, ids));
+    });
+  } catch (err) {
+    throw toCommandError(err);
+  }
 }
