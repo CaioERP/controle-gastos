@@ -9,5 +9,6 @@ export default defineConfig({
     exclude: ['tests/e2e/**', 'node_modules/**'],
     passWithNoTests: true,
     testTimeout: 30_000, // PGlite + migrations podem levar alguns segundos
+    hookTimeout: 60_000, // beforeAll cria banco em memória + dados fictícios; com a máquina carregada passa de 10 s
   },
 });
