@@ -2,26 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { eq, inArray } from 'drizzle-orm';
 import { createTestDb } from '../../../tests/helpers/db';
 import { seedBase } from '@/server/db/seed';
-import { accounts, categories, institutions, transactions } from '@/server/db/schema';
+import { accounts, categories, institutions, merchants, transactions } from '@/server/db/schema';
 import type { NewTransaction } from '@/server/domain/types';
-import { categorizeWithLlm, type LlmClassification, type LlmClient, type LlmItem } from './llm';
-import { maskForLlm } from './mask';
-
-describe('maskForLlm', () => {
-  it.each([
-    ['PIX ENVIADO - JOAO DA SILVA', 'PIX ENVIADO - [PESSOA]'],
-    ['PIX RECEBIDO MARIA SOUZA', 'PIX RECEBIDO - [PESSOA]'],
-    ['TED RECEBIDA FULANO DE TAL', 'TED RECEBIDA - [PESSOA]'],
-    ['IFD*IFOOD', 'IFD*IFOOD'],
-    // 11 dígitos sem pontuação têm formato de CPF: mascarados como documento
-    ['PAGTO 12345678901', 'PAGTO [DOC]'],
-    ['PEDIDO 1234567', 'PEDIDO [NUM]'],
-    ['BOLETO 123.456.789-09', 'BOLETO [DOC]'],
-    ['EMPRESA 12.345.678/0001-90', 'EMPRESA [DOC]'],
-  ])('%s → %s', (input, expected) => {
-    expect(maskForLlm(input)).toBe(expected);
-  });
-});
+import { recategorize } from '@/server/commands/transactions';
+import { categorizeTransactions } from './engine';
+import {
+  categorizeWithLlm,
+  createAnthropicLlmClient,
+  type LlmClassification,
+  type LlmClient,
+  type LlmItem,
+} from './llm';
 
 /** Cliente falso: devolve a categoria pedida para cada item e registra as chamadas. */
 function fakeClient(answer: (item: LlmItem) => Omit<LlmClassification, 'id'> | null) {
@@ -70,6 +61,116 @@ describe('categorizeWithLlm', () => {
     const t = await insertTx();
     expect(await categorizeWithLlm(db, [t.id], { client: null })).toEqual({ classified: 0, skipped: 1 });
     expect((await getTx(t.id)).categoryId).toBeNull();
+  });
+
+  it('sem cliente, de ponta a ponta pelo engine: fica sem categoria e com needsReview', async () => {
+    const { db, insertTx, getTx } = await setup();
+    const t = await insertTx();
+    const res = await categorizeTransactions(db, [t.id], { llm: (d, ids) => categorizeWithLlm(d, ids, { client: null }) });
+    expect(res.pending).toBe(1);
+    const after = await getTx(t.id);
+    expect(after.categoryId).toBeNull();
+    expect(after.needsReview).toBe(true);
+  });
+
+  it('payload sem CPF, sem nome de pessoa e sem o estabelecimento cru', async () => {
+    const { db, insertTx } = await setup();
+    const [mei] = await db.insert(merchants).values({ name: 'Joao da Silva 12345678901' }).returning();
+    const compra = await insertTx({ descriptionRaw: 'COMPRA LOJA DO JOAO', merchantId: mei!.id });
+    const pix = await insertTx({
+      descriptionRaw: 'Transferência enviada pelo Pix - MARIA SOUZA - •••.123.456-•• - NU PAGAMENTOS',
+      paymentMethod: 'pix',
+    });
+    const { client, calls } = fakeClient(() => null);
+
+    await categorizeWithLlm(db, [compra.id, pix.id], { client });
+    const sent = JSON.stringify(calls);
+    expect(sent).not.toContain('12345678901');
+    expect(sent).not.toContain('Joao da Silva');
+    expect(sent).not.toContain('MARIA');
+    expect(sent).not.toMatch(/\d{3}\.\d{3}/);
+    expect(calls[0]!.map((i) => i.merchant)).toContain('[PESSOA]');
+  });
+
+  it('Pix para pessoas diferentes não são agrupados num único item', async () => {
+    const { db, insertTx, catId, getTx } = await setup();
+    const aluguel = await insertTx({ descriptionRaw: 'PIX ENVIADO - JOAO DA SILVA', paymentMethod: 'pix', amountCents: -150000 });
+    const almoco = await insertTx({ descriptionRaw: 'PIX ENVIADO - MARIA SOUZA', paymentMethod: 'pix', amountCents: -3500 });
+    const { client, calls } = fakeClient((item) => ({
+      categorySlug: item.amountReais > 1000 ? 'moradia-aluguel' : 'alimentacao-restaurante',
+      confidence: 0.9,
+    }));
+
+    await categorizeWithLlm(db, [aluguel.id, almoco.id], { client });
+    expect(calls[0]!.length).toBe(2);
+    expect(calls[0]!.every((i) => i.description === 'PIX ENVIADO - [PESSOA]')).toBe(true);
+    expect((await getTx(aluguel.id)).categoryId).toBe(await catId('moradia-aluguel'));
+    expect((await getTx(almoco.id)).categoryId).toBe(await catId('alimentacao-restaurante'));
+  });
+
+  it('R9: se o usuário recategoriza durante a chamada da IA, a correção dele prevalece', async () => {
+    const { db, insertTx, catId, getTx } = await setup();
+    const t = await insertTx();
+    const minha = await catId('lazer-saidas');
+    const client: LlmClient = {
+      async classify({ items }) {
+        await recategorize(db, { transactionId: t.id, categoryId: minha, scope: 'this' });
+        return items.map((i) => ({ id: i.id, categorySlug: 'alimentacao-restaurante', confidence: 0.9 }));
+      },
+    };
+
+    expect(await categorizeWithLlm(db, [t.id], { client })).toEqual({ classified: 0, skipped: 1 });
+    const after = await getTx(t.id);
+    expect(after.categoryId).toBe(minha);
+    expect(after.categorySource).toBe('user');
+    expect(after.userEditedFields).toEqual(['category']);
+  });
+
+  it('id vazio ou que não é inteiro não negativo é rejeitado', async () => {
+    const { db, insertTx, getTx } = await setup();
+    const t = await insertTx();
+    const client: LlmClient = {
+      classify: async () => [
+        { id: '', categorySlug: 'alimentacao-restaurante', confidence: 0.9 },
+        { id: ' 0', categorySlug: 'alimentacao-restaurante', confidence: 0.9 },
+        { id: '0.0', categorySlug: 'alimentacao-restaurante', confidence: 0.9 },
+        { id: '-0', categorySlug: 'alimentacao-restaurante', confidence: 0.9 },
+      ],
+    };
+    expect(await categorizeWithLlm(db, [t.id], { client })).toEqual({ classified: 0, skipped: 1 });
+    expect((await getTx(t.id)).categoryId).toBeNull();
+  });
+
+  it('confiança fora de [0, 1] é limitada ao intervalo', async () => {
+    const { db, insertTx, getTx } = await setup();
+    const alta = await insertTx({ descriptionRaw: 'RESTAURANTE A' });
+    const baixa = await insertTx({ descriptionRaw: 'RESTAURANTE B' });
+    const { client } = fakeClient((item) => ({
+      categorySlug: 'alimentacao-restaurante',
+      confidence: item.description.endsWith('A') ? 1.7 : -0.3,
+    }));
+    await categorizeWithLlm(db, [alta.id, baixa.id], { client });
+    expect((await getTx(alta.id)).categoryConfidence).toBe(1);
+    const b = await getTx(baixa.id);
+    expect(b.categoryConfidence).toBe(0);
+    expect(b.needsReview).toBe(true);
+  });
+
+  it('sugestão da fonte só é trocada por resultado da IA com confiança >= 0,7', async () => {
+    const { db, insertTx, catId, getTx } = await setup();
+    const farmacia = await catId('saude-farmacia');
+    const fraca = await insertTx({ descriptionRaw: 'DROGARIA A', categoryId: farmacia, categorySource: 'provider', categoryConfidence: 0.7 });
+    const forte = await insertTx({ descriptionRaw: 'DROGARIA B', categoryId: farmacia, categorySource: 'provider', categoryConfidence: 0.7 });
+    const { client } = fakeClient((item) => ({
+      categorySlug: 'compras',
+      confidence: item.description.endsWith('A') ? 0.3 : 0.85,
+    }));
+
+    expect(await categorizeWithLlm(db, [fraca.id, forte.id], { client })).toEqual({ classified: 1, skipped: 1 });
+    expect((await getTx(fraca.id)).categorySource).toBe('provider');
+    const b = await getTx(forte.id);
+    expect(b.categorySource).toBe('llm');
+    expect(b.categoryId).toBe(await catId('compras'));
   });
 
   it('aplica categoria com origem llm; confiança < 0,8 vai para revisão', async () => {
@@ -165,6 +266,60 @@ describe('categorizeWithLlm', () => {
       await expect(categorizeWithLlm(db, [t.id], { client: failing })).resolves.toEqual({ classified: 0, skipped: 1 });
     } finally {
       spy.mockRestore();
+    }
+  });
+});
+
+describe('createAnthropicLlmClient (fetch simulado, sem rede)', () => {
+  const ITEMS: LlmItem[] = [
+    { id: '0', description: 'X', merchant: null, amountReais: 10, paymentMethod: 'pix', kind: 'expense', accountType: 'checking' },
+  ];
+
+  function stubResponse(text: string, stopReason: string) {
+    const body = {
+      id: 'msg_teste',
+      type: 'message',
+      role: 'assistant',
+      model: 'claude-haiku-5-5',
+      content: [{ type: 'text', text }],
+      stop_reason: stopReason,
+      stop_sequence: null,
+      usage: { input_tokens: 1, output_tokens: 1 },
+    };
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it.each([
+    ['JSON cortado em max_tokens', '{"results":[{"id":"0","category_slug":"PADARIA SEGREDO', 'max_tokens'],
+    ['recusa com texto', 'Não posso ajudar com PADARIA SEGREDO', 'refusal'],
+  ])('%s: devolve [] e registra só o tipo do erro', async (_caso, text, stopReason) => {
+    const fetchMock = stubResponse(text, stopReason);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const client = createAnthropicLlmClient('chave-de-teste');
+      await expect(client.classify({ system: 'sistema', items: ITEMS })).resolves.toEqual([]);
+      expect(fetchMock).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
+      expect(JSON.stringify(spy.mock.calls)).not.toContain('SEGREDO');
+    } finally {
+      spy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('resposta válida é convertida', async () => {
+    stubResponse('{"results":[{"id":"0","category_slug":"compras","confidence":0.9}]}', 'end_turn');
+    try {
+      const client = createAnthropicLlmClient('chave-de-teste');
+      await expect(client.classify({ system: 'sistema', items: ITEMS })).resolves.toEqual([
+        { id: '0', categorySlug: 'compras', confidence: 0.9 },
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 });
