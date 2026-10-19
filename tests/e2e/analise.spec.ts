@@ -20,6 +20,14 @@ test.describe('Análise', () => {
     await expect(crumbs).toContainText('Alimentação');
     await expect(page.getByRole('list', { name: 'Gastos por categoria' })).toContainText(/Delivery|Mercado|Restaurante|Padaria/);
 
+    // No detalhamento, a matriz também é por subcategoria: nenhuma célula aponta para o pai inteiro
+    const parentId = new URL(page.url()).searchParams.get('cat')!;
+    const cellHrefs = await page.getByTestId('crosstab').locator('a[data-cell]').evaluateAll((els) =>
+      els.map((e) => e.getAttribute('href') ?? '')
+    );
+    expect(cellHrefs.length).toBeGreaterThan(0);
+    for (const href of cellHrefs) expect(new URLSearchParams(href.split('?')[1]).get('cat')).not.toBe(parentId);
+
     // Subcategoria abre as transações filtradas por ela
     const sub = page.getByRole('list', { name: 'Gastos por categoria' }).getByRole('link').first();
     await expect(sub).toHaveAttribute('href', /\/transacoes\?.*cat=/);

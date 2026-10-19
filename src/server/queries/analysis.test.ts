@@ -19,6 +19,10 @@ import {
   parseAnalysisDim,
 } from './analysis';
 import { analysisHref } from '@/components/analysis/links';
+import { categoryTransactionsHref, crossTransactionsHref, parentCategoryIds } from '@/components/charts/links';
+import type { TxFilters } from '@/server/domain/filters';
+import { listCategories } from './catalog';
+import { categoryDimensionFor } from './stats';
 
 const fixtureOpts = { referenceDate: '2026-10-15', months: 6, seed: 42 };
 const SEP = { from: '2026-09-01', to: '2026-09-30', basis: 'accrual' as const };
@@ -99,13 +103,74 @@ describe('queries / analysis', () => {
       const href = analysisHref({ ...SEP, basis: 'cash' }, { categoryIds: [id] }, 'paymentMethod');
       const [path, qs] = href.split('?');
       expect(path).toBe('/analise');
-      const f = parseFilters(qs!, '2026-10-15');
+      // Data de referência dentro do período: não depende do mês em que o teste roda
+      // (serializeFilters omite `mes` quando ele é o mês corrente).
+      const f = parseFilters(qs!, '2026-09-15');
       expect(f.categoryIds).toEqual([id]);
       expect(f.from).toBe(SEP.from);
+      expect(f.to).toBe(SEP.to);
       expect(f.basis).toBe('cash');
       expect(new URLSearchParams(qs).get('dim')).toBe('paymentMethod');
-      // voltar para "Todas" remove cat; dim padrão não vai para a URL
-      expect(analysisHref({ ...SEP, categoryIds: [id] }, { categoryIds: undefined }, 'category')).toBe('/analise?mes=2026-09');
+
+      // voltar para "Todas" remove cat, mantém o período; dim padrão não vai para a URL
+      const back = analysisHref({ ...SEP, categoryIds: [id] }, { categoryIds: undefined }, 'category');
+      const [backPath, backQs = ''] = back.split('?');
+      expect(backPath).toBe('/analise');
+      const bf = parseFilters(backQs, '2026-09-15');
+      expect(bf.categoryIds).toBeUndefined();
+      expect([bf.from, bf.to]).toEqual([SEP.from, SEP.to]);
+      expect(new URLSearchParams(backQs).has('dim')).toBe(false);
+    });
+  });
+
+  describe('matriz: o link de cada célula lista exatamente o valor da célula', () => {
+    /** Mesma lógica da página: dimensão de categoria conforme `cat`, pais sem link no detalhamento. */
+    async function checkCells(f: TxFilters) {
+      const tree = await listCategories(db);
+      const dim = categoryDimensionFor(f);
+      const opts = dim === 'category' ? { parentIds: parentCategoryIds(tree) } : {};
+      const hm = buildHeatmap(await getCrossTab(db, f, dim, 'paymentMethod'));
+      let linked = 0;
+      for (const row of hm.rows) {
+        for (const cell of row.cells) {
+          if (cell.cents === 0) continue;
+          const href = crossTransactionsHref(f, row.key, cell.colKey, opts);
+          if (!href) continue;
+          linked++;
+          const target = parseFilters(href.split('?')[1] ?? '', '2026-09-15');
+          expect((await getSpendingSummary(db, target)).expenseCents, `${row.label} × ${cell.colKey}`).toBe(cell.cents);
+        }
+      }
+      return { hm, linked };
+    }
+
+    it('sem cat: linhas por categoria pai', async () => {
+      const { linked } = await checkCells(SEP);
+      expect(linked).toBeGreaterThan(3);
+    });
+
+    it('cat=<subcategoria>: linhas por categoria exata (não amplia para o pai)', async () => {
+      const [sub] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao-delivery'));
+      const f = { ...SEP, categoryIds: [sub!.id] };
+      const { hm, linked } = await checkCells(f);
+      expect(hm.rows.map((r) => r.key)).toEqual([sub!.id]);
+      expect(linked).toBeGreaterThan(0);
+    });
+
+    it('cat=<categoria pai> e várias subcategorias juntas', async () => {
+      const [alim] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+      await checkCells({ ...SEP, categoryIds: [alim!.id] });
+      const subs = await db.select().from(categories).where(eq(categories.parentId, alim!.id));
+      const { linked } = await checkCells({ ...SEP, from: '2026-05-01', categoryIds: subs.map((s) => s.id) });
+      expect(linked).toBeGreaterThan(1);
+    });
+
+    it('linha do próprio pai no detalhamento fica sem link', async () => {
+      const [alim] = await db.select().from(categories).where(eq(categories.slug, 'alimentacao'));
+      const tree = await listCategories(db);
+      const f = { ...SEP, categoryIds: [alim!.id] };
+      expect(crossTransactionsHref(f, alim!.id, 'pix', { parentIds: parentCategoryIds(tree) })).toBeNull();
+      expect(categoryTransactionsHref(f, alim!.id, { parentIds: parentCategoryIds(tree) })).toBeNull();
     });
   });
 
