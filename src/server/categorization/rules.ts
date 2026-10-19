@@ -66,16 +66,25 @@ export function ruleMatches(rule: MatchableRule, tx: RuleTx): boolean {
   return textMatches(rule, tx.description) || (!!tx.descriptionRaw && textMatches(rule, tx.descriptionRaw));
 }
 
-/** Ordem de desempate: prioridade maior → regra restrita a uma conta → padrão mais longo. */
+/**
+ * Ordem de desempate: prioridade maior → regra restrita a uma conta → padrão mais longo → `id`.
+ * O `id` é o último critério, estável, para o resultado não depender da ordem em que o banco devolve as regras.
+ */
 function compareRules(a: MatchableRule, b: MatchableRule): number {
   if (a.priority !== b.priority) return b.priority - a.priority;
   const aAccount = a.accountId ? 1 : 0;
   const bAccount = b.accountId ? 1 : 0;
   if (aAccount !== bAccount) return bAccount - aAccount;
-  return b.pattern.length - a.pattern.length;
+  if (a.pattern.length !== b.pattern.length) return b.pattern.length - a.pattern.length;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/** Cópia das regras na ordem de desempate. Ordene uma vez e reutilize ao avaliar muitas transações. */
+export function sortRules<R extends MatchableRule>(rules: readonly R[]): R[] {
+  return [...rules].sort(compareRules);
 }
 
 /** Primeira regra habilitada que casa, na ordem de desempate. */
 export function pickRule<R extends MatchableRule>(rules: readonly R[], tx: RuleTx): R | null {
-  return [...rules].sort(compareRules).find((r) => ruleMatches(r, tx)) ?? null;
+  return sortRules(rules).find((r) => ruleMatches(r, tx)) ?? null;
 }
