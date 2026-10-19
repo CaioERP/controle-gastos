@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseFilters, serializeFilters, withFilters } from './url-filters';
+import { mergeFilterParams, parseFilters, serializeFilters, withFilters } from './url-filters';
 import { defaultFilters, type TxFilters } from '@/server/domain/filters';
 
 const REF_DATE = '2026-10-15';
@@ -162,6 +162,102 @@ describe('url-filters', () => {
       expect(url2).toContain('/analise?');
       expect(url2).toContain('regime=caixa');
       expect(url2).toContain('q=uber');
+    });
+
+    it('preserva parâmetros da página presentes no href', () => {
+      const base = defaultFilters(REF_DATE);
+      const url = withFilters('/analise?dim=merchant&mes=2026-05', { basis: 'cash' }, base);
+      const sp = new URLSearchParams(url.split('?')[1]);
+      expect(sp.get('dim')).toBe('merchant');
+      expect(sp.get('mes')).toBe('2026-05');
+      expect(sp.get('regime')).toBe('caixa');
+    });
+  });
+
+  describe('mergeFilterParams', () => {
+    const merge = (search: string, patch: Partial<TxFilters>) =>
+      new URLSearchParams(mergeFilterParams(search, patch, undefined, REF_DATE));
+
+    it('mantém dim=parentCategory ao mudar o período', () => {
+      const sp = merge('dim=parentCategory&mes=2026-09', { from: '2026-08-01', to: '2026-08-31' });
+      expect(sp.get('dim')).toBe('parentCategory');
+      expect(sp.get('mes')).toBe('2026-08');
+    });
+
+    it('mantém cartao e fatura ao mudar o período', () => {
+      const sp = merge(`cartao=${UUID_1}&fatura=2026-10`, { from: '2026-07-01', to: '2026-07-31' });
+      expect(sp.get('cartao')).toBe(UUID_1);
+      expect(sp.get('fatura')).toBe('2026-10');
+      expect(sp.get('mes')).toBe('2026-07');
+    });
+
+    it('mantém aba e parâmetros repetidos desconhecidos ao mudar visão e regime', () => {
+      const sp = merge('aba=regras&x=1&x=2', { institutionIds: [UUID_1], basis: 'cash' });
+      expect(sp.get('aba')).toBe('regras');
+      expect(sp.getAll('x')).toEqual(['1', '2']);
+      expect(sp.get('inst')).toBe(UUID_1);
+      expect(sp.get('regime')).toBe('caixa');
+    });
+
+    it('substitui filtros existentes e remove os que o patch zera', () => {
+      const sp = merge(
+        `dim=merchant&mes=2026-05&de=2026-01-01&ate=2026-01-31&forma=pix&cat=${UUID_CAT}&regime=caixa&q=uber`,
+        { paymentMethods: ['debit_card'], categoryIds: undefined, search: undefined }
+      );
+      expect(sp.get('dim')).toBe('merchant');
+      expect(sp.get('mes')).toBe('2026-05');
+      expect(sp.has('de')).toBe(false);
+      expect(sp.has('ate')).toBe(false);
+      expect(sp.get('forma')).toBe('debit_card');
+      expect(sp.has('cat')).toBe(false);
+      expect(sp.has('q')).toBe(false);
+      expect(sp.get('regime')).toBe('caixa');
+    });
+
+    it('descarta parâmetros de filtro inválidos sem afetar os da página', () => {
+      const sp = merge('dim=tag&forma=xyz&inst=abc', { basis: 'cash' });
+      expect(sp.get('dim')).toBe('tag');
+      expect(sp.has('forma')).toBe(false);
+      expect(sp.has('inst')).toBe(false);
+    });
+
+    it('volta ao padrão omitindo o mês corrente e mantém o resto', () => {
+      const sp = merge('dim=kind&mes=2026-05', { from: '2026-10-01', to: '2026-10-31' });
+      expect(sp.has('mes')).toBe(false);
+      expect(sp.get('dim')).toBe('kind');
+    });
+  });
+
+  describe('validação de datas sem dependência de fuso', () => {
+    const accepts = (d: string) => parseFilters({ de: d, ate: d }, REF_DATE).from === d;
+
+    it('aceita datas válidas, inclusive 29/02 em ano bissexto', () => {
+      expect(accepts('2026-10-15')).toBe(true);
+      expect(accepts('2026-01-01')).toBe(true);
+      expect(accepts('2026-12-31')).toBe(true);
+      expect(accepts('2024-02-29')).toBe(true);
+    });
+
+    it('rejeita dias e meses inexistentes', () => {
+      expect(accepts('2026-02-30')).toBe(false);
+      expect(accepts('2026-02-29')).toBe(false);
+      expect(accepts('2026-13-01')).toBe(false);
+      expect(accepts('2026-00-10')).toBe(false);
+      expect(accepts('2026-04-31')).toBe(false);
+    });
+
+    it('aceita datas válidas num fuso a leste de UTC (UTC+9)', () => {
+      const originalTz = process.env.TZ;
+      process.env.TZ = 'Asia/Tokyo';
+      try {
+        expect(accepts('2026-10-15')).toBe(true);
+        expect(accepts('2024-02-29')).toBe(true);
+        expect(accepts('2026-02-30')).toBe(false);
+        expect(parseFilters({ mes: '2026-03' }, REF_DATE).from).toBe('2026-03-01');
+      } finally {
+        if (originalTz === undefined) delete process.env.TZ;
+        else process.env.TZ = originalTz;
+      }
     });
   });
 });
