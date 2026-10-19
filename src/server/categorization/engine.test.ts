@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { createTestDb } from '../../../tests/helpers/db';
 import { loadFixtures } from '../../../tests/fixtures/load';
 import { seedBase } from '@/server/db/seed';
@@ -14,7 +14,8 @@ import {
   transactionSources,
 } from '@/server/db/schema';
 import type { NewTransaction } from '@/server/domain/types';
-import { categorizeTransactions } from './engine';
+import { markReviewed } from '@/server/commands/transactions';
+import { categorizeTransactions, notUserCategorized } from './engine';
 
 async function setup() {
   const db = await createTestDb();
@@ -138,6 +139,21 @@ describe('categorizeTransactions', () => {
     expect((await getTx(t2.id)).categoryId).toBe(minha);
   });
 
+  it('R9: a guarda do UPDATE não deixa a escrita automática alcançar categoria do usuário', async () => {
+    const { db, catId, insertTx } = await setup();
+    const minha = await catId('lazer-saidas');
+    const livre = await insertTx();
+    const doUsuario = await insertTx({ categoryId: minha, categorySource: 'user' });
+    const editada = await insertTx({ categoryId: minha, categorySource: 'llm', userEditedFields: ['category'] });
+
+    const written = await db
+      .update(transactions)
+      .set({ categoryId: await catId('outros'), categorySource: 'rule' })
+      .where(and(inArray(transactions.id, [livre.id, doUsuario.id, editada.id]), notUserCategorized()))
+      .returning({ id: transactions.id });
+    expect(written.map((w) => w.id)).toEqual([livre.id]);
+  });
+
   it('categoria de receita nunca é aplicada em despesa', async () => {
     const { db, catId, insertTx, insertRule, getTx } = await setup();
     await insertRule('padaria', await catId('salario'));
@@ -162,6 +178,111 @@ describe('categorizeTransactions', () => {
 
     // Sem categorizador de IA, não lança erro
     await expect(categorizeTransactions(db, [semMatch.id])).resolves.toMatchObject({ pending: 1 });
+  });
+
+  it('aceitar a sugestão da fonte e reprocessar mantém a revisão concluída', async () => {
+    const { db, catId, insertTx, getTx } = await setup();
+    const farmacia = await catId('saude-farmacia');
+    await db.insert(providerCategoryMap).values({ provider: 'pluggy', providerCategoryId: 'c1', categoryId: farmacia });
+    const t = await insertTx({ description: 'Drogaria X', providerCategoryId: 'c1' });
+    await db.insert(transactionSources).values({ transactionId: t.id, source: 'pluggy', externalId: 'ext-c1' });
+
+    await categorizeTransactions(db, [t.id]);
+    expect((await getTx(t.id)).needsReview).toBe(true);
+
+    await markReviewed(db, { transactionIds: [t.id] });
+    const reviewed = await getTx(t.id);
+    expect(reviewed.needsReview).toBe(false);
+
+    const res = await categorizeTransactions(db, [t.id]);
+    expect(res.byProvider).toBe(1);
+    const after = await getTx(t.id);
+    expect(after.needsReview).toBe(false);
+    expect(after.categoryId).toBe(farmacia);
+    expect(after.categorySource).toBe('provider');
+    // Nada mudou → a linha não foi regravada
+    expect(after.updatedAt.getTime()).toBe(reviewed.updatedAt.getTime());
+  });
+
+  it('setKind da regra: a categoria é conferida com a natureza que a transação terá depois da regra', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    const compras = await catId('compras');
+    await insertRule('estorno', compras, { setKind: 'refund' });
+    const t = await insertTx({ amountCents: 5000, kind: 'income', description: 'Estorno Loja X', descriptionRaw: 'ESTORNO LOJA X' });
+
+    const res = await categorizeTransactions(db, [t.id]);
+    expect(res).toMatchObject({ byRule: 1, pending: 0 });
+    const after = await getTx(t.id);
+    expect(after.kind).toBe('refund');
+    expect(after.categoryId).toBe(compras);
+    expect(after.categorySource).toBe('rule');
+  });
+
+  it('setKind da regra: se o usuário editou a natureza, a checagem usa a natureza atual', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    await insertRule('estorno', await catId('compras'), { setKind: 'refund' });
+    const t = await insertTx({
+      amountCents: 5000,
+      kind: 'income',
+      description: 'Estorno Loja X',
+      userEditedFields: ['kind'],
+    });
+
+    const res = await categorizeTransactions(db, [t.id]);
+    expect(res).toMatchObject({ byRule: 0, pending: 1 });
+    const after = await getTx(t.id);
+    expect(after.kind).toBe('income');
+    expect(after.categoryId).toBeNull();
+  });
+
+  it('setKind da regra não se aplica a naturezas sem categoria (transferência)', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    await insertRule('aluguel', await catId('moradia-aluguel'), { setKind: 'expense' });
+    const t = await insertTx({ kind: 'transfer', description: 'Pix aluguel' });
+
+    await categorizeTransactions(db, [t.id]);
+    const after = await getTx(t.id);
+    expect(after.kind).toBe('transfer');
+    expect(after.categoryId).toBeNull();
+  });
+
+  it('regra apagada: a transação de origem rule volta para as camadas seguintes', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    const padaria = await catId('alimentacao-padaria-cafe');
+    const delivery = await catId('alimentacao-delivery');
+    const r = await insertRule('padaria', padaria);
+    const [loja] = await db.insert(merchants).values({ name: 'Padaria São João', defaultCategoryId: delivery }).returning();
+    const comMemoria = await insertTx({ merchantId: loja!.id });
+    const semMemoria = await insertTx();
+
+    await categorizeTransactions(db, [comMemoria.id, semMemoria.id]);
+    expect((await getTx(comMemoria.id)).categorySource).toBe('rule');
+
+    await db.delete(categorizationRules).where(eq(categorizationRules.id, r.id));
+    const res = await categorizeTransactions(db, [comMemoria.id, semMemoria.id]);
+    expect(res).toMatchObject({ byRule: 0, byMerchant: 1 });
+
+    const a = await getTx(comMemoria.id);
+    expect(a.categoryId).toBe(delivery);
+    expect(a.categorySource).toBe('merchant');
+    expect(a.categoryConfidence).toBe(0.95);
+    // Sem outra camada, mantém a categoria que já tinha (não volta a ficar sem categoria)
+    const b = await getTx(semMemoria.id);
+    expect(b.categoryId).toBe(padaria);
+    expect(b.categorySource).toBe('rule');
+  });
+
+  it('empate total entre regras: vence sempre a de menor id, qualquer que seja a ordem de criação', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    const padaria = await catId('alimentacao-padaria-cafe');
+    const restaurante = await catId('alimentacao-restaurante');
+    const r1 = await insertRule('padaria', padaria);
+    const r2 = await insertRule('padaria', restaurante);
+    const winner = r1.id < r2.id ? r1 : r2;
+    const t = await insertTx();
+
+    await categorizeTransactions(db, [t.id]);
+    expect((await getTx(t.id)).categoryId).toBe(winner.setCategoryId);
   });
 
   it('integração com os dados fictícios: regra "contém uber" categoriza todas as corridas', async () => {

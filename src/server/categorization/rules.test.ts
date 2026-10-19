@@ -86,6 +86,13 @@ describe('pickRule', () => {
     expect(pickRule([curta, longa], tx())?.id).toBe('longa');
   });
 
+  it('empate em prioridade, conta e tamanho do padrão: desempata pelo id, independente da ordem de entrada', () => {
+    const a = rule({ id: 'aaa', pattern: 'padaria' });
+    const b = rule({ id: 'bbb', pattern: 'padaria' });
+    expect(pickRule([a, b], tx())?.id).toBe('aaa');
+    expect(pickRule([b, a], tx())?.id).toBe('aaa');
+  });
+
   it('nenhuma regra casa → null', () => {
     expect(pickRule([rule({ pattern: 'mercado' })], tx())).toBeNull();
   });
