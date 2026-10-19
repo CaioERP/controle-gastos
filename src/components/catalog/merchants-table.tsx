@@ -23,13 +23,27 @@ export function MerchantsTable({ merchants, search, categoryGroups }: MerchantsT
   const pathname = usePathname();
   const [query, setQuery] = React.useState(search);
   const [editing, setEditing] = React.useState<MerchantRow | null>(null);
+  // Último valor que este campo mandou para a URL e o último `search` visto. O componente não é
+  // recriado a cada busca (o input perderia o foco); quando `search` muda por fora (voltar/avançar),
+  // o campo acompanha. O eco da própria digitação é ignorado para não apagar o que já foi digitado.
+  const [sent, setSent] = React.useState(search);
+  const [seenSearch, setSeenSearch] = React.useState(search);
+  if (search !== seenSearch) {
+    setSeenSearch(search);
+    if (search !== sent) {
+      setQuery(search);
+      setSent(search);
+    }
+  }
 
   // Busca na URL (q=), com atraso para não navegar a cada tecla
   React.useEffect(() => {
-    if (query.trim() === search) return;
+    const trimmed = query.trim();
+    if (trimmed === search) return;
     const handle = setTimeout(() => {
       const params = new URLSearchParams({ aba: 'estabelecimentos' });
-      if (query.trim()) params.set('q', query.trim());
+      if (trimmed) params.set('q', trimmed);
+      setSent(trimmed);
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, 300);
     return () => clearTimeout(handle);

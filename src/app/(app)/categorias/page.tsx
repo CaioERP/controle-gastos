@@ -46,7 +46,7 @@ export default async function CategoriasPage({ searchParams }: Props) {
       {tab === 'categorias' && <CategoryTree roots={categories} />}
       {tab === 'regras' && <RulesTable rules={rules} categoryGroups={categoryGroups} accounts={accounts} />}
       {tab === 'estabelecimentos' && (
-        <MerchantsTable key={search} merchants={merchants} search={search} categoryGroups={categoryGroups} />
+        <MerchantsTable merchants={merchants} search={search} categoryGroups={categoryGroups} />
       )}
     </div>
   );

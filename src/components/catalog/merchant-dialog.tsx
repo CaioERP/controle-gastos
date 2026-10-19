@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { updateMerchantAction } from '@/app/(app)/categorias/actions';
 import type { MerchantRow } from '@/server/queries/catalog';
 import type { CategoryOptionGroup } from './catalog-helpers';
-import { CategorySelect } from './form-controls';
+import { ArchivedCategoryHint, CategorySelect } from './form-controls';
 
 type MerchantDialogProps = {
   merchant: MerchantRow | null;
@@ -78,9 +78,11 @@ function MerchantForm({
           id="merchant-category"
           groups={categoryGroups}
           emptyLabel="Nenhuma"
+          currentLabel={merchant.defaultCategory?.name}
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
         />
+        <ArchivedCategoryHint groups={categoryGroups} value={categoryId} />
       </div>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone} disabled={isPending}>

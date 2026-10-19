@@ -29,7 +29,7 @@ test.describe('Tela de categorias, regras e estabelecimentos', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading')).toHaveText('Nova subcategoria em Alimentação');
     await dialog.getByLabel('Nome').fill(name);
-    await dialog.getByRole('radio', { name: 'coffee' }).click();
+    await dialog.getByRole('radio', { name: 'Café', exact: true }).click();
     await dialog.getByRole('button', { name: 'Salvar' }).click();
 
     await expect(page.getByText('Categoria criada')).toBeVisible();
@@ -130,6 +130,40 @@ test.describe('Tela de categorias, regras e estabelecimentos', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Salvar' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(row.getByRole('button', { name: 'Editar iFood', exact: true })).toBeVisible();
+  });
+
+  test('busca de estabelecimentos mantém o texto e o foco ao digitar com pausas', async ({ page }) => {
+    await page.goto('/categorias?aba=estabelecimentos');
+    const input = page.getByLabel('Buscar estabelecimento');
+
+    // Uma tecla por vez, com pausa maior que o atraso da busca (300 ms): cada pausa navega
+    await input.click();
+    await input.pressSequentially('if', { delay: 50 });
+    await expect(page).toHaveURL(/q=if(&|$)/);
+    await page.waitForTimeout(800);
+    await expect(input).toBeFocused();
+    await input.pressSequentially('ood', { delay: 600 });
+    await expect(page).toHaveURL(/q=ifood/);
+    await page.waitForTimeout(800);
+
+    await expect(input).toHaveValue('ifood');
+    await expect(input).toBeFocused();
+    await expect(page.getByTestId('merchant-row')).toHaveCount(1);
+
+    // De uma vez só
+    await input.fill('');
+    await expect(page).not.toHaveURL(/q=/);
+    await input.pressSequentially('ifood');
+    await expect(page).toHaveURL(/q=ifood/);
+    await page.waitForTimeout(800);
+    await expect(input).toHaveValue('ifood');
+    await expect(input).toBeFocused();
+
+    // Navegação de fora (aba sem q=) limpa o campo
+    await page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Estabelecimentos' }).click();
+    await expect(page).not.toHaveURL(/q=/);
+    await expect(input).toHaveValue('');
+    await expect(page.getByTestId('merchant-row')).not.toHaveCount(1);
   });
 
   test('funciona em 390 px nas três abas, sem rolagem horizontal', async ({ page }) => {

@@ -8,13 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { deleteRuleAction, upsertRuleAction } from '@/app/(app)/categorias/actions';
 import type { RuleInput } from '@/server/commands/rules';
-import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
-import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
 import type { RuleRow } from '@/server/queries/catalog';
-import { formatAmountInput, parseOptionalAmount, type CategoryOptionGroup } from './catalog-helpers';
-import { CategorySelect, NativeSelect } from './form-controls';
-
-export type AccountOption = { id: string; name: string };
+import { appliedMessage, parseOptionalAmount, type CategoryOptionGroup } from './catalog-helpers';
+import { ArchivedCategoryHint, CategorySelect, NativeSelect } from './form-controls';
+import {
+  hasOptionalValues,
+  initialOptionalValues,
+  RuleOptionalFields,
+  type AccountOption,
+  type RuleOptionalValues,
+} from './rule-optional-fields';
 
 /** `rule === undefined`: fechado; `null`: nova regra; RuleRow: edição. */
 type RuleDialogProps = {
@@ -23,28 +26,6 @@ type RuleDialogProps = {
   categoryGroups: CategoryOptionGroup[];
   accounts: AccountOption[];
 };
-
-export function appliedMessage(applied: number): string {
-  return `Regra salva · ${applied} ${applied === 1 ? 'transação recategorizada' : 'transações recategorizadas'}`;
-}
-
-/** Linha da tabela → entrada do comando (usada também pelo switch "ativa"). */
-export function ruleToInput(rule: RuleRow): RuleInput {
-  return {
-    id: rule.id,
-    priority: rule.priority,
-    matchField: rule.matchField,
-    matchType: rule.matchType,
-    pattern: rule.pattern,
-    accountId: rule.accountId,
-    amountMinCents: rule.amountMinCents,
-    amountMaxCents: rule.amountMaxCents,
-    setCategoryId: rule.setCategoryId,
-    setKind: rule.setKind,
-    setPaymentMethod: rule.setPaymentMethod,
-    enabled: rule.enabled,
-  };
-}
 
 export function RuleDialog({ rule, onClose, categoryGroups, accounts }: RuleDialogProps) {
   return (
@@ -66,55 +47,47 @@ export function RuleDialog({ rule, onClose, categoryGroups, accounts }: RuleDial
 
 type RuleFormProps = Omit<RuleDialogProps, 'rule' | 'onClose'> & { rule: RuleRow | null; onDone: () => void };
 
+/** Valida os textos do formulário e monta a entrada do comando; devolve a mensagem de erro, se houver. */
+function buildInput(
+  rule: RuleRow | null,
+  base: Pick<RuleInput, 'matchField' | 'matchType' | 'pattern' | 'setCategoryId'>,
+  opt: RuleOptionalValues,
+): RuleInput | string {
+  const min = parseOptionalAmount(opt.amountMin);
+  const max = parseOptionalAmount(opt.amountMax);
+  const priority = Number(opt.priority);
+  if (!base.pattern.trim()) return 'Informe o texto da condição';
+  if (!base.setCategoryId) return 'Escolha a categoria';
+  if (min === undefined || max === undefined) return 'Valor inválido. Use o formato 1.234,56';
+  if (min !== null && max !== null && min > max) return 'O valor mínimo deve ser menor ou igual ao máximo';
+  if (!Number.isInteger(priority)) return 'A prioridade deve ser um número inteiro';
+  return {
+    ...base,
+    id: rule?.id,
+    pattern: base.pattern.trim(),
+    priority,
+    accountId: opt.accountId || null,
+    amountMinCents: min,
+    amountMaxCents: max,
+    setKind: opt.setKind || null,
+    setPaymentMethod: opt.setPayment || null,
+    enabled: rule?.enabled ?? true,
+  };
+}
+
 function RuleForm({ rule, categoryGroups, accounts, onDone }: RuleFormProps) {
   const [matchField, setMatchField] = React.useState<RuleInput['matchField']>(rule?.matchField ?? 'description');
   const [matchType, setMatchType] = React.useState<RuleInput['matchType']>(rule?.matchType ?? 'contains');
   const [pattern, setPattern] = React.useState(rule?.pattern ?? '');
-  const [accountId, setAccountId] = React.useState(rule?.accountId ?? '');
-  const [amountMin, setAmountMin] = React.useState(formatAmountInput(rule?.amountMinCents ?? null));
-  const [amountMax, setAmountMax] = React.useState(formatAmountInput(rule?.amountMaxCents ?? null));
   const [categoryId, setCategoryId] = React.useState(rule?.setCategoryId ?? '');
-  const [setKind, setSetKind] = React.useState<TxKind | ''>(rule?.setKind ?? '');
-  const [setPayment, setSetPayment] = React.useState<PaymentMethod | ''>(rule?.setPaymentMethod ?? '');
-  const [priority, setPriority] = React.useState(String(rule?.priority ?? 0));
+  const [opt, setOpt] = React.useState(() => initialOptionalValues(rule));
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
-  const hasOptional =
-    rule !== null &&
-    (rule.accountId !== null ||
-      rule.amountMinCents !== null ||
-      rule.amountMaxCents !== null ||
-      rule.setKind !== null ||
-      rule.setPaymentMethod !== null ||
-      rule.priority !== 0);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const min = parseOptionalAmount(amountMin);
-    const max = parseOptionalAmount(amountMax);
-    const prio = Number(priority);
-    if (!pattern.trim()) return void toast.error('Informe o texto da condição');
-    if (!categoryId) return void toast.error('Escolha a categoria');
-    if (min === undefined || max === undefined) return void toast.error('Valor inválido. Use o formato 10,50');
-    if (min !== null && max !== null && min > max) {
-      return void toast.error('O valor mínimo deve ser menor ou igual ao máximo');
-    }
-    if (!Number.isInteger(prio)) return void toast.error('A prioridade deve ser um número inteiro');
-
-    const input: RuleInput = {
-      id: rule?.id,
-      priority: prio,
-      matchField,
-      matchType,
-      pattern: pattern.trim(),
-      accountId: accountId || null,
-      amountMinCents: min,
-      amountMaxCents: max,
-      setCategoryId: categoryId,
-      setKind: setKind || null,
-      setPaymentMethod: setPayment || null,
-      enabled: rule?.enabled ?? true,
-    };
+    const input = buildInput(rule, { matchField, matchType, pattern, setCategoryId: categoryId }, opt);
+    if (typeof input === 'string') return void toast.error(input);
     startTransition(async () => {
       const res = await upsertRuleAction(input);
       if (res.ok) {
@@ -212,77 +185,19 @@ function RuleForm({ rule, categoryGroups, accounts, onDone }: RuleFormProps) {
           id="rule-category"
           groups={categoryGroups}
           emptyLabel="Escolha a categoria"
+          currentLabel={rule?.categoryName}
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
         />
+        <ArchivedCategoryHint groups={categoryGroups} value={categoryId} />
       </div>
 
-      <details className="rounded-lg border p-3" open={hasOptional}>
-        <summary className="cursor-pointer text-sm font-medium">Condições e ajustes opcionais</summary>
-        <div className="mt-3 grid gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="rule-account">Só na conta</Label>
-            <NativeSelect id="rule-account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              <option value="">Qualquer conta</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="rule-min">Valor mínimo (R$)</Label>
-              <Input id="rule-min" inputMode="decimal" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} placeholder="10,00" />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="rule-max">Valor máximo (R$)</Label>
-              <Input id="rule-max" inputMode="decimal" value={amountMax} onChange={(e) => setAmountMax(e.target.value)} placeholder="50,00" />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label htmlFor="rule-kind">Natureza</Label>
-              <NativeSelect id="rule-kind" value={setKind} onChange={(e) => setSetKind(e.target.value as TxKind | '')}>
-                <option value="">Não alterar</option>
-                {TX_KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {KIND_LABELS[k]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="rule-payment">Forma de pagamento</Label>
-              <NativeSelect
-                id="rule-payment"
-                value={setPayment}
-                onChange={(e) => setSetPayment(e.target.value as PaymentMethod | '')}
-              >
-                <option value="">Não alterar</option>
-                {PAYMENT_METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {PAYMENT_METHOD_LABELS[m]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="rule-priority">Prioridade</Label>
-            <Input
-              id="rule-priority"
-              type="number"
-              step={1}
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              className="w-28"
-            />
-            <p className="text-xs text-muted-foreground">Quando duas regras casam, vence a de maior prioridade.</p>
-          </div>
-        </div>
-      </details>
+      <RuleOptionalFields
+        value={opt}
+        onChange={(patch) => setOpt((o) => ({ ...o, ...patch }))}
+        accounts={accounts}
+        defaultOpen={hasOptionalValues(rule)}
+      />
 
       <DialogFooter className="sm:justify-between">
         {rule ? (

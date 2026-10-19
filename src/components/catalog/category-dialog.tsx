@@ -47,7 +47,9 @@ function formKey(mode: CategoryDialogMode): string {
 function CategoryForm({ mode, roots, onDone }: { mode: CategoryDialogMode; roots: CategoryTree[]; onDone: () => void }) {
   const editing = mode.type === 'edit' ? mode.category : null;
   const fixedParent = mode.type === 'create' ? mode.parent : null;
-  const hasChildren = (editing?.children.length ?? 0) > 0;
+  // Usa o nó original de `roots` (a coluna mostra só filhas ativas): filha arquivada também impede
+  // virar subcategoria, e o comando rejeitaria
+  const hasChildren = editing !== null && (roots.find((r) => r.id === editing.id)?.children.length ?? 0) > 0;
 
   const [name, setName] = React.useState(editing?.name ?? '');
   const [kind, setKind] = React.useState<CategoryKind>(editing?.kind ?? (mode.type === 'create' ? mode.kind : 'expense'));
@@ -137,7 +139,9 @@ function CategoryForm({ mode, roots, onDone }: { mode: CategoryDialogMode; roots
           ))}
         </NativeSelect>
         {hasChildren && (
-          <p className="text-xs text-muted-foreground">Categoria com subcategorias não pode virar subcategoria.</p>
+          <p className="text-xs text-muted-foreground">
+            Categoria com subcategorias (inclusive arquivadas) não pode virar subcategoria.
+          </p>
         )}
       </div>
 

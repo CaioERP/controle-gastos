@@ -1,3 +1,4 @@
+import type { RuleInput } from '@/server/commands/rules';
 import type { CategoryKind } from '@/server/domain/enums';
 import { formatBRL, toCents } from '@/server/domain/money';
 import type { CategoryTree, RuleRow } from '@/server/queries/catalog';
@@ -48,6 +49,11 @@ export function categoryOptionGroups(roots: CategoryTree[], kind?: CategoryKind)
     }));
 }
 
+/** true se o id está entre as opções ativas (raiz ou filha). Vazio conta como presente. */
+export function hasCategoryOption(groups: CategoryOptionGroup[], id: string): boolean {
+  return id === '' || groups.some((g) => g.root.id === id || g.children.some((c) => c.id === id));
+}
+
 const MATCH_LABELS: Record<RuleRow['matchType'], string> = {
   contains: 'contém',
   starts_with: 'começa com',
@@ -81,14 +87,39 @@ export function describeRule(
  * Vazio → null. Inválido ou negativo → undefined (o formulário mostra o erro).
  */
 export function parseOptionalAmount(text: string): number | null | undefined {
-  const trimmed = text.trim();
+  const trimmed = text.trim().replace(/R\$|\s/g, '');
   if (trimmed === '') return null;
+  // pt-BR: ponto sem vírgula seguido de grupos de 3 dígitos é separador de milhar ("1.000" = mil reais).
+  // toCents (domínio) leria como decimal, então os pontos saem antes.
+  const normalized = /^\d{1,3}(\.\d{3})+$/.test(trimmed) ? trimmed.replace(/\./g, '') : trimmed;
   try {
-    const cents = toCents(trimmed);
+    const cents = toCents(normalized);
     return cents >= 0 ? cents : undefined;
   } catch {
     return undefined;
   }
+}
+
+export function appliedMessage(applied: number): string {
+  return `Regra salva · ${applied} ${applied === 1 ? 'transação recategorizada' : 'transações recategorizadas'}`;
+}
+
+/** Linha da tabela → entrada do comando (usada pelo switch "ativa"). */
+export function ruleToInput(rule: RuleRow): RuleInput {
+  return {
+    id: rule.id,
+    priority: rule.priority,
+    matchField: rule.matchField,
+    matchType: rule.matchType,
+    pattern: rule.pattern,
+    accountId: rule.accountId,
+    amountMinCents: rule.amountMinCents,
+    amountMaxCents: rule.amountMaxCents,
+    setCategoryId: rule.setCategoryId,
+    setKind: rule.setKind,
+    setPaymentMethod: rule.setPaymentMethod,
+    enabled: rule.enabled,
+  };
 }
 
 /** Centavos → texto editável no formulário ("1234,56"); null → "". */

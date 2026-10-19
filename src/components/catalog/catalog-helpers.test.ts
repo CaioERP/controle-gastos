@@ -6,9 +6,11 @@ import type { Db } from '@/server/db/client';
 import { archiveCategory, upsertCategory } from '@/server/commands';
 import { listCategories } from '@/server/queries/catalog';
 import {
+  appliedMessage,
   categoryOptionGroups,
   describeRule,
   formatAmountInput,
+  hasCategoryOption,
   parentOptions,
   parseOptionalAmount,
   splitCategories,
@@ -53,7 +55,12 @@ describe('catalog-helpers (árvore real do seed)', () => {
     split = splitCategories(await listCategories(db));
     expect(split.expense.find((r) => r.id === alimentacao.id)!.children.map((c) => c.id)).not.toContain(id);
     expect(split.archived).toEqual([expect.objectContaining({ id, parentName: 'Alimentação', parentArchived: false })]);
-    expect(categoryOptionGroups(await listCategories(db)).flatMap((g) => g.children.map((c) => c.id))).not.toContain(id);
+    const groupsAfter = categoryOptionGroups(await listCategories(db));
+    expect(groupsAfter.flatMap((g) => g.children.map((c) => c.id))).not.toContain(id);
+    // Regra/estabelecimento apontando para a arquivada: o select precisa da opção extra "(arquivada)"
+    expect(hasCategoryOption(groupsAfter, id)).toBe(false);
+    expect(hasCategoryOption(groupsAfter, alimentacao.id)).toBe(true);
+    expect(hasCategoryOption(groupsAfter, '')).toBe(true);
   });
 
   it('opções de pai: só raízes ativas do mesmo kind, sem a própria categoria', async () => {
@@ -99,7 +106,22 @@ describe('catalog-helpers (funções puras)', () => {
     expect(parseOptionalAmount('1.234,56')).toBe(123456);
     expect(parseOptionalAmount('abc')).toBeUndefined();
     expect(parseOptionalAmount('-5')).toBeUndefined();
+    // Milhar em pt-BR sem vírgula
+    expect(parseOptionalAmount('1.000')).toBe(100000);
+    expect(parseOptionalAmount('1.234')).toBe(123400);
+    expect(parseOptionalAmount('12.345.678')).toBe(1234567800);
+    expect(parseOptionalAmount('R$ 1.000')).toBe(100000);
+    expect(parseOptionalAmount('1.000,50')).toBe(100050);
+    // Ponto que não é milhar continua decimal
+    expect(parseOptionalAmount('10.5')).toBe(1050);
+    expect(parseOptionalAmount('1.50')).toBe(150);
     expect(formatAmountInput(123456)).toBe('1234,56');
     expect(formatAmountInput(null)).toBe('');
+  });
+
+  it('mensagem de regra salva com a contagem no singular e no plural', () => {
+    expect(appliedMessage(0)).toBe('Regra salva · 0 transações recategorizadas');
+    expect(appliedMessage(1)).toBe('Regra salva · 1 transação recategorizada');
+    expect(appliedMessage(12)).toBe('Regra salva · 12 transações recategorizadas');
   });
 });

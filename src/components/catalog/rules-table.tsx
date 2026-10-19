@@ -9,8 +9,9 @@ import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/states/empty-state';
 import { upsertRuleAction } from '@/app/(app)/categorias/actions';
 import type { RuleRow } from '@/server/queries/catalog';
-import { describeRule, type CategoryOptionGroup } from './catalog-helpers';
-import { RuleDialog, ruleToInput, type AccountOption } from './rule-dialog';
+import { describeRule, ruleToInput, type CategoryOptionGroup } from './catalog-helpers';
+import { RuleDialog } from './rule-dialog';
+import type { AccountOption } from './rule-optional-fields';
 
 type RulesTableProps = {
   rules: RuleRow[];
