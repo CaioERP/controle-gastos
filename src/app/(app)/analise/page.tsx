@@ -12,17 +12,22 @@ import {
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories, listTags, type CategoryTree } from '@/server/queries/catalog';
 import { getCrossTab } from '@/server/queries/crosstab';
-import { trailingMonthsRange } from '@/server/queries/dashboard';
 import { getMonthlySeries } from '@/server/queries/monthly';
+import { previousPeriodLabel } from '@/server/queries/period-label';
+import { categoryDimensionFor, trailingMonthsRange } from '@/server/queries/stats';
 import { getSpendingSummary, previousRange } from '@/server/queries/summary';
 import { parseFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
-import { categoryTransactionsHref, isFilterableId, paymentMethodTransactionsHref } from '@/components/charts/links';
+import {
+  categoryTransactionsHref,
+  isFilterableId,
+  parentCategoryIds,
+  paymentMethodTransactionsHref,
+} from '@/components/charts/links';
 import { monthlyChartData } from '@/components/charts/monthly-data';
 import { paymentMethodColor, seriesColor } from '@/components/charts/palette';
-import { previousPeriodLabel } from '@/components/charts/period-label';
 import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
 import { BreakdownBars } from '@/components/analysis/breakdown-bars';
 import { CrosstabTable } from '@/components/analysis/crosstab-table';
@@ -50,8 +55,10 @@ export default async function AnalisePage({ searchParams }: Props) {
   const params = await searchParams;
   const filters = parseFilters(params);
   const dim = parseAnalysisDim(params.dim);
-  const drilled = (filters.categoryIds?.length ?? 0) > 0;
-  const catDim = drilled ? 'category' : 'parentCategory';
+  // Com `cat` na URL, todas as quebras por categoria (barras, matriz, comparação) usam a categoria
+  // exata, para que nenhum link amplie o filtro além do valor clicado.
+  const catDim = categoryDimensionFor(filters);
+  const drilled = catDim === 'category';
   const prev = previousRange(filters.from, filters.to);
   const db = getDb();
 
@@ -63,7 +70,7 @@ export default async function AnalisePage({ searchParams }: Props) {
       getSpendingSummary(db, filters),
       getBreakdown(db, filters, 'paymentMethod'),
       getBreakdown(db, filters, catDim),
-      getCrossTab(db, filters, 'parentCategory', 'paymentMethod'),
+      getCrossTab(db, filters, catDim, 'paymentMethod'),
       getMonthlySeries(db, { ...filters, ...trailingMonthsRange(filters, 12) }, analysisDimToDimension(dim), { top: 6 }),
       getBreakdown(db, filters, 'merchant'),
       getBreakdown(db, { ...filters, from: prev.from, to: prev.to }, catDim),
@@ -75,6 +82,7 @@ export default async function AnalisePage({ searchParams }: Props) {
   const comparison = comparePeriods(byCategory, previousByCategory);
   const prevLabel = previousPeriodLabel(filters);
   const path = filters.categoryIds?.length === 1 ? categoryPath(categories, filters.categoryIds[0]!) : [];
+  const linkOpts = drilled ? { parentIds: parentCategoryIds(categories) } : {};
 
   return (
     <div className="space-y-6">
@@ -138,7 +146,7 @@ export default async function AnalisePage({ searchParams }: Props) {
                     !isFilterableId(i.key)
                       ? null
                       : drilled
-                        ? categoryTransactionsHref(filters, i.key)
+                        ? categoryTransactionsHref(filters, i.key, linkOpts)
                         : analysisHref(filters, { categoryIds: [i.key] }, dim)
                   }
                 />
@@ -152,7 +160,7 @@ export default async function AnalisePage({ searchParams }: Props) {
             title="Categoria × forma de pagamento"
             description="Intensidade da cor proporcional ao valor. Clique numa célula para ver as transações."
           >
-            {heatmap.rows.length > 0 ? <CrosstabTable heatmap={heatmap} filters={filters} /> : <SectionEmpty />}
+            {heatmap.rows.length > 0 ? <CrosstabTable heatmap={heatmap} filters={filters} linkOptions={linkOpts} /> : <SectionEmpty />}
           </SectionCard>
 
           <SectionCard

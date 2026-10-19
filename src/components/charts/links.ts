@@ -14,9 +14,24 @@ export function isPaymentMethod(key: string): key is PaymentMethod {
   return (PAYMENT_METHODS as readonly string[]).includes(key);
 }
 
+/**
+ * `parentIds`: informe ao quebrar por categoria EXATA ('category'). Um id de categoria pai no filtro
+ * inclui as filhas, então a linha "transações lançadas direto no pai" não tem link que reproduza
+ * só o seu valor e fica sem link.
+ */
+export type CategoryLinkOptions = { parentIds?: ReadonlySet<string> };
+
+function categoryLinkable(categoryId: string, opts: CategoryLinkOptions): boolean {
+  return isFilterableId(categoryId) && !opts.parentIds?.has(categoryId);
+}
+
 /** Link para /transacoes mantendo período, visão e regime atuais, filtrando pela categoria. */
-export function categoryTransactionsHref(current: TxFilters, categoryId: string): string | null {
-  if (!isFilterableId(categoryId)) return null;
+export function categoryTransactionsHref(
+  current: TxFilters,
+  categoryId: string,
+  opts: CategoryLinkOptions = {}
+): string | null {
+  if (!categoryLinkable(categoryId, opts)) return null;
   return withFilters('/transacoes', { categoryIds: [categoryId] }, current);
 }
 
@@ -27,7 +42,17 @@ export function paymentMethodTransactionsHref(current: TxFilters, method: string
 }
 
 /** Link para /transacoes filtrando por categoria e forma de pagamento (célula da matriz). */
-export function crossTransactionsHref(current: TxFilters, categoryId: string, method: string): string | null {
-  if (!isFilterableId(categoryId) || !isPaymentMethod(method)) return null;
+export function crossTransactionsHref(
+  current: TxFilters,
+  categoryId: string,
+  method: string,
+  opts: CategoryLinkOptions = {}
+): string | null {
+  if (!categoryLinkable(categoryId, opts) || !isPaymentMethod(method)) return null;
   return withFilters('/transacoes', { categoryIds: [categoryId], paymentMethods: [method] }, current);
+}
+
+/** Ids das categorias que têm filhas (para `CategoryLinkOptions.parentIds`). */
+export function parentCategoryIds(tree: ReadonlyArray<{ id: string; children: ReadonlyArray<unknown> }>): Set<string> {
+  return new Set(tree.filter((c) => c.children.length > 0).map((c) => c.id));
 }

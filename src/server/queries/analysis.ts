@@ -1,7 +1,9 @@
+// Funções puras da tela de análise. Este módulo NÃO pode importar '@/server/db' nem consultas
+// (só `import type`): componentes importam daqui (ex.: dimension-select).
 import type { Dimension } from '@/server/domain/filters';
 import type { BreakdownItem } from './breakdown';
 import type { CrossTabResult } from './crosstab';
-import { percentChange } from './dashboard';
+import { percentChange } from './stats';
 
 /** Dimensões aceitas no seletor da evolução mensal (`dim` na URL). */
 export const ANALYSIS_DIMS = ['category', 'paymentMethod', 'institution', 'account'] as const;

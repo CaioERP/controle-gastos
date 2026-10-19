@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Money } from '@/components/format/money';
-import { crossTransactionsHref } from '@/components/charts/links';
+import { crossTransactionsHref, type CategoryLinkOptions } from '@/components/charts/links';
 import { formatBRL } from '@/server/domain/money';
 import type { TxFilters } from '@/server/domain/filters';
 import type { Heatmap } from '@/server/queries/analysis';
@@ -14,10 +14,10 @@ function heatBackground(intensity: number): string | undefined {
   return `color-mix(in srgb, ${HEAT_COLOR} ${Math.round(8 + intensity * 67)}%, transparent)`;
 }
 
-type CrosstabTableProps = { heatmap: Heatmap; filters: TxFilters };
+type CrosstabTableProps = { heatmap: Heatmap; filters: TxFilters; linkOptions?: CategoryLinkOptions };
 
 /** Matriz categoria × forma de pagamento com totais; clique na célula abre /transacoes filtrada. */
-export function CrosstabTable({ heatmap, filters }: CrosstabTableProps) {
+export function CrosstabTable({ heatmap, filters, linkOptions = {} }: CrosstabTableProps) {
   const { rows, cols, grandTotalCents } = heatmap;
   return (
     <div className="-mx-4 overflow-x-auto px-4" data-testid="crosstab">
@@ -48,7 +48,7 @@ export function CrosstabTable({ heatmap, filters }: CrosstabTableProps) {
                 </span>
               </th>
               {r.cells.map((cell) => {
-                const href = cell.cents !== 0 ? crossTransactionsHref(filters, r.key, cell.colKey) : null;
+                const href = cell.cents !== 0 ? crossTransactionsHref(filters, r.key, cell.colKey, linkOptions) : null;
                 const colLabel = cols.find((c) => c.key === cell.colKey)?.label ?? cell.colKey;
                 const content = cell.cents !== 0 ? <Money cents={cell.cents} className="font-normal" /> : <span className="text-muted-foreground/50">—</span>;
                 return (
