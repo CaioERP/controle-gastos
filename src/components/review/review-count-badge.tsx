@@ -8,7 +8,7 @@ export function ReviewCountBadge({ count, className }: { count: number; classNam
     <span
       data-slot="review-count-badge"
       className={cn(
-        'ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold tabular-nums text-white',
+        'ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold tabular-nums text-amber-950',
         className,
       )}
     >

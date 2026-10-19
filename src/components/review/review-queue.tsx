@@ -17,8 +17,11 @@ import {
   recategorizeAction,
   setKindAndReviewAction,
 } from '@/app/(app)/revisao/actions';
+import { BulkConfirm } from './bulk-confirm';
 import { QuickCategories } from './quick-categories';
 import { hasSuggestion, ReviewCard } from './review-card';
+import { ShortcutLegend } from './shortcut-legend';
+import { useReviewShortcuts } from './use-review-shortcuts';
 
 type ReviewQueueProps = {
   initialItems: TransactionRow[];
@@ -30,14 +33,15 @@ type ReviewQueueProps = {
 };
 
 const LEAVE_MS = 200;
-const BULK_MIN_CONFIDENCE = 0.7;
 
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function isTypingTarget(el: HTMLElement): boolean {
-  return Boolean(el.closest('input, textarea, select, [contenteditable="true"]'));
+function without(set: ReadonlySet<string>, id: string): ReadonlySet<string> {
+  const next = new Set(set);
+  next.delete(id);
+  return next;
 }
 
 export function ReviewQueue({ initialItems, initialCursor, count, categories, quick, bulk }: ReviewQueueProps) {
@@ -48,7 +52,7 @@ export function ReviewQueue({ initialItems, initialCursor, count, categories, qu
   const [leaving, setLeaving] = React.useState<ReadonlySet<string>>(new Set());
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [pickerFor, setPickerFor] = React.useState<string | null>(null);
-  const [bulkProgress, setBulkProgress] = React.useState<{ current: number; total: number } | null>(null);
+  const [bulkRunning, setBulkRunning] = React.useState(false);
   const [loadingMore, startLoadMore] = React.useTransition();
   const [, startAction] = React.useTransition();
   const cardRefs = React.useRef(new Map<string, HTMLElement>());
@@ -89,6 +93,7 @@ export function ReviewQueue({ initialItems, initialCursor, count, categories, qu
     }
   }, [activeKey]);
 
+  /** Tira o card da fila (com animação) enquanto a action roda; se falhar, ele volta. */
   const resolve = React.useCallback(
     (tx: TransactionRow, run: () => Promise<ActionResult<{ updated: number }>>, message: string) => {
       setLeaving((s) => new Set(s).add(tx.id));
@@ -96,21 +101,13 @@ export function ReviewQueue({ initialItems, initialCursor, count, categories, qu
       startAction(async () => {
         const [res] = await Promise.all([run(), delay(LEAVE_MS)]);
         if (!res.ok) {
-          setLeaving((s) => {
-            const n = new Set(s);
-            n.delete(tx.id);
-            return n;
-          });
+          setLeaving((s) => without(s, tx.id));
           toast.error(res.error.message);
           return;
         }
         startAction(() => {
           setDone((s) => new Set(s).add(tx.id));
-          setLeaving((s) => {
-            const n = new Set(s);
-            n.delete(tx.id);
-            return n;
-          });
+          setLeaving((s) => without(s, tx.id));
         });
         toast.success(message);
       });
@@ -151,83 +148,39 @@ export function ReviewQueue({ initialItems, initialCursor, count, categories, qu
   );
 
   const markReviewed = React.useCallback(
-    (tx: TransactionRow) =>
-      resolve(tx, () => markReviewedAction({ transactionIds: [tx.id] }), 'Transação revisada'),
+    (tx: TransactionRow) => resolve(tx, () => markReviewedAction({ transactionIds: [tx.id] }), 'Transação revisada'),
     [resolve],
   );
 
   const skip = React.useCallback((tx: TransactionRow) => setActiveId(nextAfter(tx.id)), [nextAfter]);
+  const openPicker = React.useCallback((tx: TransactionRow) => setPickerFor(tx.id), []);
+  const markTransfer = React.useCallback((tx: TransactionRow) => setKind(tx, 'transfer'), [setKind]);
 
   const quickAllowed = active ? categoryKindFor(active.kind) === 'expense' : false;
+  // Categoria rápida vale só para a transação atual: uma tecla nunca altera outras sem o usuário ver.
   const pickQuick = React.useCallback(
     (cat: FlatCategory) => {
       if (!active || categoryKindFor(active.kind) !== 'expense') return;
-      // Com estabelecimento, vale para as transações dele (mesmo padrão do diálogo de B1-05).
-      pick(active, cat, active.merchant ? 'similar' : 'this');
+      pick(active, cat, 'this');
     },
     [active, pick],
   );
 
-  // Atalhos: Enter confirmar · 1–9 categoria rápida · S pular · T transferência · C escolher outra
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-      const target = e.target as HTMLElement;
-      if (isTypingTarget(target)) return;
-      // Com seletor, diálogo ou painel aberto, as teclas pertencem a ele.
-      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
-      if (!active || bulkProgress) return;
-      const key = e.key.toLowerCase();
-      if (key === 'enter') {
-        if (target.closest('button, a')) return; // Enter num botão focado mantém o comportamento nativo
-        e.preventDefault();
-        if (hasSuggestion(active)) confirm(active);
-        else if (!categoryKindFor(active.kind)) markReviewed(active);
-        else setPickerFor(active.id);
-      } else if (/^[1-9]$/.test(key)) {
-        const cat = quick[Number(key) - 1];
-        if (cat && quickAllowed) {
-          e.preventDefault();
-          pickQuick(cat);
-        }
-      } else if (key === 's') {
-        e.preventDefault();
-        skip(active);
-      } else if (key === 't') {
-        if (active.kind === 'transfer') return;
-        e.preventDefault();
-        setKind(active, 'transfer');
-      } else if (key === 'c') {
-        if (!categoryKindFor(active.kind)) return;
-        e.preventDefault();
-        setPickerFor(active.id);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [active, bulkProgress, confirm, markReviewed, pickQuick, quick, quickAllowed, setKind, skip]);
+  useReviewShortcuts({
+    active,
+    disabled: bulkRunning,
+    quick,
+    quickAllowed,
+    onConfirm: confirm,
+    onMarkReviewed: markReviewed,
+    onOpenPicker: openPicker,
+    onQuick: pickQuick,
+    onSkip: skip,
+    onTransfer: markTransfer,
+  });
 
   const bulkPending = bulk.filter((s) => !done.has(s.transactionId));
-
-  const runBulk = () => {
-    const list = [...bulkPending];
-    if (list.length === 0) return;
-    startAction(async () => {
-      let ok = 0;
-      for (let i = 0; i < list.length; i++) {
-        setBulkProgress({ current: i + 1, total: list.length });
-        const s = list[i]!;
-        const res = await recategorizeAction({ transactionId: s.transactionId, categoryId: s.categoryId, scope: 'this' });
-        if (res.ok) {
-          ok++;
-          setDone((d) => new Set(d).add(s.transactionId));
-        }
-      }
-      setBulkProgress(null);
-      if (ok === list.length) toast.success(`${ok} sugest${ok === 1 ? 'ão confirmada' : 'ões confirmadas'}`);
-      else toast.error(`${ok} de ${list.length} sugestões confirmadas; tente de novo as restantes.`);
-    });
-  };
+  const markDone = React.useCallback((id: string) => setDone((d) => new Set(d).add(id)), []);
 
   const loadMore = () => {
     if (!cursor) return;
@@ -241,6 +194,14 @@ export function ReviewQueue({ initialItems, initialCursor, count, categories, qu
       setExtraCursor(res.data.nextCursor);
     });
   };
+
+  const loadMoreButton = cursor ? (
+    <div className="flex justify-center">
+      <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+        {loadingMore ? 'Carregando...' : 'Carregar mais'}
+      </Button>
+    </div>
+  ) : null;
 
   const handlers = {
     onActivate: (tx: TransactionRow) => setActiveId(tx.id),
@@ -258,42 +219,19 @@ export function ReviewQueue({ initialItems, initialCursor, count, categories, qu
         <p className="text-sm font-medium" aria-live="polite" data-testid="review-count">
           {count === 0 ? 'Nenhuma transação para revisar' : `${pluralTransactions(count)} para revisar`}
         </p>
-        {bulkPending.length > 0 && (
-          <Button
-            variant="outline"
-            onClick={runBulk}
-            disabled={bulkProgress !== null}
-            className="h-auto min-h-8 whitespace-normal py-1.5 text-left"
-          >
-            {bulkProgress
-              ? `Confirmando ${bulkProgress.current} de ${bulkProgress.total}...`
-              : `Confirmar todas as sugestões com confiança ≥ ${Math.round(BULK_MIN_CONFIDENCE * 100)}% (${bulkPending.length})`}
-          </Button>
-        )}
+        <BulkConfirm pending={bulkPending} onConfirmed={markDone} onRunningChange={setBulkRunning} />
       </div>
 
       {items.length === 0 ? (
         count > 0 && cursor ? (
-          <div className="flex justify-center">
-            <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore ? 'Carregando...' : 'Carregar mais'}
-            </Button>
-          </div>
+          loadMoreButton
         ) : (
           <EmptyState icon={PartyPopperIcon} title="Tudo revisado 🎉" description="Não há transações esperando revisão." />
         )
       ) : (
         <>
           <QuickCategories categories={quick} disabled={!quickAllowed} onPick={pickQuick} />
-
-          <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="Atalhos de teclado">
-            <span><Kbd>Enter</Kbd> confirmar</span>
-            <span><Kbd>1</Kbd>–<Kbd>9</Kbd> categoria rápida</span>
-            <span><Kbd>S</Kbd> pular</span>
-            <span><Kbd>T</Kbd> transferência</span>
-            <span><Kbd>C</Kbd> escolher outra</span>
-          </p>
-
+          <ShortcutLegend />
           <div className="space-y-3">
             {items.map((tx) => (
               <ReviewCard
@@ -311,20 +249,9 @@ export function ReviewQueue({ initialItems, initialCursor, count, categories, qu
               />
             ))}
           </div>
-
-          {cursor && (
-            <div className="flex justify-center">
-              <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? 'Carregando...' : 'Carregar mais'}
-              </Button>
-            </div>
-          )}
+          {loadMoreButton}
         </>
       )}
     </div>
   );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">{children}</kbd>;
 }
