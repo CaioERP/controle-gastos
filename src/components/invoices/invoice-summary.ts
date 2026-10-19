@@ -70,15 +70,18 @@ const OTHERS_COLOR = '#9CA3AF';
 /**
  * Valor por categoria pai (R8), maiores primeiro. Devolve as `limit` maiores e, se sobrar,
  * uma fatia "Outras" com o restante. Só entram categorias com saldo positivo.
+ * `rootColors` (nome da raiz → cor) dá a cor da categoria pai; sem ela, usa a cor do item
+ * (a subcategoria pode ter cor própria, então a fatia dependeria do primeiro item).
  */
 export function topCategories(
   items: Array<Pick<TransactionRow, 'amountCents' | 'category'>>,
+  rootColors: ReadonlyMap<string, string> = new Map(),
   limit = 5,
 ): CategoryShare[] {
   const byKey = new Map<string, CategoryShare>();
   for (const item of items) {
     const label = item.category ? (item.category.parentName ?? item.category.name) : 'Sem categoria';
-    const color = item.category?.color ?? OTHERS_COLOR;
+    const color = rootColors.get(label) ?? item.category?.color ?? OTHERS_COLOR;
     const share = byKey.get(label) ?? { key: label, label, color, totalCents: 0 };
     share.totalCents += invoiceItemValue(item);
     byKey.set(label, share);

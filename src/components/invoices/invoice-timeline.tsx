@@ -34,7 +34,7 @@ export function InvoiceTimeline({ cardId, invoices, selectedId }: InvoiceTimelin
   }, [selectedId]);
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0" aria-label="Linha do tempo das faturas">
+    <nav className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0" aria-label="Linha do tempo das faturas">
       <ol className="flex w-max gap-2">
         {ordered.map((inv) => {
           const selected = inv.id === selectedId;
@@ -72,6 +72,6 @@ export function InvoiceTimeline({ cardId, invoices, selectedId }: InvoiceTimelin
           );
         })}
       </ol>
-    </div>
+    </nav>
   );
 }

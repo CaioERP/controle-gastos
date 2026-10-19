@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, lt, ne } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { invoices, transactions } from '@/server/db/schema';
 
@@ -12,6 +12,7 @@ export type InvoiceExtras = {
 export async function getInvoiceExtras(db: Db, invoiceId: string): Promise<InvoiceExtras | null> {
   const [inv] = await db
     .select({
+      accountId: invoices.accountId,
       minimumPaymentCents: invoices.minimumPaymentCents,
       paidAt: invoices.paidAt,
       paidAmountCents: invoices.paidAmountCents,
@@ -34,6 +35,10 @@ export async function getInvoiceExtras(db: Db, invoiceId: string): Promise<Invoi
         eq(transactions.invoiceId, invoiceId),
         eq(transactions.kind, 'invoice_payment'),
         isNull(transactions.deletedAt),
+        // Só a saída da conta pagadora (R6). O crédito "Pagamento recebido" na própria conta-cartão
+        // também é invoice_payment da fatura e, se entrasse, dobraria o valor.
+        lt(transactions.amountCents, 0),
+        ne(transactions.accountId, inv.accountId),
       ),
     )
     .orderBy(asc(transactions.date));

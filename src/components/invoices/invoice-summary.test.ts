@@ -160,6 +160,18 @@ describe('invoice-summary (funções puras)', () => {
     expect(top.reduce((s, t) => s + t.totalCents, 0)).toBe(sumInvoiceItems(items));
   });
 
+  it('topCategories usa a cor da categoria pai, não a da subcategoria do primeiro item', () => {
+    const sub = (date: string, cents: number, name: string, color: string) => ({
+      date,
+      amountCents: cents,
+      category: { id: name, name, color, icon: 'tag', parentName: 'Alimentação' },
+    });
+    const items = [sub('2026-10-01', -100, 'Café', '#000001'), sub('2026-10-02', -200, 'Mercado', '#000002')];
+    expect(topCategories(items, new Map([['Alimentação', '#F97316']]))[0]!.color).toBe('#F97316');
+    // Sem o mapa, cai na cor do item
+    expect(topCategories(items)[0]!.color).toBe('#000001');
+  });
+
   it('fillInstallmentMonths devolve 12 meses a partir do mês atual', () => {
     const months = fillInstallmentMonths([{ month: '2026-12-01', totalCents: 500, count: 1 }], '2026-10-15');
     expect(months).toHaveLength(12);

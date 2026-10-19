@@ -22,6 +22,8 @@ type InvoiceDetailProps = {
   invoice: InvoiceSummary;
   extras: InvoiceExtras | null;
   items: TransactionRow[];
+  /** Nome da categoria raiz → cor (de listCategories), para a mini-barra agregar com a cor do pai. */
+  rootColors: ReadonlyMap<string, string>;
 };
 
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
@@ -33,10 +35,10 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-export function InvoiceDetail({ invoice, extras, items }: InvoiceDetailProps) {
+export function InvoiceDetail({ invoice, extras, items, rootColors }: InvoiceDetailProps) {
   const forecast = isForecastInvoice(invoice);
   const itemsTotal = sumInvoiceItems(items);
-  const shares = topCategories(items);
+  const shares = topCategories(items, rootColors);
   const sharesTotal = shares.reduce((s, c) => s + c.totalCents, 0);
   const groups = groupItemsByDate(items);
 
@@ -89,8 +91,14 @@ export function InvoiceDetail({ invoice, extras, items }: InvoiceDetailProps) {
         ) : (
           <>
             {sharesTotal > 0 && (
-              <div className="space-y-2" aria-label="Maiores categorias da fatura">
-                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="space-y-2">
+                <div
+                  role="img"
+                  aria-label={`Maiores categorias da fatura: ${shares
+                    .map((s) => `${s.label} ${Math.round((s.totalCents / sharesTotal) * 100)}%`)
+                    .join(', ')}`}
+                  className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
+                >
                   {shares.map((s) => (
                     <div
                       key={s.key}

@@ -4,7 +4,7 @@ import { createTestDb } from '../../../tests/helpers/db';
 import { generateFixtures } from '../../../tests/fixtures/generate';
 import { loadFixtures } from '../../../tests/fixtures/load';
 import { seedBase } from '@/server/db/seed';
-import { accounts, invoices } from '@/server/db/schema';
+import { accounts, invoices, transactions } from '@/server/db/schema';
 import type { Db } from '@/server/db/client';
 import { getInvoices } from './invoices';
 import { getInvoiceExtras } from './invoice-extras';
@@ -35,6 +35,29 @@ describe('queries / invoice-extras', () => {
 
     const open = list.find((i) => i.status === 'open')!;
     expect((await getInvoiceExtras(db, open.id))!.payment).toBeNull();
+  });
+
+  it('ignora o crédito "Pagamento recebido" na própria conta-cartão (não soma o pagamento em dobro)', async () => {
+    const [card] = await db.select().from(accounts).where(eq(accounts.name, 'Nubank'));
+    const paid = (await getInvoices(db, card!.id)).find((i) => i.status === 'paid' && i.totalCents > 0)!;
+    const before = await getInvoiceExtras(db, paid.id);
+    expect(before!.payment!.amountCents).toBe(paid.totalCents);
+
+    // Lado do cartão: crédito positivo, também invoice_payment e vinculado à mesma fatura (R6)
+    await db.insert(transactions).values({
+      accountId: card!.id,
+      invoiceId: paid.id,
+      date: paid.dueDate,
+      amountCents: paid.totalCents,
+      descriptionRaw: 'PAGAMENTO RECEBIDO',
+      description: 'Pagamento recebido',
+      kind: 'invoice_payment',
+      paymentMethod: 'other',
+    });
+
+    const after = await getInvoiceExtras(db, paid.id);
+    expect(after!.payment!.amountCents).toBe(paid.totalCents);
+    expect(after!.payment!.date).toBe(before!.payment!.date);
   });
 
   it('usa paidAt/paidAmountCents e o mínimo gravados na fatura quando existem', async () => {

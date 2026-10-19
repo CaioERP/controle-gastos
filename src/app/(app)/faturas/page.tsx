@@ -2,6 +2,7 @@ import { CreditCard } from 'lucide-react';
 import { getDb } from '@/server/db/client';
 import { today } from '@/server/domain/dates';
 import { getAccountsOverview } from '@/server/queries/accounts';
+import { listCategories } from '@/server/queries/catalog';
 import { getFutureInstallments } from '@/server/queries/installments';
 import { getInvoiceExtras } from '@/server/queries/invoice-extras';
 import { getInvoiceItems, getInvoices } from '@/server/queries/invoices';
@@ -58,11 +59,13 @@ export default async function FaturasPage({ searchParams }: Props) {
   }
 
   const card = cards.find((c) => c.id === requestedCard) ?? cards[0]!;
-  const [invoices, cardInstallments, allInstallments] = await Promise.all([
+  const [invoices, cardInstallments, allInstallments, categories] = await Promise.all([
     getInvoices(db, card.id),
-    getFutureInstallments(db, { accountIds: [card.id] }),
-    getFutureInstallments(db, { accountIds: cards.map((c) => c.id) }),
+    getFutureInstallments(db, { accountIds: [card.id] }, { today: todayStr }),
+    getFutureInstallments(db, { accountIds: cards.map((c) => c.id) }, { today: todayStr }),
+    listCategories(db),
   ]);
+  const rootColors = new Map(categories.map((c) => [c.name, c.color]));
 
   const requestedInvoice = single(params.fatura);
   const invoice =
@@ -82,7 +85,7 @@ export default async function FaturasPage({ searchParams }: Props) {
         <>
           <InvoiceTimeline cardId={card.id} invoices={invoices} selectedId={invoice.id} />
           <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <InvoiceDetail invoice={invoice} extras={extras} items={items} />
+            <InvoiceDetail invoice={invoice} extras={extras} items={items} rootColors={rootColors} />
             <div>
               <FutureInstallmentsChart
                 card={fillInstallmentMonths(cardInstallments, todayStr)}

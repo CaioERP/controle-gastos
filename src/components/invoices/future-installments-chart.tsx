@@ -61,7 +61,7 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
         </div>
         <CardDescription data-testid="committed-text">
           <Money cents={total} className="text-foreground" /> já comprometidos nos próximos 12 meses
-          {scope === 'card' ? ` em ${cardName}` : ' em todos os cartões'}
+          {scope === 'card' ? ` em ${cardName}` : ' em todos os cartões visíveis'}
         </CardDescription>
       </CardHeader>
       <CardContent>
