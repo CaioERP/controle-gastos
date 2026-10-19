@@ -1,4 +1,3 @@
-import { isValid, parseISO } from 'date-fns';
 import { z } from 'zod';
 import { PAYMENT_METHODS, REPORTABLE_KINDS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
 import { defaultFilters, txFiltersSchema, type TxFilters } from '@/server/domain/filters';
@@ -6,16 +5,39 @@ import { monthEnd, today } from '@/server/domain/dates';
 
 const uuidSchema = z.string().uuid();
 
+/** Parâmetros de URL que representam filtros (`TxFilters`). Os demais pertencem a cada página. */
+export const FILTER_PARAM_KEYS = [
+  'mes',
+  'de',
+  'ate',
+  'inst',
+  'contas',
+  'natureza',
+  'forma',
+  'cat',
+  'tag',
+  'q',
+  'regime',
+  'projetadas',
+  'revisao',
+] as const;
+
+const FILTER_PARAM_SET = new Set<string>(FILTER_PARAM_KEYS);
+
+/**
+ * Valida `YYYY-MM-DD` só com aritmética em UTC, sem depender do fuso da máquina
+ * (parseISO usa meia-noite local, o que quebrava a comparação em fusos a leste de UTC).
+ */
 function isValidDateString(d: unknown): d is string {
-  if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
-  const parsed = parseISO(d);
-  if (!isValid(parsed)) return false;
-  const [y, m, day] = d.split('-').map(Number);
-  return (
-    parsed.getUTCFullYear() === y &&
-    parsed.getUTCMonth() + 1 === m &&
-    parsed.getUTCDate() === day
-  );
+  if (typeof d !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  if (!match) return false;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const day = Number(match[3]);
+  if (m < 1 || m > 12 || day < 1) return false;
+  const utc = new Date(Date.UTC(y, m - 1, day));
+  return utc.getUTCFullYear() === y && utc.getUTCMonth() === m - 1 && utc.getUTCDate() === day;
 }
 
 function isValidMonthString(m: unknown): m is string {
@@ -47,6 +69,26 @@ export type RawFilterParams =
   | Record<string, string | string[] | undefined>
   | URLSearchParams
   | string;
+
+/** Todos os pares chave/valor da entrada, na ordem original (inclui valores repetidos). */
+function toParamEntries(input: RawFilterParams): Array<[string, string]> {
+  if (typeof input === 'string') {
+    const raw = input.startsWith('?') ? input.slice(1) : input;
+    return [...new URLSearchParams(raw).entries()];
+  }
+  if (input instanceof URLSearchParams) {
+    return [...input.entries()];
+  }
+  const entries: Array<[string, string]> = [];
+  for (const [k, v] of Object.entries(input)) {
+    if (Array.isArray(v)) {
+      for (const item of v) entries.push([k, item]);
+    } else if (typeof v === 'string') {
+      entries.push([k, v]);
+    }
+  }
+  return entries;
+}
 
 function toParamRecord(input: RawFilterParams): Record<string, string | undefined> {
   if (typeof input === 'string') {
@@ -220,17 +262,42 @@ export function serializeFilters(f: Partial<TxFilters>, base?: TxFilters): strin
 }
 
 /**
+ * Aplica `patch` aos filtros da query string atual e devolve a nova query string (sem '?').
+ * Parâmetros de filtro são reescritos (campo `undefined` no patch remove o filtro);
+ * qualquer outro parâmetro (ex.: `dim`, `cartao`, `fatura`, `aba`) é preservado como está.
+ * `current`, se informado, substitui os filtros lidos de `currentSearch`.
+ */
+export function mergeFilterParams(
+  currentSearch: RawFilterParams,
+  patch: Partial<TxFilters>,
+  current?: TxFilters,
+  ref: string = today()
+): string {
+  const existing = current ?? parseFilters(currentSearch, ref);
+  const merged: TxFilters = {
+    ...existing,
+    ...patch,
+    from: patch.from ?? existing.from,
+    to: patch.to ?? existing.to,
+  };
+
+  const out = new URLSearchParams();
+  for (const [k, v] of toParamEntries(currentSearch)) {
+    if (!FILTER_PARAM_SET.has(k)) out.append(k, v);
+  }
+  const filterParams = new URLSearchParams(serializeFilters(merged, defaultFilters(ref)));
+  for (const [k, v] of filterParams.entries()) {
+    out.append(k, v);
+  }
+  return out.toString();
+}
+
+/**
  * Constrói URL com filtros atualizados (usado em links e navegação por drill-down).
+ * Parâmetros de `href` que não são filtros são preservados.
  */
 export function withFilters(href: string, patch: Partial<TxFilters>, current: TxFilters): string {
   const [pathname = '', rawQuery] = href.split('?');
-  const existingFilters = rawQuery ? parseFilters(rawQuery) : current;
-  const merged: TxFilters = {
-    ...existingFilters,
-    ...patch,
-    from: patch.from ?? existingFilters.from,
-    to: patch.to ?? existingFilters.to,
-  };
-  const qs = serializeFilters(merged);
+  const qs = rawQuery ? mergeFilterParams(rawQuery, patch) : mergeFilterParams('', patch, current);
   return qs ? `${pathname}?${qs}` : pathname;
 }
