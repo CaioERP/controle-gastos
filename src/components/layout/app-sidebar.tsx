@@ -7,12 +7,14 @@ import { NAV_ITEMS } from './nav-items';
 import { ThemeToggle } from './theme-toggle';
 import { cn } from '@/lib/utils';
 import { Wallet } from 'lucide-react';
+import { ReviewCountBadge } from '@/components/review/review-count-badge';
 
 export interface AppSidebarProps {
   footerSlot?: React.ReactNode;
+  reviewCount?: number;
 }
 
-export function AppSidebar({ footerSlot }: AppSidebarProps) {
+export function AppSidebar({ footerSlot, reviewCount = 0 }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -41,6 +43,7 @@ export function AppSidebar({ footerSlot }: AppSidebarProps) {
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span>{item.label}</span>
+              {item.href === '/revisao' && <ReviewCountBadge count={reviewCount} />}
             </Link>
           );
         })}
