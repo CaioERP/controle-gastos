@@ -34,3 +34,6 @@ yarn-error.log*
 # segredos
 .env*
 !.env.example
+
+# worktrees temporários dos agentes do Claude Code — nunca versionar
+/.claude/worktrees/
