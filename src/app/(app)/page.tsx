@@ -1,14 +1,11 @@
 import Link from 'next/link';
 import { PlugZap } from 'lucide-react';
 import { getDb } from '@/server/db/client';
-import { formatMonthBR, monthEnd } from '@/server/domain/dates';
-import type { TxFilters } from '@/server/domain/filters';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories, listTags } from '@/server/queries/catalog';
 import { getDashboardKpis, topWithOthers, trailingMonthsRange } from '@/server/queries/dashboard';
 import { getMonthlySeries } from '@/server/queries/monthly';
-import { previousRange } from '@/server/queries/summary';
 import { getReviewCount } from '@/server/queries/transactions';
 import { parseFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
@@ -17,6 +14,7 @@ import { EmptyState } from '@/components/states/empty-state';
 import { buttonVariants } from '@/components/ui/button';
 import { categoryTransactionsHref } from '@/components/charts/links';
 import { NEUTRAL_COLOR, seriesColor } from '@/components/charts/palette';
+import { previousPeriodLabel } from '@/components/charts/period-label';
 import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { CategoryDonut } from '@/components/dashboard/category-donut';
@@ -29,12 +27,6 @@ import { ReviewCallout } from '@/components/dashboard/review-callout';
 export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
-
-function previousLabel(f: TxFilters): string {
-  const prev = previousRange(f.from, f.to);
-  const isFullMonth = prev.from.endsWith('-01') && prev.to === monthEnd(prev.from);
-  return isFullMonth ? formatMonthBR(prev.from) : 'período anterior';
-}
 
 export default async function DashboardPage({ searchParams }: Props) {
   const filters = parseFilters(await searchParams);
@@ -72,7 +64,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     );
   }
 
-  const prevLabel = previousLabel(filters);
+  const prevLabel = previousPeriodLabel(filters);
   const totalCents = kpis.expenseCents;
 
   const slices = topWithOthers(byCategory, 7).map((item, i) => ({
