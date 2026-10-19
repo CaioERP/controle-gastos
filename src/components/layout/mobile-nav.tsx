@@ -9,12 +9,14 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Wallet } from 'lucide-react';
+import { ReviewCountBadge } from '@/components/review/review-count-badge';
 
 export interface MobileNavProps {
   footerSlot?: React.ReactNode;
+  reviewCount?: number;
 }
 
-export function MobileNav({ footerSlot }: MobileNavProps) {
+export function MobileNav({ footerSlot, reviewCount = 0 }: MobileNavProps) {
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
@@ -62,6 +64,7 @@ export function MobileNav({ footerSlot }: MobileNavProps) {
                   >
                     <Icon className="h-4 w-4 shrink-0" />
                     <span>{item.label}</span>
+                    {item.href === '/revisao' && <ReviewCountBadge count={reviewCount} />}
                   </Link>
                 );
               })}
