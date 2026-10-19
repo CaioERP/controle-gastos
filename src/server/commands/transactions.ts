@@ -1,16 +1,11 @@
 import { and, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { applyRuleToExisting } from '@/server/categorization/apply-rule';
 import { categoryKindFor, notUserCategorized } from '@/server/categorization/engine';
-import { ruleMatches } from '@/server/categorization/rules';
+import { descriptionBase, learnedMatchFor, saveLearnedRule } from '@/server/categorization/learned-rule';
 import type { Db } from '@/server/db/client';
-import { categories, categorizationRules, merchants, transactions, transactionTags } from '@/server/db/schema';
-import {
-  PAYMENT_METHODS,
-  TX_KINDS,
-  type CategoryKind,
-  type CategorySource,
-  type TxKind,
-} from '@/server/domain/enums';
+import { categories, merchants, transactions, transactionTags } from '@/server/db/schema';
+import { PAYMENT_METHODS, TX_KINDS, type CategoryKind, type TxKind } from '@/server/domain/enums';
 import { CommandError, toCommandError } from '@/server/domain/errors';
 import { normalizeForMatch } from '@/server/ingestion/normalize/text';
 
@@ -27,71 +22,48 @@ const recategorizeInput = z.object({
   scope: z.enum(['this', 'similar', 'rule']),
 });
 
-/**
- * Descrição sem o sufixo de parcela no final (" 3/10", " PARC 03/10", " - Parcela 3 de 10").
- * "Notebook Dell 3/10" → "Notebook Dell". Usada para achar transações parecidas e como padrão de regra aprendida.
- */
-export function descriptionBase(description: string): string {
-  const base = description.replace(/\s*-?\s*(?:parc(?:ela)?\.?\s*)?\d{1,2}\s*(?:\/|de)\s*\d{1,2}\s*$/i, '').trim();
-  return base || description.trim();
-}
-
 type DbTx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 /**
- * Transações que podem receber categoria automaticamente: não excluídas, de natureza compatível com a categoria,
- * sem categoria do usuário (R9) e diferentes da transação de origem. `merchantId` (se informado) restringe ao
- * mesmo estabelecimento (`null` = sem estabelecimento).
+ * Transações parecidas com a de origem que podem receber a categoria: mesmo estabelecimento (ou, sem
+ * estabelecimento, mesma descrição sem a parcela), não excluídas, de natureza compatível com a categoria e sem
+ * categoria do usuário (R9).
  */
-async function automationCandidates(
+async function similarTransactionIds(
   tx: DbTx,
-  opts: { excludeId: string; categoryKind: CategoryKind; merchantId?: string | null },
-) {
-  const kinds: TxKind[] = opts.categoryKind === 'income' ? ['income'] : ['expense', 'refund'];
-  const sameMerchant =
-    opts.merchantId === undefined
-      ? undefined
-      : opts.merchantId === null
-        ? isNull(transactions.merchantId)
-        : eq(transactions.merchantId, opts.merchantId);
-  return tx
+  origin: { id: string; merchantId: string | null; description: string; installmentTotal: number | null },
+  categoryKind: CategoryKind,
+): Promise<string[]> {
+  const kinds: TxKind[] = categoryKind === 'income' ? ['income'] : ['expense', 'refund'];
+  const rows = await tx
     .select({
       id: transactions.id,
-      accountId: transactions.accountId,
-      amountCents: transactions.amountCents,
       description: transactions.description,
-      descriptionRaw: transactions.descriptionRaw,
-      merchantName: merchants.name,
+      installmentTotal: transactions.installmentTotal,
     })
     .from(transactions)
-    .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
     .where(
       and(
-        ne(transactions.id, opts.excludeId),
+        ne(transactions.id, origin.id),
         isNull(transactions.deletedAt),
         inArray(transactions.kind, kinds),
         notUserCategorized(),
-        sameMerchant,
+        origin.merchantId ? eq(transactions.merchantId, origin.merchantId) : isNull(transactions.merchantId),
       ),
     );
+  if (origin.merchantId) return rows.map((r) => r.id);
+  const base = normalizeForMatch(descriptionBase(origin.description, origin.installmentTotal));
+  return rows
+    .filter((r) => normalizeForMatch(descriptionBase(r.description, r.installmentTotal)) === base)
+    .map((r) => r.id);
 }
 
-/** Grava a categoria automática nos ids, com a guarda de R9 no `WHERE`. Não regrava (nem conta) as que já estão iguais. */
-async function applyAutomaticCategory(
-  tx: DbTx,
-  ids: string[],
-  categoryId: string,
-  source: Extract<CategorySource, 'merchant' | 'rule'>,
-): Promise<number> {
+/** Grava a memória do estabelecimento nos ids, com a guarda de R9 no `WHERE`. Não regrava (nem conta) as que já estão iguais. */
+async function applyMerchantCategory(tx: DbTx, ids: string[], categoryId: string): Promise<number> {
   if (ids.length === 0) return 0;
   const res = await tx
     .update(transactions)
-    .set({
-      categoryId,
-      categorySource: source,
-      categoryConfidence: source === 'rule' ? 1 : 0.95,
-      needsReview: false,
-    })
+    .set({ categoryId, categorySource: 'merchant', categoryConfidence: 0.95, needsReview: false })
     .where(
       and(
         inArray(transactions.id, ids),
@@ -99,7 +71,7 @@ async function applyAutomaticCategory(
         or(
           isNull(transactions.categoryId),
           ne(transactions.categoryId, categoryId),
-          ne(transactions.categorySource, source),
+          ne(transactions.categorySource, 'merchant'),
           eq(transactions.needsReview, true),
         ),
       ),
@@ -112,8 +84,10 @@ async function applyAutomaticCategory(
  * Recategoriza uma transação (correção do usuário, R9) e grava a memória do estabelecimento.
  * - `this`: só a transação.
  * - `similar`: também as do mesmo estabelecimento (ou, sem estabelecimento, mesma descrição sem a parcela),
- *   que recebem `categorySource: 'merchant'`.
- * - `rule`: cria uma regra aprendida e aplica nas existentes que casam, com `categorySource: 'rule'`.
+ *   que recebem `categorySource: 'merchant'`. Se alguma delas casar com uma regra, um reprocessamento futuro
+ *   devolve a categoria da regra (camada 1 vence a camada 2), como define a spec.
+ * - `rule`: cria (ou atualiza, sem duplicar) uma regra aprendida e a aplica nas existentes pelo motor de
+ *   categorização, respeitando regras de prioridade maior.
  * Nunca toca em outras transações com categoria do usuário. `updated` = total de transações alteradas.
  */
 export async function recategorize(db: Db, input: z.infer<typeof recategorizeInput>) {
@@ -125,6 +99,7 @@ export async function recategorize(db: Db, input: z.infer<typeof recategorizeInp
         .select({
           kind: transactions.kind,
           description: transactions.description,
+          installmentTotal: transactions.installmentTotal,
           merchantId: transactions.merchantId,
           merchantName: merchants.name,
         })
@@ -134,10 +109,11 @@ export async function recategorize(db: Db, input: z.infer<typeof recategorizeInp
       if (!current) throw new CommandError('NOT_FOUND', 'Transação não encontrada');
 
       const [cat] = await tx
-        .select({ id: categories.id, kind: categories.kind })
+        .select({ id: categories.id, kind: categories.kind, archived: categories.archived })
         .from(categories)
         .where(eq(categories.id, categoryId));
       if (!cat) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
+      if (cat.archived) throw new CommandError('VALIDATION', 'A categoria está arquivada');
 
       // income só em transações income; expense em expense/refund
       if (categoryKindFor(current.kind) !== cat.kind) {
@@ -163,38 +139,15 @@ export async function recategorize(db: Db, input: z.infer<typeof recategorizeInp
       }
 
       if (scope === 'similar') {
-        const candidates = await automationCandidates(tx, {
-          excludeId: transactionId,
-          categoryKind: cat.kind,
-          merchantId: current.merchantId,
-        });
-        const base = normalizeForMatch(descriptionBase(current.description));
-        const ids = candidates
-          .filter((c) => current.merchantId !== null || normalizeForMatch(descriptionBase(c.description)) === base)
-          .map((c) => c.id);
-        updated += await applyAutomaticCategory(tx, ids, categoryId, 'merchant');
+        const ids = await similarTransactionIds(tx, { id: transactionId, ...current }, cat.kind);
+        updated += await applyMerchantCategory(tx, ids, categoryId);
       }
 
       if (scope === 'rule') {
-        const byMerchant = current.merchantName !== null;
-        const [rule] = await tx
-          .insert(categorizationRules)
-          .values({
-            matchField: byMerchant ? 'merchant' : 'description',
-            matchType: byMerchant ? 'equals' : 'contains',
-            pattern: current.merchantName ?? descriptionBase(current.description),
-            setCategoryId: categoryId,
-            origin: 'learned',
-          })
-          .returning();
-        ruleId = rule!.id;
-        const candidates = await automationCandidates(tx, { excludeId: transactionId, categoryKind: cat.kind });
-        const ids = candidates.filter((c) => ruleMatches(rule!, c)).map((c) => c.id);
-        const applied = await applyAutomaticCategory(tx, ids, categoryId, 'rule');
-        if (applied > 0) {
-          await tx.update(categorizationRules).set({ hitCount: applied }).where(eq(categorizationRules.id, ruleId));
-        }
-        updated += applied;
+        const rule = await saveLearnedRule(tx, learnedMatchFor(current), categoryId);
+        ruleId = rule.id;
+        // O motor conta os acertos (hitCount) e respeita a precedência entre regras e a R9
+        updated += await applyRuleToExisting(tx, rule);
       }
 
       return { updated, ruleId };
