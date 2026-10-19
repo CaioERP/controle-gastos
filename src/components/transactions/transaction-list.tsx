@@ -17,6 +17,7 @@ import { TransactionSheet } from './transaction-sheet';
 import { groupByDay, pluralTransactions } from './tx-utils';
 
 type Patch = { id: string; changes: Partial<Tx> };
+type Override = { at: Tx[]; changes: Partial<Tx> };
 
 type TransactionListProps = {
   initialItems: Tx[];
@@ -34,19 +35,24 @@ export function TransactionList({ initialItems, initialCursor, filters, categori
   // Páginas extras carregadas por "Carregar mais"; a primeira página vem sempre do servidor (atualizada pelo revalidatePath).
   const [extra, setExtra] = React.useState<Tx[]>([]);
   const [cursor, setCursor] = React.useState<string | null>(initialCursor);
-  // Edições confirmadas pelo servidor, aplicadas também às páginas extras (que o servidor não re-renderiza).
-  const [overrides, setOverrides] = React.useState<Record<string, Partial<Tx>>>({});
+  // Edições confirmadas, guardadas com a versão da primeira página em que foram feitas (`at`).
+  const [overrides, setOverrides] = React.useState<Record<string, Override>>({});
   const [selected, setSelected] = React.useState<Tx | null>(null);
   const [loadingMore, startLoadMore] = React.useTransition();
   const [, startEdit] = React.useTransition();
 
   const merged = React.useMemo(() => {
+    const fromServer = new Set(initialItems.map((t) => t.id));
     const seen = new Set<string>();
     const out: Tx[] = [];
     for (const t of [...initialItems, ...extra]) {
       if (seen.has(t.id)) continue;
       seen.add(t.id);
-      out.push(overrides[t.id] ? { ...t, ...overrides[t.id] } : t);
+      const o = overrides[t.id];
+      // Quando o servidor manda a primeira página nova (revalidatePath), ela já traz a edição:
+      // a edição local deixa de valer. Nas páginas extras, que o servidor não re-renderiza, ela continua.
+      const valid = o && (!fromServer.has(t.id) || o.at === initialItems);
+      out.push(valid ? { ...t, ...o.changes } : t);
     }
     return out;
   }, [initialItems, extra, overrides]);
@@ -55,9 +61,15 @@ export function TransactionList({ initialItems, initialCursor, filters, categori
   const groups = React.useMemo(() => groupByDay(items), [items]);
   const multiYear = groups.length > 0 && groups[0]!.date.slice(0, 4) !== groups[groups.length - 1]!.date.slice(0, 4);
 
-  const commit = React.useCallback((p: Patch) => {
-    setOverrides((o) => ({ ...o, [p.id]: { ...o[p.id], ...p.changes } }));
-  }, []);
+  const commit = React.useCallback(
+    (p: Patch) => {
+      setOverrides((o) => {
+        const prev = o[p.id]?.at === initialItems ? o[p.id]!.changes : {};
+        return { ...o, [p.id]: { at: initialItems, changes: { ...prev, ...p.changes } } };
+      });
+    },
+    [initialItems],
+  );
 
   const handleRecategorize = React.useCallback<RecategorizeHandler>(
     (tx, cat, scope) => {

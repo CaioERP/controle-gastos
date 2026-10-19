@@ -65,9 +65,9 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A1-03 | Motor de sincronização | A | A1-01, A1-02 | ⬜ |
 | A1-04 | Faturas e parcelas futuras | A | A1-03 | ⬜ |
 | A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ⬜ |
-| A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | 🟡 Agente A (Claude) — PR #9 em revisão |
-| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | 🟡 Agente A (Claude) — PR #10 em revisão (teste real aguarda H-03) |
-| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | ⬜ |
+| A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
+| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ✅ (teste com a API real pendente: H-03) |
+| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | 🟡 Agente A (Claude, agente 5) — parte sem dependência do Pluggy — PR #20 em revisão |
 | A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ⬜ |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
@@ -77,13 +77,13 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B1-01 | Consultas de agregação | B | F0-04 | ✅ |
 | B1-02 | Consultas de listagem | B | F0-04 | ✅ |
 | B1-03 | Filtros na URL, barra de filtros e seletor de visão | B | F0-05, B1-02 | ✅ |
-| B1-04 | Dashboard | B | B1-01, B1-03 | 🟡 Agente B (Claude, agente 1) |
-| B1-05 | Tela de transações | B | B1-02, B1-03 | 🟡 Agente B (Claude, agente 2) |
+| B1-04 | Dashboard | B | B1-01, B1-03 | 🟡 Agente B (Claude, agente 1) — PR #14 em revisão |
+| B1-05 | Tela de transações | B | B1-02, B1-03 | 🟡 Agente B (Claude, agente 2) — PR #15 em revisão |
 | B1-06 | Telas de contas, cartões e conexões | B | B1-02 (widget Pluggy real: A1-01) | ✅ |
-| B1-07 | Tela de faturas | B | B1-02 | 🟡 Agente B (Claude, agente 3) |
-| B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | 🟡 Agente B (Claude, agente 1) |
-| B1-09 | Tela de categorias e regras | B | B1-02 | 🟡 Agente B (Claude, agente 3) |
-| B1-10 | Fila de revisão | B | B1-05 | 🟡 Agente B (Claude, agente 2) |
+| B1-07 | Tela de faturas | B | B1-02 | 🟡 Agente B (Claude, agente 3) — PR #13 em revisão |
+| B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | 🟡 Agente B (Claude, agente 1) — PR #17 em revisão |
+| B1-09 | Tela de categorias e regras | B | B1-02 | 🟡 Agente B (Claude, agente 3) — PR #16 em revisão |
+| B1-10 | Fila de revisão | B | B1-05 | 🟡 Agente B (Claude, agente 2) — PR #18 em revisão |
 
 ## Fase 1 — Integração
 
@@ -142,3 +142,4 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 - [A1-06] PLUGGY_CATEGORY_SEED vazio até a F0-07 rodar (precisa de H-01/H-02) — Agente A, 2026-10-18
 - [A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18
+- ~~[B1-03] FilterBar descartava parâmetros da página (dim, cartao, fatura, aba); datas da URL dependiam do fuso~~ — resolvido no PR #19, 2026-10-19

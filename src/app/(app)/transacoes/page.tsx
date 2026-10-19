@@ -1,4 +1,5 @@
 import { getDb } from '@/server/db/client';
+import type { TxFilters } from '@/server/domain/filters';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { listCategories, listTags } from '@/server/queries/catalog';
 import { listTransactions } from '@/server/queries/transactions';
@@ -15,7 +16,11 @@ const FIRST_PAGE = 100;
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function Page({ searchParams }: Props) {
-  const filters = parseFilters(await searchParams);
+  const params = await searchParams;
+  const parsed = parseFilters(params);
+  // Lista: sem `natureza` na URL mostra todas as naturezas (B1-02); totais das outras telas seguem R2.
+  // O mesmo objeto vai para o TransactionList, então o "Carregar mais" pagina com o mesmo critério.
+  const filters: TxFilters = params.natureza ? parsed : { ...parsed, kinds: undefined };
   const db = getDb();
   const [accounts, categories, tags, page] = await Promise.all([
     getAccountsOverview(db),

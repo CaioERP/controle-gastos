@@ -74,6 +74,22 @@ test.describe('Tela de transações', () => {
     await expect(transfer.getByRole('button', { name: /Alterar categoria/ })).toHaveCount(0);
   });
 
+  test('sem natureza na URL a lista mostra todas as naturezas; com natureza=expense só despesas', async ({ page }) => {
+    await page.goto('/transacoes?mes=2026-10');
+    await expect(rows(page).filter({ hasText: 'Transferência' }).first()).toBeVisible();
+    await expect(rows(page).filter({ hasText: 'Pagamento de fatura' }).first()).toBeVisible();
+
+    await page.goto('/transacoes?mes=2026-10&natureza=expense');
+    await expect(rows(page).first()).toBeVisible();
+    for (const label of ['Transferência', 'Pagamento de fatura', 'Investimento', 'Ajuste']) {
+      await expect(rows(page).filter({ has: page.getByText(label, { exact: true }) })).toHaveCount(0);
+    }
+    // Só despesas: nenhum valor positivo (receita/estorno) na lista
+    for (const text of await rows(page).allInnerTexts()) {
+      expect(text).not.toMatch(/(^|\s)R\$\s?\d/);
+    }
+  });
+
   test('sugestão automática aparece com a confiança', async ({ page }) => {
     await page.goto(`${ALL}&revisao=1`);
     await expect(page.getByRole('img', { name: /^Sugestão automática \(\d+%\)$/ }).first()).toBeVisible();

@@ -110,6 +110,10 @@ describe('tx-utils', () => {
     expect(buildEditPatch(tx, { ...same, description: '   ' })).toEqual({});
     // Limpar observação existente envia null
     expect(buildEditPatch({ ...tx, notes: 'antiga' }, same)).toEqual({ notes: null });
+    // Valores gravados com espaço nas pontas ou observação '' não viram edição ao salvar sem mexer
+    const messy = { ...tx, description: ' Uber ', notes: '' };
+    expect(buildEditPatch(messy, { ...same, description: messy.description, notes: '' })).toEqual({});
+    expect(buildEditPatch({ ...tx, notes: '  nota ' }, { ...same, notes: '  nota ' })).toEqual({});
   });
 
   it('agrupa categorias por pai, separando por natureza e escondendo arquivadas', () => {

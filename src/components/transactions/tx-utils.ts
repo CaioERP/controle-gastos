@@ -137,18 +137,24 @@ export type EditPatch = Partial<{
   tagIds: string[];
 }>;
 
+function normalizeNotes(notes: string | null): string | null {
+  const trimmed = notes?.trim() ?? '';
+  return trimmed ? trimmed : null;
+}
+
 /**
  * Monta o patch de `updateTransaction` só com o que mudou: cada campo enviado entra em
  * `user_edited_fields` e passa a ser protegido da sincronização (R9), então não podemos enviar o resto.
  */
 export function buildEditPatch(tx: TransactionRow, form: EditForm): EditPatch {
   const patch: EditPatch = {};
+  // Compara com os valores originais normalizados: espaço nas pontas e '' x null não contam como edição.
   const description = form.description.trim();
-  if (description && description !== tx.description) patch.description = description;
+  if (description && description !== tx.description.trim()) patch.description = description;
   if (form.kind !== tx.kind) patch.kind = form.kind;
   if (form.paymentMethod !== tx.paymentMethod) patch.paymentMethod = form.paymentMethod;
-  const notes = form.notes.trim() ? form.notes.trim() : null;
-  if (notes !== tx.notes) patch.notes = notes;
+  const notes = normalizeNotes(form.notes);
+  if (notes !== normalizeNotes(tx.notes)) patch.notes = notes;
   const before = tx.tags.map((t) => t.id).sort().join(',');
   if ([...form.tagIds].sort().join(',') !== before) patch.tagIds = form.tagIds;
   return patch;
