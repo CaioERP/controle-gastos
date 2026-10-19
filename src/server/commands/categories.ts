@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
-import { categories, transactions } from '@/server/db/schema';
+import { categories, categorizationRules, merchants, providerCategoryMap, transactions } from '@/server/db/schema';
 import { CATEGORY_KINDS } from '@/server/domain/enums';
 import { CommandError, toCommandError } from '@/server/domain/errors';
 
@@ -148,29 +148,94 @@ const archiveCategoryInput = z.object({
   moveTransactionsTo: z.string().uuid().nullable(),
 });
 
+/**
+ * Arquiva a categoria (e as filhas, se for pai). Transações não excluídas na categoria ou nas filhas precisam de
+ * destino (`moveTransactionsTo`, da mesma natureza); sem destino e com transações → `CONFLICT`.
+ * Referências à categoria (regras, memória dos estabelecimentos, mapa de categorias da fonte) passam para o destino;
+ * sem destino, as regras são desabilitadas e as referências zeradas.
+ */
 export async function archiveCategory(
   db: Db,
   input: z.infer<typeof archiveCategoryInput>,
 ): Promise<void> {
   const { categoryId, moveTransactionsTo } = archiveCategoryInput.parse(input);
 
-  await db.transaction(async (tx) => {
-    const [cat] = await tx.select({ id: categories.id }).from(categories).where(eq(categories.id, categoryId));
-    if (!cat) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
+  try {
+    await db.transaction(async (tx) => {
+      const [cat] = await tx
+        .select({ id: categories.id, kind: categories.kind })
+        .from(categories)
+        .where(eq(categories.id, categoryId));
+      if (!cat) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
 
-    if (moveTransactionsTo) {
-      const [dest] = await tx
+      const children = await tx
         .select({ id: categories.id })
         .from(categories)
-        .where(eq(categories.id, moveTransactionsTo));
-      if (!dest) throw new CommandError('NOT_FOUND', 'Categoria de destino não encontrada');
+        .where(eq(categories.parentId, categoryId));
+      const ids = [categoryId, ...children.map((c) => c.id)];
 
-      await tx
-        .update(transactions)
-        .set({ categoryId: moveTransactionsTo })
-        .where(eq(transactions.categoryId, categoryId));
-    }
+      if (moveTransactionsTo) {
+        const [dest] = await tx
+          .select({ id: categories.id, kind: categories.kind, archived: categories.archived })
+          .from(categories)
+          .where(eq(categories.id, moveTransactionsTo));
+        if (!dest) throw new CommandError('NOT_FOUND', 'Categoria de destino não encontrada');
+        if (ids.includes(dest.id)) {
+          throw new CommandError('VALIDATION', 'O destino não pode ser a própria categoria nem uma subcategoria dela');
+        }
+        if (dest.archived) throw new CommandError('VALIDATION', 'A categoria de destino está arquivada');
+        if (dest.kind !== cat.kind) {
+          throw new CommandError('VALIDATION', 'A categoria de destino deve ter a mesma natureza');
+        }
 
-    await tx.update(categories).set({ archived: true }).where(eq(categories.id, categoryId));
-  });
+        // As transações mantêm a origem. As de origem 'rule', 'merchant' e 'provider' continuam coerentes porque as
+        // referências abaixo passam a apontar para o destino; sugestões da IA ou sem origem vão para a revisão.
+        await tx
+          .update(transactions)
+          .set({
+            categoryId: moveTransactionsTo,
+            needsReview: sql`CASE WHEN ${transactions.categorySource} IN ('llm', 'default') THEN true ELSE ${transactions.needsReview} END`,
+          })
+          .where(inArray(transactions.categoryId, ids));
+        await tx
+          .update(categorizationRules)
+          .set({ setCategoryId: moveTransactionsTo })
+          .where(inArray(categorizationRules.setCategoryId, ids));
+        await tx
+          .update(merchants)
+          .set({ defaultCategoryId: moveTransactionsTo })
+          .where(inArray(merchants.defaultCategoryId, ids));
+        await tx
+          .update(providerCategoryMap)
+          .set({ categoryId: moveTransactionsTo })
+          .where(inArray(providerCategoryMap.categoryId, ids));
+      } else {
+        const [inUse] = await tx
+          .select({ id: transactions.id })
+          .from(transactions)
+          .where(and(inArray(transactions.categoryId, ids), isNull(transactions.deletedAt)))
+          .limit(1);
+        if (inUse) {
+          throw new CommandError('CONFLICT', 'Categoria em uso: escolha para onde mover as transações');
+        }
+        // Sem destino: as regras param de valer e as memórias/mapeamentos deixam de apontar para a categoria
+        await tx
+          .update(categorizationRules)
+          .set({ enabled: false })
+          .where(inArray(categorizationRules.setCategoryId, ids));
+        await tx
+          .update(merchants)
+          .set({ defaultCategoryId: null })
+          .where(inArray(merchants.defaultCategoryId, ids));
+        await tx
+          .update(providerCategoryMap)
+          .set({ categoryId: null })
+          .where(inArray(providerCategoryMap.categoryId, ids));
+      }
+
+      await tx.update(categories).set({ archived: true }).where(inArray(categories.id, ids));
+    });
+  } catch (err) {
+    throw toCommandError(err);
+  }
 }

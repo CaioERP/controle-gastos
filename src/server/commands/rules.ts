@@ -1,9 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { applyRuleToExisting } from '@/server/categorization/apply-rule';
 import type { Db } from '@/server/db/client';
-import { categorizationRules } from '@/server/db/schema';
+import { categories, categorizationRules } from '@/server/db/schema';
 import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
 import { CommandError, toCommandError } from '@/server/domain/errors';
+import type { CategorizationRule } from '@/server/domain/types';
 
 export type RuleInput = {
   id?: string;
@@ -35,6 +37,12 @@ const ruleInputSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
+/**
+ * Cria ou edita uma regra e a aplica nas transações existentes (ver `applyRuleToExisting`).
+ * `applied` = transações que passaram a usar a categoria da regra. A natureza da categoria não é bloqueada aqui:
+ * se ela não for compatível com as transações que casam (ex.: categoria de receita sobre despesas, sem `setKind`),
+ * a regra é salva e `applied` é 0.
+ */
 export async function upsertRule(
   db: Db,
   input: RuleInput,
@@ -56,19 +64,31 @@ export async function upsertRule(
   }
 
   try {
-    if (data.id) {
-      const { id, ...fields } = data;
-      const res = await db
-        .update(categorizationRules)
-        .set(fields)
-        .where(eq(categorizationRules.id, id))
-        .returning({ id: categorizationRules.id });
-      if (res.length === 0) throw new CommandError('NOT_FOUND', 'Regra não encontrada');
-      return { id: res[0]!.id, applied: 0 };
-    }
+    return await db.transaction(async (tx) => {
+      const [cat] = await tx
+        .select({ archived: categories.archived })
+        .from(categories)
+        .where(eq(categories.id, data.setCategoryId));
+      if (!cat) throw new CommandError('NOT_FOUND', 'Categoria não encontrada');
+      if (cat.archived) throw new CommandError('VALIDATION', 'A categoria está arquivada');
 
-    const [created] = await db.insert(categorizationRules).values(data).returning({ id: categorizationRules.id });
-    return { id: created!.id, applied: 0 };
+      let rule: CategorizationRule;
+      if (data.id) {
+        const { id, ...fields } = data;
+        const [updated] = await tx
+          .update(categorizationRules)
+          .set(fields)
+          .where(eq(categorizationRules.id, id))
+          .returning();
+        if (!updated) throw new CommandError('NOT_FOUND', 'Regra não encontrada');
+        rule = updated;
+      } else {
+        const [created] = await tx.insert(categorizationRules).values(data).returning();
+        rule = created!;
+      }
+      const applied = await applyRuleToExisting(tx, rule);
+      return { id: rule.id, applied };
+    });
   } catch (err) {
     throw toCommandError(err);
   }
