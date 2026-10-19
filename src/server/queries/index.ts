@@ -9,3 +9,4 @@ export * from './invoices';
 export * from './installments';
 export * from './catalog';
 export * from './connections';
+export * from './url-filters';
