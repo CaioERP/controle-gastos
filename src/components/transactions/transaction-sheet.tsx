@@ -1,0 +1,177 @@
+'use client';
+
+import * as React from 'react';
+import { toast } from 'sonner';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Money } from '@/components/format/money';
+import { DateBR } from '@/components/format/date-br';
+import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
+import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
+import type { TagWithCount } from '@/server/queries/catalog';
+import type { TransactionRow as Tx, TransactionTag } from '@/server/queries/transaction-row';
+import { updateTransactionAction, upsertTagAction } from '@/app/(app)/transacoes/actions';
+import { TagPicker, nextTagColor } from './tag-picker';
+import { TransactionDetailInfo } from './transaction-detail-info';
+import { buildEditPatch } from './tx-utils';
+
+type TransactionSheetProps = {
+  tx: Tx | null;
+  tags: TagWithCount[];
+  onClose: () => void;
+  onSaved: (id: string, changes: Partial<Tx>) => void;
+};
+
+export function TransactionSheet({ tx, tags, onClose, onSaved }: TransactionSheetProps) {
+  return (
+    <Sheet open={tx !== null} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        {tx && <SheetBody key={tx.id} tx={tx} tags={tags} onClose={onClose} onSaved={onSaved} />}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+const selectClass =
+  'h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30';
+
+function SheetBody({ tx, tags, onClose, onSaved }: Omit<TransactionSheetProps, 'tx'> & { tx: Tx }) {
+  const [description, setDescription] = React.useState(tx.description);
+  const [kind, setKind] = React.useState<TxKind>(tx.kind);
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(tx.paymentMethod);
+  const [notes, setNotes] = React.useState(tx.notes ?? '');
+  const [tagIds, setTagIds] = React.useState(tx.tags.map((t) => t.id));
+  const [allTags, setAllTags] = React.useState<TransactionTag[]>(() => {
+    const byId = new Map<string, TransactionTag>();
+    for (const t of [...tags, ...tx.tags]) byId.set(t.id, { id: t.id, name: t.name, color: t.color });
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  });
+  const [saving, startSave] = React.useTransition();
+
+  const createTag = async (name: string): Promise<TransactionTag | null> => {
+    const color = nextTagColor(allTags.length);
+    const res = await upsertTagAction({ name, color });
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return null;
+    }
+    const tag = { id: res.data.id, name, color };
+    setAllTags((prev) => [...prev.filter((t) => t.id !== tag.id), tag]);
+    toast.success(`Tag “${name}” criada`);
+    return tag;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = description.trim();
+    if (!trimmed) {
+      toast.error('A descrição não pode ficar vazia');
+      return;
+    }
+    const patch = buildEditPatch(tx, { description, kind, paymentMethod, notes, tagIds });
+
+    if (Object.keys(patch).length === 0) {
+      onClose();
+      return;
+    }
+
+    startSave(async () => {
+      const res = await updateTransactionAction({ transactionId: tx.id, patch });
+      if (!res.ok) {
+        toast.error(res.error.message);
+        return;
+      }
+      const changes: Partial<Tx> = {};
+      if (patch.description !== undefined) changes.description = patch.description;
+      if (patch.kind !== undefined) changes.kind = patch.kind;
+      if (patch.paymentMethod !== undefined) changes.paymentMethod = patch.paymentMethod;
+      if (patch.notes !== undefined) changes.notes = patch.notes;
+      if (patch.tagIds !== undefined) changes.tags = allTags.filter((t) => tagIds.includes(t.id));
+      onSaved(tx.id, changes);
+      toast.success('Transação atualizada');
+      onClose();
+    });
+  };
+
+  return (
+    <>
+      <SheetHeader className="border-b pr-12">
+        <SheetTitle className="truncate">{tx.description}</SheetTitle>
+        <SheetDescription className="flex items-center gap-2">
+          <DateBR date={tx.date} />
+          <span aria-hidden="true">·</span>
+          <Money cents={tx.amountCents} />
+        </SheetDescription>
+      </SheetHeader>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="tx-description">Descrição</Label>
+          <Input
+            id="tx-description"
+            value={description}
+            maxLength={200}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="tx-kind">Natureza</Label>
+            <select id="tx-kind" className={selectClass} value={kind} onChange={(e) => setKind(e.target.value as TxKind)}>
+              {TX_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {KIND_LABELS[k]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="tx-payment">Forma de pagamento</Label>
+            <select
+              id="tx-payment"
+              className={selectClass}
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+            >
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {PAYMENT_METHOD_LABELS[m]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="tx-notes">Observações</Label>
+          <Textarea
+            id="tx-notes"
+            value={notes}
+            maxLength={1000}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Anotações sobre esta transação"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium">Tags</span>
+          <TagPicker tags={allTags} selectedIds={tagIds} onChange={setTagIds} onCreate={createTag} />
+        </div>
+        <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+          Campos que você editar não serão sobrescritos pela sincronização.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </div>
+      </form>
+
+      <TransactionDetailInfo tx={tx} />
+    </>
+  );
+}
