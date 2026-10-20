@@ -84,7 +84,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | ✅ |
 | B1-09 | Tela de categorias e regras | B | B1-02 | ✅ |
 | B1-10 | Fila de revisão | B | B1-05 | ✅ |
-| B1-11 | Links de detalhamento com contas fora dos totais | B | B1-04, B1-08 | 🟡 Agente B |
+| B1-11 | Links de detalhamento com contas fora dos totais | B | B1-04, B1-08 | 🟡 Agente B — PR #25 em revisão |
 
 ## Fase 1 — Integração
 
