@@ -10,6 +10,15 @@ import { toDisplayCase } from '../strings';
 import type { NormalizedTransaction, RawAccount } from '../types';
 import type { PluggyAccount, PluggyTransaction } from './api';
 
+function toSaoPauloDateString(raw: string): string {
+  const trimmed = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const d = new Date(trimmed);
+  return format(new TZDate(d, TZ), 'yyyy-MM-dd');
+}
+
 /**
  * Normaliza uma conta retornada pela API da Pluggy para a estrutura única RawAccount.
  */
@@ -44,7 +53,8 @@ export function normalizePluggyAccount(
   if (acc.creditData?.balanceCloseDate) {
     const d = new Date(acc.creditData.balanceCloseDate);
     if (!isNaN(d.getTime())) {
-      closingDay = parseInt(format(new TZDate(d, TZ), 'd'), 10);
+      const iso = toSaoPauloDateString(acc.creditData.balanceCloseDate);
+      closingDay = parseInt(iso.slice(8, 10), 10);
     }
   }
 
@@ -52,7 +62,8 @@ export function normalizePluggyAccount(
   if (acc.creditData?.balanceDueDate) {
     const d = new Date(acc.creditData.balanceDueDate);
     if (!isNaN(d.getTime())) {
-      dueDay = parseInt(format(new TZDate(d, TZ), 'd'), 10);
+      const iso = toSaoPauloDateString(acc.creditData.balanceDueDate);
+      dueDay = parseInt(iso.slice(8, 10), 10);
     }
   }
 
@@ -85,8 +96,7 @@ export function normalizePluggyTransaction(
   account: RawAccount
 ): NormalizedTransaction {
   // Conversão de data para fuso horário de São Paulo (YYYY-MM-DD)
-  const dateObj = new Date(tx.date);
-  const dateStr = format(new TZDate(dateObj, TZ), 'yyyy-MM-dd');
+  const dateStr = toSaoPauloDateString(tx.date);
 
   // Sinal do valor (R1: negativo = saída, positivo = entrada/estorno)
   const centsAbs = Math.abs(toCents(tx.amount));
@@ -120,7 +130,7 @@ export function normalizePluggyTransaction(
     if (tx.creditCardMetadata.purchaseDate) {
       const pDate = new Date(tx.creditCardMetadata.purchaseDate);
       if (!isNaN(pDate.getTime())) {
-        purchaseDateStr = format(new TZDate(pDate, TZ), 'yyyy-MM-dd');
+        purchaseDateStr = toSaoPauloDateString(tx.creditCardMetadata.purchaseDate);
       }
     }
 

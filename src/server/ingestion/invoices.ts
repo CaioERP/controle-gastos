@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { accounts, invoices, transactions, transactionSources } from '@/server/db/schema';
 import { addDaysISO, addMonthsISO, monthStart, today as getToday } from '@/server/domain/dates';
@@ -319,6 +319,11 @@ export async function recalculateInvoices(
         inArray(transactions.accountId, uniqueAccountIds),
         isNull(transactions.deletedAt),
         ne(transactions.kind, 'invoice_payment'),
+        sql`not exists (
+          select 1 from ${transactions} child
+          where child.parent_transaction_id = ${transactions.id}
+            and child.deleted_at is null
+        )`,
       ),
     );
 
