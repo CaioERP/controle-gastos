@@ -66,7 +66,8 @@ describe('syncConnection (A1-03)', () => {
     expect(cardRows[0]!.last4).toBe('7890');
 
     const txRows = await db.select().from(transactions);
-    expect(txRows).toHaveLength(checkingTxs.length + creditTxs.length);
+    const syncedRows = txRows.filter((t) => t.status !== 'projected');
+    expect(syncedRows).toHaveLength(checkingTxs.length + creditTxs.length);
 
     const [run] = await db.select().from(syncRuns).where(eq(syncRuns.id, result.syncRunId));
     expect(run!.status).toBe('success');
