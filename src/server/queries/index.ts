@@ -13,3 +13,4 @@ export * from './url-filters';
 export * from './rule-preview';
 export * from './imports';
 export * from './investments';
+export * from './net-worth';
