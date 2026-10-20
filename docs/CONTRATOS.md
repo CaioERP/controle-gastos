@@ -107,6 +107,11 @@ export const CONNECTION_STATUSES = ['pending', 'active', 'syncing', 'error', 'ex
 export const CATEGORY_KINDS = ['expense', 'income'] as const;
 export const IMPORT_BATCH_STATUSES = ['preview', 'confirmed', 'discarded'] as const;
 export const IMPORT_FORMATS = ['ofx', 'csv_nubank_checking', 'csv_nubank_card', 'pdf_invoice'] as const;
+export const ASSET_CLASSES = ['fixed_income', 'stocks', 'fii', 'etf', 'funds', 'treasury', 'crypto', 'pension', 'other'] as const;
+export const INVESTMENT_INDEXERS = ['cdi', 'ipca', 'selic', 'prefixado', 'other'] as const;
+export const INVESTMENT_TX_TYPES = ['buy', 'sell', 'income', 'tax', 'fee', 'transfer'] as const;
+export const BENCHMARK_CODES = ['cdi', 'selic', 'ipca', 'ibov'] as const;
+export const PRICE_SOURCES = ['brapi', 'tesouro', 'coingecko', 'pluggy', 'manual'] as const;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 export type TxKind = (typeof TX_KINDS)[number];
@@ -119,6 +124,11 @@ export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
 export type CategoryKind = (typeof CATEGORY_KINDS)[number];
 export type ImportBatchStatus = (typeof IMPORT_BATCH_STATUSES)[number];
 export type ImportFormat = (typeof IMPORT_FORMATS)[number];
+export type AssetClass = (typeof ASSET_CLASSES)[number];
+export type InvestmentIndexer = (typeof INVESTMENT_INDEXERS)[number];
+export type InvestmentTxType = (typeof INVESTMENT_TX_TYPES)[number];
+export type BenchmarkCode = (typeof BENCHMARK_CODES)[number];
+export type PriceSource = (typeof PRICE_SOURCES)[number];
 
 /** Natureza que entra nos relatórios de gasto/receita (regra R2). */
 export const REPORTABLE_KINDS: readonly TxKind[] = ['expense', 'income', 'refund'];
@@ -307,10 +317,96 @@ Seed completo na tarefa F0-03.
 
 Índice: `(account_id, status)`. Relação com quem importou: sistema de usuário único (sem `user_id`); a rastreabilidade de quais transações vieram ou foram vinculadas pelo lote é feita por `transaction_sources.import_batch_id`.
 
+### `assets` — cadastro de ativos de investimento (Fase 3, gerado na A3-01)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| code | text unique not null | chave canônica única (`'B3:PETR4'`, `'TESOURO:TESOURO SELIC:2029-03-01'`, `'CRYPTO:bitcoin'`, `'CNPJ:...'`, `'PLUGGY:<id>'`, `'MANUAL:<slug>'`) |
+| ticker | text null | código de negociação na B3 (`'PETR4'`, `'HGLG11'`) ou ID CoinGecko (`'bitcoin'`), usado em A3-02 |
+| isin | text null | código ISIN de 12 caracteres |
+| cnpj | text null | CNPJ do fundo ou emissor |
+| name | text not null | nome do ativo |
+| asset_class | enum `ASSET_CLASSES` | `'fixed_income'`, `'stocks'`, `'fii'`, `'etf'`, `'funds'`, `'treasury'`, `'crypto'`, `'pension'`, `'other'` |
+| currency | text | default `'BRL'` |
+| issuer | text null | emissor |
+| indexer | enum `INVESTMENT_INDEXERS` null | `'cdi'`, `'ipca'`, `'selic'`, `'prefixado'`, `'other'` (renda fixa / Tesouro) |
+| rate_bps | integer null | taxa contratada em *basis points* inteiros (`10200` = 102% do CDI; `625` = IPCA + 6,25%) |
+| maturity_date | date null | data de vencimento (`YYYY-MM-DD`) |
+| is_tax_exempt | boolean | default `false` (LCI/LCA/CRI/CRA/debênture incentivada) |
+
+Índices: `unique(code)`, `(ticker)`, `(asset_class)`.
+
+### `holdings` — posições de investimento por conta (Fase 3, gerado na A3-01)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| account_id | fk not null (cascade) | conta do tipo `investment` |
+| asset_id | fk not null (restrict) | ativo em `assets` |
+| source | enum `SOURCES` | `'pluggy'` ou `'manual'` |
+| external_id | text not null | unique `(source, external_id)` — idempotência (R10) |
+| quantity | numeric(20, 8) not null | quantidade de cotas/ações com escala fixa de 8 casas decimais (string em TS; aritmética escalada por $10^8$ em `bigint` via `investments/math.ts`) |
+| average_price_cents | bigint null | preço médio unitário em centavos |
+| invested_cents | bigint not null | default 0; valor total aplicado/custo em centavos (positivo) |
+| current_value_cents | bigint not null | default 0; valor bruto atual de mercado em centavos (positivo) |
+| net_value_cents | bigint null | valor líquido estimado para resgate em centavos |
+| profit_cents | bigint null | resultado bruto acumulado (`current_value_cents - invested_cents`) |
+| as_of_date | date not null | data de referência da posição (`YYYY-MM-DD`) |
+| is_redeemed | boolean | default `false` (`true` quando totalmente resgatada) |
+| user_edited_fields | text[] | R9; default `'{}'` |
+| raw | jsonb null | payload original da fonte |
+
+Índices: `unique(source, external_id)`, `(account_id)`, `(asset_id)`.
+
+### `investment_transactions` — movimentações e proventos de investimentos (Fase 3, gerado na A3-01)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| holding_id | fk not null (cascade) | posição em `holdings` |
+| account_id | fk not null (cascade) | conta de investimento |
+| source | enum `SOURCES` | `'pluggy'` ou `'manual'` |
+| external_id | text not null | unique `(source, external_id)` — idempotência (R10) |
+| type | enum `INVESTMENT_TX_TYPES` | `'buy'`, `'sell'`, `'income'`, `'tax'`, `'fee'`, `'transfer'` |
+| date | date not null | data da movimentação (`YYYY-MM-DD`) |
+| quantity | numeric(20, 8) null | quantidade negociada (nula em proventos/juros em dinheiro) |
+| unit_price_cents | bigint null | preço unitário da operação em centavos |
+| amount_cents | bigint not null | valor financeiro bruto da operação em centavos (sempre inteiro positivo; direção dada por `type`) |
+| fee_cents | bigint not null | default 0; corretagem/emolumentos em centavos |
+| tax_cents | bigint not null | default 0; IR/IOF retido em centavos |
+| description | text null | descrição (ex.: `"Dividendo"`, `"JCP"`, `"Aplicação CDB"`) |
+| linked_transaction_id | fk null (set null) | aponta para `transactions.id` (`kind = 'investment'`) na conta corrente, evitando contagem dupla (R2) |
+| raw | jsonb null | payload original |
+
+Índices: `unique(source, external_id)`, `(holding_id, date)`, `(linked_transaction_id)`.
+
+### `asset_prices` — histórico diário de cotações (Fase 3, gerado na A3-01)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| asset_id | fk not null (cascade) | ativo em `assets` |
+| date | date not null | `YYYY-MM-DD`; unique `(asset_id, date)` |
+| price_cents | bigint not null | preço unitário em centavos |
+| source | enum `PRICE_SOURCES` | `'brapi'`, `'tesouro'`, `'coingecko'`, `'pluggy'`, `'manual'` |
+
+### `benchmark_series` — séries históricas de índices (Fase 3, gerado na A3-01)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| benchmark | enum `BENCHMARK_CODES` | `'cdi'`, `'selic'`, `'ipca'`, `'ibov'` |
+| date | date not null | `YYYY-MM-DD` (IPCA sempre no dia `YYYY-MM-01`); unique `(benchmark, date)` |
+| value_micros | bigint not null | para `cdi`/`selic`/`ipca`: taxa percentual no período $\times 10^6$ (ex.: `0,050788%` → `50788`); para `ibov`: fechamento em pontos $\times 100$ (ex.: `128500,00` → `12850000`) |
+
+### `net_worth_snapshots` — evolução diária do patrimônio líquido (Fase 3, gerado na A3-01)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| date | date unique not null | `YYYY-MM-DD` |
+| cash_accounts_cents | bigint not null | default 0; soma dos saldos de contas líquidas (`checking`, `savings`, `wallet`, `benefit`) com `include_in_totals = true` |
+| investments_cents | bigint not null | default 0; soma de `holdings.current_value_cents` ativas de contas com `include_in_totals = true` |
+| open_invoices_cents | bigint not null | default 0; soma positiva das faturas não pagas (`closed`, `overdue` + fatura `open` atual) |
+| future_installments_cents | bigint not null | default 0; soma positiva das parcelas futuras (`projected`) de faturas posteriores à aberta atual |
+| assets_cents | bigint not null | default 0; `cash_accounts_cents + investments_cents` |
+| liabilities_cents | bigint not null | default 0; `open_invoices_cents + future_installments_cents` |
+| net_worth_cents | bigint not null | default 0; `assets_cents - liabilities_cents` |
+| breakdown | jsonb not null | default `{}`; decomposição por classe de ativo e por instituição na data |
+
 ### Tabelas de fases futuras
 Definidas no início da fase, como mudança de contrato aditiva:
-- **F2:** `import_batches` e `transaction_sources.import_batch_id` (especificados acima, migration gerada na A2-01); coluna `parent_transaction_id` em `transactions` (divisão de transação, B2-03b).
-- **F3:** `assets`, `holdings`, `investment_transactions`, `asset_prices`, `benchmark_series`, `net_worth_snapshots`.
+- **F2:** `import_batches` e `transaction_sources.import_batch_id` (gerados na A2-01); coluna `parent_transaction_id` em `transactions` (B2-03b).
+- **F3:** `assets`, `holdings`, `investment_transactions`, `asset_prices`, `benchmark_series`, `net_worth_snapshots` (especificados acima, migration gerada na A3-01).
 - **F4:** `budgets`, `recurrences`, `notifications`.
 
 ---
@@ -418,6 +514,11 @@ listRules(): Promise<RuleRow[]>;
 listConnections(): Promise<ConnectionRow[]>;
 listMerchants(opts: { search?: string; limit: number }): Promise<MerchantRow[]>;
 listTags(): Promise<Tag[]>;
+
+// Investimentos e patrimônio (Fase 3 — B3-01, B3-02, B3-03) — src/server/queries/investments.ts e net-worth.ts
+getInvestmentsOverview(filters?: { institutionId?: string; assetClass?: AssetClass; today?: string }): Promise<InvestmentsOverview>;
+getDividendsOverview(opts?: { institutionId?: string; today?: string }): Promise<DividendsOverview>;
+getNetWorthOverview(opts?: { today?: string }): Promise<NetWorthOverview>;
 ```
 
 Valores de gasto retornados por consultas são **positivos** (ex.: gasto de R$ 50 → `5000`). O sinal negativo é detalhe de armazenamento.
@@ -457,6 +558,14 @@ previewPdfInvoiceImport(input: { accountId: string; filename: string; pdfBase64:
 confirmFileImport(input: { batchId: string; decisions?: Record<string, 'import_as_new' | 'skip' | { linkTransactionId: string }> }): Promise<{ batchId: string; created: number; linked: number; skippedDuplicates: number }>;
 discardFileImport(input: { batchId: string }): Promise<void>;
 
+// Investimentos e patrimônio (Fase 3 — A3-02, A3-03, A3-04) — src/server/commands/investments.ts
+upsertManualHolding(input: UpsertManualHoldingInput): Promise<{ holdingId: string; assetId: string }>;
+deleteManualHolding(input: { holdingId: string }): Promise<void>;
+recordInvestmentTransaction(input: RecordInvestmentTransactionInput): Promise<{ investmentTransactionId: string }>;
+deleteInvestmentTransaction(input: { investmentTransactionId: string }): Promise<void>;
+refreshMarketPrices(): Promise<PriceUpdateStats>;
+captureNetWorthSnapshot(refDate?: string): Promise<NetWorthComputation>;
+
 type RuleInput = {
   id?: string;
   priority: number;
@@ -484,13 +593,13 @@ type RuleInput = {
 | Arquivo | Exporta |
 |---|---|
 | `enums.ts` | enums e tipos (§3) |
-| `labels.ts` | `KIND_LABELS`, `PAYMENT_METHOD_LABELS`, `ACCOUNT_TYPE_LABELS`, `INVOICE_STATUS_LABELS`, `CONNECTION_STATUS_LABELS` (pt-BR) |
+| `labels.ts` | `KIND_LABELS`, `PAYMENT_METHOD_LABELS`, `ACCOUNT_TYPE_LABELS`, `INVOICE_STATUS_LABELS`, `CONNECTION_STATUS_LABELS`, `ASSET_CLASS_LABELS`, `INVESTMENT_INDEXER_LABELS`, `INVESTMENT_TX_TYPE_LABELS`, `BENCHMARK_LABELS` (pt-BR) |
 | `money.ts` | `toCents(value)`, `formatBRL(cents)`, `sumCents(values)` |
 | `dates.ts` | `TZ`, `today()`, `monthStart(d)`, `monthEnd(d)`, `addMonthsISO(d, n)`, `addDaysISO(d, n)`, `formatDateBR(d)`, `formatMonthBR(d)` |
 | `invoice-cycle.ts` | `getInvoiceCycle(date, closingDay, dueDay)` → `{ referenceMonth, closingDate, dueDate }` |
 | `filters.ts` | `Dimension`, `TxFilters`, `txFiltersSchema`, `defaultFilters()` |
 | `errors.ts` | `CommandError`, `toCommandError(e)` |
-| `types.ts` | tipos das linhas do banco inferidos do schema (`Transaction`, `Account`…) |
+| `types.ts` | tipos das linhas do banco inferidos do schema (`Transaction`, `Account`, `Asset`, `Holding`, `InvestmentTransactionRow`, `AssetPrice`, `BenchmarkSeriesRow`, `NetWorthSnapshot`…) |
 
 Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em erro de regra de negócio e registra o campo em `user_edited_fields` quando a edição vem do usuário (R9).
 
@@ -517,3 +626,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-19 | Coordenador | B2-03a | Comandos de lançamento manual: createManualAccount, createManualTransaction, updateManualTransaction, deleteManualTransaction (aditivo, sem mudança de schema) |
 | 2026-10-19 | Agente B | B2-03b | Coluna parent_transaction_id em transactions, índice e comandos splitTransaction e unsplitTransaction (aditivo) |
 | 2026-10-20 | Planejador | P2-00 | Especificação da tabela `import_batches`, coluna `transaction_sources.import_batch_id`, enums `IMPORT_BATCH_STATUSES`/`IMPORT_FORMATS`, extensão de `createManualAccount` (`credit_card`) e comandos `previewFileImport`, `previewPdfInvoiceImport`, `confirmFileImport`, `discardFileImport` e `reconnectConnection` (aditivo; migration gerada na A2-01) |
+| 2026-10-20 | Planejador | P3-00 | Especificação da Fase 3 (Patrimônio): enums `ASSET_CLASSES`, `INVESTMENT_INDEXERS`, `INVESTMENT_TX_TYPES`, `BENCHMARK_CODES`, `PRICE_SOURCES`; tabelas `assets`, `holdings`, `investment_transactions`, `asset_prices`, `benchmark_series` e `net_worth_snapshots`; comandos `upsertManualHolding`, `deleteManualHolding`, `recordInvestmentTransaction`, `deleteInvestmentTransaction`, `refreshMarketPrices` e `captureNetWorthSnapshot` (aditivo; migration gerada na A3-01) |

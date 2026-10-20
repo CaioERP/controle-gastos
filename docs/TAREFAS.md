@@ -97,7 +97,9 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 ## Fase 2 — Robustez · specs: [`tarefas/fase-2-dados.md`](./tarefas/fase-2-dados.md) e [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)
 
-## Fases 3 a 5 · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
+## Fase 3 — Patrimônio · specs: [`tarefas/fase-3-dados.md`](./tarefas/fase-3-dados.md) e [`tarefas/fase-3-interface.md`](./tarefas/fase-3-interface.md)
+
+## Fases 4 e 5 · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
 
 > Antes de iniciar cada fase, a tarefa `Px-00` detalha as tarefas no mesmo formato das Fases 0 e 1.
 > **`Px-00` deve ser feita por um modelo forte** (ex.: Claude Opus), com base no que foi aprendido nas fases anteriores.
@@ -115,14 +117,14 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #31, #32) |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #29, #30) |
-| P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
-| A3-01 | Schema de investimentos e sincronização Pluggy | A | P3-00 | ⬜ |
-| A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) | A | P3-00 | ⬜ |
-| A3-03 | Rentabilidade e snapshots de patrimônio | A | A3-01, A3-02 | ⬜ |
-| A3-04 | Posições manuais (backend) | A | A3-01 | ⬜ |
-| B3-01 | Tela de investimentos | B | A3-01 | ⬜ |
-| B3-02 | Tela de patrimônio líquido | B | A3-03 | ⬜ |
-| B3-03 | Telas de posições manuais e proventos | B | A3-04 | ⬜ |
+| P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ✅ |
+| A3-01 | Schema de investimentos, aritmética de cotas e sincronização Pluggy | A | P3-00, A1-01, A1-03 (validação real: F0-07) | ⬜ |
+| A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) + job `prices-daily` | A | P3-00, A3-01 | ⬜ |
+| A3-03 | Rentabilidade (TWR mensal) e snapshots de patrimônio | A | P3-00, A3-01, A3-02 | ⬜ |
+| A3-04 | Posições manuais e proventos (backend + fixtures) | A | P3-00, A3-01 | ⬜ |
+| B3-01 | Tela de investimentos (`/investimentos`) | B | P3-00, A3-01 (curva TWR completa: A3-03) | ⬜ |
+| B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | ⬜ |
+| B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | ⬜ |
 | P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ⬜ |
 | A4-01 | Detecção de recorrências e assinaturas | A | P4-00 | ⬜ |
 | A4-02 | Orçamentos sugeridos e motor de alertas | A | P4-00 | ⬜ |
@@ -164,3 +166,5 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [A2-01] Validar parsers de OFX e CSV contra amostras reais em `.data/samples/` quando H-04 for concluída — Agente A, 2026-10-20
 - [B2-03b] 🟢 Consultas secundárias `getInvoices`/`getInvoiceItems` (`queries/invoices.ts`), `getReviewCount` (`queries/transactions.ts`) e `globalSearch` (`queries/search.ts`) ainda não filtram transações-mãe divididas (`not exists child com parent_transaction_id`), já filtradas em `baseWhere` (`queries/base.ts`) e `recalculateInvoices` (`ingestion/invoices.ts`) — Revisor, 2026-10-20
 - [Revisão pós-merge #30–#44] 🟠 corrigidos nos PRs #45–#48. 🟢 restantes (detalhes nos corpos dos PRs): datas do Pluggy em T00:00Z podem cair um dia antes (conferir na F0-07); item em LOGIN_ERROR/OUTDATED marca conexão como active; erro de fetchBills derruba a conexão; parcelas idênticas no mesmo grupo; dedupe automático com candidata única a ±2 dias; CSV genérico data,descricao,valor tratado como cartão; jobs sem backoff e trava só no processo; webhook sem await e segredo na query (F5); partes de divisão ficam pending quando a mãe é lançada; falta "ver a mãe" na divisão; histórico de sync com textos em inglês e dia em UTC; pré-visualização de CSV enorme lenta — Coordenador, 2026-10-20
+- [A3-01/F0-07] Normalizador de investimentos da A3-01 foi especificado sobre os tipos de `pluggy-sdk`; validar os subtipos e campos retornados pelas corretoras reais do usuário quando F0-07 rodar — Planejador (P3-00), 2026-10-20
+- [A3-02] `brapi.dev` sem `BRAPI_TOKEN` permite apenas `PETR4`, `VALE3`, `MGLU3` e `ITUB4` (plano gratuito com token dá 15.000 req/mês, 1 ativo por requisição). Configurar `BRAPI_TOKEN` (e opcionalmente `COINGECKO_API_KEY`) no `.env.local` para cotar demais tickers da B3 — Planejador (P3-00), 2026-10-20

@@ -286,10 +286,95 @@ Ao terminar:
 
 ---
 
-## 7, 10 e 13 — Agente A: implementar as Fases 3, 4 e 5 (dados)
+## 7 — Agente A: Fase 3 (dados — investimentos, cotações, rentabilidade e posições manuais)
+
+```text
+Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
+docs/tarefas/fase-3-dados.md.
+
+Pré-requisito: P3-00, A1-03, A1-04, A1-05, A1-08 e A1-09 com ✅ no quadro. Se não estiverem, pare e avise.
+
+Tarefas, nesta ordem, um PR cada:
+1. A3-01 — Schema de investimentos e sincronização Pluggy. Faz o commit de contrato com a migration
+   0003 das 6 tabelas novas (assets, holdings, investment_transactions, asset_prices, benchmark_series
+   e net_worth_snapshots), enums e stubs de comandos, conforme a spec e o CONTRATOS.md §6.
+   Desenvolva e teste com createFakePluggyApi; no corpo do PR, escreva "validação com a API real
+   pendente (F0-07)".
+2. A3-04 — Posições manuais (backend). Depende de A3-01 e é independente do Pluggy real. Priorize
+   logo após a A3-01 para desbloquear a B3-03 do Agente B.
+3. A3-02 — Cotações e índices (brapi.dev, Tesouro Transparente, SGS/BCB e CoinGecko). Depende de
+   A3-01 e é independente do Pluggy real.
+4. A3-03 — Rentabilidade (TWR mensal simplificado) e snapshots diários de patrimônio líquido. Depende
+   de A3-01 e A3-02.
+
+Se abrir um PR antes do anterior ser aceito, empilhe a branch na anterior (--base <branch-anterior>),
+conforme "Dependência em revisão" do AGENTS.md §3.
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅ (ou
+  em PR empilhado da própria trilha). Se faltar algo, se a spec não existir ou se ela contradisser o
+  código, pare e registre em "Pendências de coordenação".
+- Serviços externos (Pluggy, brapi, Tesouro, BCB, CoinGecko) só pela interface injetável da spec, com
+  fake nos testes (testes nunca acessam a rede).
+- Quantidade de cotas/ações em numeric(20, 8) com aritmética BigInt de escala 10^8 (sem float acumulado).
+  Dinheiro em centavos inteiros.
+- Segredos (BRAPI_TOKEN, COINGECKO_API_KEY) só no .env.local.
+- Escreva só os testes que a spec pede.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
+os desvios e as pendências.
+```
+
+---
+
+## 8 — Agente B: Fase 3 (interface — investimentos, patrimônio líquido e posições manuais)
+
+```text
+Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md,
+docs/tarefas/fase-3-interface.md e docs/tarefas/fase-3-dados.md (para referência do schema e dos
+comandos).
+
+Pré-requisito: P3-00, B1-01 e B1-02 com ✅ no quadro, e pelo menos a A3-01 já aberta em PR (ou na main)
+para usar o schema das 6 tabelas da Fase 3. Se a A3-01 ainda não tiver PR, espere o commit de contrato
+da A3-01 e avise.
+
+Tarefas, um PR cada:
+1. B3-01 — Tela de investimentos (/investimentos e /investimentos/[id]). Depende do schema da A3-01.
+   Se a A3-01 ainda estiver só em PR, siga o "Dependência em revisão" do AGENTS.md §3: crie a branch
+   a partir da branch da A3-01 e abra o PR com --base nela.
+2. B3-03 — Posições manuais e proventos. Depende da B3-01 e dos comandos da A3-04. Se a A3-04 estiver
+   em PR, integre/empilhe conforme AGENTS.md §3 (ou use os stubs de contrato de src/server/commands/investments.ts
+   criados na A3-01).
+3. B3-02 — Tela de patrimônio líquido (/patrimonio). Depende da B3-01 e das séries/snapshots da A3-03
+   (se a tabela estiver vazia antes do primeiro job da A3-03, a query listNetWorthEvolution já calcula
+   o ponto de hoje ao vivo como fallback).
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅ (ou
+  em PR, no caso de dependência em revisão). Se faltar algo, se a spec não existir ou se ela contradisser
+  o código, pare e registre em "Pendências de coordenação".
+- Textos em pt-BR, dinheiro com <Money />, datas com <DateBR />, e tudo funcionando em 390 px.
+- Escreva só os testes que a spec pede.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3001. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
+os desvios e as pendências.
+```
+
+---
+
+## 10 e 13 — Agente A: implementar as Fases 4 e 5 (dados)
 
 Use o mesmo prompt, trocando `<N>`, a lista de tarefas e o pré-requisito:
-- Fase 3: tarefas A3-01 a A3-04; pré-requisito P3-00 ✅.
 - Fase 4: tarefas A4-01 a A4-04; pré-requisito P4-00 ✅.
 - Fase 5: tarefas A5-01 e A5-02; pré-requisito P5-00 ✅ e H-06 ✅.
 
@@ -322,10 +407,9 @@ os desvios e as pendências.
 
 ---
 
-## 8, 11 e 14 — Agente B: implementar as Fases 3, 4 e 5 (interface)
+## 11 e 14 — Agente B: implementar as Fases 4 e 5 (interface)
 
 Use o mesmo prompt, trocando `<N>`, a lista de tarefas e o pré-requisito:
-- Fase 3: tarefas B3-01 a B3-03; pré-requisito P3-00 ✅.
 - Fase 4: tarefas B4-01 a B4-05; pré-requisito P4-00 ✅.
 - Fase 5: tarefas B5-01 e B5-02; pré-requisito P5-00 ✅ e, para a B5-02, H-06 ✅.
 
