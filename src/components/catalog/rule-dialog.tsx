@@ -11,6 +11,7 @@ import type { RuleInput } from '@/server/commands/rules';
 import type { RuleRow } from '@/server/queries/catalog';
 import { appliedMessage, parseOptionalAmount, type CategoryOptionGroup } from './catalog-helpers';
 import { ArchivedCategoryHint, CategorySelect, NativeSelect } from './form-controls';
+import { RulePreview } from './rule-preview';
 import {
   hasOptionalValues,
   initialOptionalValues,
@@ -178,6 +179,15 @@ function RuleForm({ rule, categoryGroups, accounts, onDone }: RuleFormProps) {
         />
         <p className="text-xs text-muted-foreground">Sem diferenciar maiúsculas nem acentos.</p>
       </div>
+
+      <RulePreview
+        matchField={matchField}
+        matchType={matchType}
+        pattern={pattern}
+        accountId={opt.accountId}
+        amountMin={opt.amountMin}
+        amountMax={opt.amountMax}
+      />
 
       <div className="grid gap-1.5">
         <Label htmlFor="rule-category">Categoria</Label>

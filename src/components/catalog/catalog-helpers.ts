@@ -122,6 +122,49 @@ export function ruleToInput(rule: RuleRow): RuleInput {
   };
 }
 
+/** Campos do formulário que decidem a prévia da regra (valores como texto). */
+export type RulePreviewFields = Pick<RuleInput, 'matchField' | 'matchType'> & {
+  pattern: string;
+  accountId: string;
+  amountMin: string;
+  amountMax: string;
+};
+
+/**
+ * Formulário → entrada da prévia. `null`: sem texto, nada a mostrar ainda.
+ * `'invalid_amount'`: faixa de valor inválida (o formulário já avisa ao salvar).
+ */
+export function previewInputFrom(
+  f: RulePreviewFields,
+): Pick<RuleInput, 'matchField' | 'matchType' | 'pattern' | 'accountId' | 'amountMinCents' | 'amountMaxCents'> | 'invalid_amount' | null {
+  const pattern = f.pattern.trim();
+  if (!pattern) return null;
+  const min = parseOptionalAmount(f.amountMin);
+  const max = parseOptionalAmount(f.amountMax);
+  if (min === undefined || max === undefined || (min !== null && max !== null && min > max)) return 'invalid_amount';
+  return {
+    matchField: f.matchField,
+    matchType: f.matchType,
+    pattern,
+    accountId: f.accountId || null,
+    amountMinCents: min,
+    amountMaxCents: max,
+  };
+}
+
+/** "Esta regra casaria com 3 transações dos últimos 90 dias" (singular para 1). */
+export function previewMessage(total: number, days: number): string {
+  return `Esta regra casaria com ${total} ${total === 1 ? 'transação' : 'transações'} dos últimos ${days} dias`;
+}
+
+/** Aviso de R9: transações com categoria do usuário não mudam. Vazio quando não há nenhuma. */
+export function previewUserNote(userCategorized: number): string {
+  if (userCategorized === 0) return '';
+  return userCategorized === 1
+    ? '1 delas tem categoria definida por você e não será alterada.'
+    : `${userCategorized} delas têm categoria definida por você e não serão alteradas.`;
+}
+
 /** Centavos → texto editável no formulário ("1234,56"); null → "". */
 export function formatAmountInput(cents: number | null): string {
   if (cents === null) return '';
