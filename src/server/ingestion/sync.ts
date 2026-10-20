@@ -1,10 +1,18 @@
 import { TZDate } from '@date-fns/tz';
 import { format } from 'date-fns';
-import { and, eq, gte, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
-import { connections, syncRuns, transactions, transactionSources } from '@/server/db/schema';
+import {
+  accounts,
+  connections,
+  invoices,
+  syncRuns,
+  transactions,
+  transactionSources,
+} from '@/server/db/schema';
 import { addDaysISO, today as getToday, TZ } from '@/server/domain/dates';
 import { resolveInstitution } from './institutions';
+import { computeInvoiceStatus } from './invoices';
 import { upsertAccount, upsertTransaction } from './persist';
 import { runPipeline } from './pipeline';
 import type { RawInvoice, SourceAdapter } from './types';
@@ -22,6 +30,39 @@ function sanitizeErrorMessage(err: unknown): string {
     /(?:Bearer\s+|api[_-]?key[=:\s]+|client[_-]?secret[=:\s]+|secret[=:\s]+|password[=:\s]+|token[=:\s]+)[^\s,;]+/gi,
     '[REDACTED]',
   );
+}
+
+async function accountHasTransactions(
+  db: Db,
+  connectionId: string,
+  accountExternalId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+    .where(and(eq(accounts.connectionId, connectionId), eq(accounts.externalId, accountExternalId)))
+    .limit(1);
+  return row !== undefined;
+}
+
+/** Desfaz a quitação registrada por um pagamento (classify-kind grava paidAt = data e paidAmountCents = valor). */
+async function unpayInvoicePaidBy(db: Db, date: string, amountCents: number, todayStr: string) {
+  const [inv] = await db
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.paidAt, date), eq(invoices.paidAmountCents, amountCents)))
+    .limit(1);
+  if (!inv) return;
+  await db
+    .update(invoices)
+    .set({
+      paidAt: null,
+      paidAmountCents: null,
+      status: computeInvoiceStatus({ closingDate: inv.closingDate, dueDate: inv.dueDate, paidAt: null }, todayStr),
+      updatedAt: new Date(),
+    })
+    .where(eq(invoices.id, inv.id));
 }
 
 export async function syncConnection(
@@ -64,9 +105,10 @@ export async function syncConnection(
     .where(eq(connections.id, conn.id));
 
   const todayStr = deps.today ?? getToday();
-  const since = conn.lastSyncedAt
+  const fullSince = addDaysISO(todayStr, -365);
+  const incrementalSince = conn.lastSyncedAt
     ? addDaysISO(format(new TZDate(conn.lastSyncedAt, TZ), 'yyyy-MM-dd'), -7)
-    : addDaysISO(todayStr, -365);
+    : fullSince;
 
   const transactionIds: string[] = [];
   const accountIds: string[] = [];
@@ -77,6 +119,11 @@ export async function syncConnection(
     const rawAccounts = await deps.adapter.listAccounts(connRef);
 
     for (const rawAccount of rawAccounts) {
+      // Conta nova (ou ainda sem lançamentos — o Pluggy pode estar coletando) busca o histórico
+      // completo; senão a janela incremental de 7 dias perderia o passado dela.
+      const since = (await accountHasTransactions(db, conn.id, rawAccount.externalId))
+        ? incrementalSince
+        : fullSince;
       const normalizedTxs = await deps.adapter.listTransactions(connRef, rawAccount, since);
 
       let rawInvoices: RawInvoice[] | undefined;
@@ -95,6 +142,20 @@ export async function syncConnection(
           invoicesByAccount[accountId] = rawInvoices;
         }
 
+        // Pendentes que a própria sincronização apagou antes (sumiram numa busca parcial)
+        const syncDeletedPending = await tx
+          .select({ id: transactions.id, externalId: transactionSources.externalId })
+          .from(transactions)
+          .innerJoin(transactionSources, eq(transactionSources.transactionId, transactions.id))
+          .where(
+            and(
+              eq(transactions.accountId, accountId),
+              eq(transactions.status, 'pending'),
+              isNotNull(transactions.deletedAt),
+              eq(transactionSources.source, deps.adapter.provider),
+            ),
+          );
+
         const fetchedExternalIds = new Set<string>();
         for (const nTx of normalizedTxs) {
           fetchedExternalIds.add(nTx.externalId);
@@ -108,11 +169,29 @@ export async function syncConnection(
           }
         }
 
+        // Voltaram na busca → restaura (senão ficariam escondidas para sempre, R10)
+        const restoreIds = syncDeletedPending
+          .filter((r) => fetchedExternalIds.has(r.externalId))
+          .map((r) => r.id);
+        if (restoreIds.length > 0) {
+          await tx
+            .update(transactions)
+            .set({ deletedAt: null, updatedAt: new Date() })
+            .where(inArray(transactions.id, restoreIds));
+          for (const id of restoreIds) {
+            if (!transactionIds.includes(id)) transactionIds.push(id);
+          }
+          stats.restored = (stats.restored ?? 0) + restoreIds.length;
+        }
+
         // Pendentes que sumiram na janela sincronizada → soft delete
         const pendingRows = await tx
           .select({
             id: transactions.id,
             externalId: transactionSources.externalId,
+            kind: transactions.kind,
+            date: transactions.date,
+            amountCents: transactions.amountCents,
           })
           .from(transactions)
           .innerJoin(transactionSources, eq(transactionSources.transactionId, transactions.id))
@@ -126,9 +205,8 @@ export async function syncConnection(
             ),
           );
 
-        const disappearedIds = pendingRows
-          .filter((r) => !fetchedExternalIds.has(r.externalId))
-          .map((r) => r.id);
+        const disappeared = pendingRows.filter((r) => !fetchedExternalIds.has(r.externalId));
+        const disappearedIds = disappeared.map((r) => r.id);
 
         if (disappearedIds.length > 0) {
           await tx
@@ -136,6 +214,14 @@ export async function syncConnection(
             .set({ deletedAt: new Date() })
             .where(inArray(transactions.id, disappearedIds));
           stats.deleted = (stats.deleted ?? 0) + disappearedIds.length;
+
+          // Pagamento de fatura pendente que sumiu (o lançado costuma vir com outro id): desfaz a
+          // quitação para o lançado conseguir casar com a fatura de novo.
+          for (const r of disappeared) {
+            if (r.kind === 'invoice_payment' && r.amountCents < 0) {
+              await unpayInvoicePaidBy(tx, r.date, -r.amountCents, todayStr);
+            }
+          }
         }
       });
     }
