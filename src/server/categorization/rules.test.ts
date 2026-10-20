@@ -93,6 +93,15 @@ describe('pickRule', () => {
     expect(pickRule([b, a], tx())?.id).toBe('aaa');
   });
 
+  it('empate em prioridade, conta e tamanho: a regra alterada mais recentemente vence, antes do id', () => {
+    const antiga = rule({ id: 'aaa', pattern: 'padaria', updatedAt: new Date('2026-10-01T10:00:00Z') });
+    const recente = rule({ id: 'bbb', pattern: 'padaria', updatedAt: new Date('2026-10-02T10:00:00Z') });
+    expect(pickRule([antiga, recente], tx())?.id).toBe('bbb');
+    expect(pickRule([recente, antiga], tx())?.id).toBe('bbb');
+    // Sem updatedAt em uma das duas, continua valendo o id
+    expect(pickRule([rule({ id: 'aaa', pattern: 'padaria' }), recente], tx())?.id).toBe('aaa');
+  });
+
   it('nenhuma regra casa → null', () => {
     expect(pickRule([rule({ pattern: 'mercado' })], tx())).toBeNull();
   });

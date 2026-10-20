@@ -33,12 +33,45 @@ export function descriptionBase(description: string, installmentTotal: number | 
   return text;
 }
 
+/**
+ * Palavras que não identificam o que foi comprado: forma de pagamento, termos de parcelamento, conectivos e
+ * marketplaces/intermediadores que vendem de tudo. Uma descrição-base feita só delas ("Compra parcelada",
+ * "Mercado Livre", "Pagamento Pix") viraria um `starts_with` que pega compras de qualquer categoria.
+ * Lista curta de propósito: só termos que aparecem como prefixo genérico nas descrições bancárias.
+ */
+const GENERIC_WORDS = new Set([
+  // operação / forma de pagamento
+  'compra', 'compras', 'parcelada', 'parcelado', 'parcela', 'parc', 'pagamento', 'pagto', 'pag', 'pix', 'ted', 'doc',
+  'transferencia', 'debito', 'credito', 'cartao', 'boleto', 'online', 'internet', 'loja', 'enviado', 'recebido',
+  // marketplaces e intermediadores
+  'mercado', 'livre', 'mercadolivre', 'pago', 'mercadopago', 'amazon', 'shopee', 'aliexpress', 'magalu',
+  'americanas', 'picpay', 'paypal', 'pagseguro', 'marketplace', 'mktplace', 'mkt', 'shop', 'store', 'www',
+  // país, banco e sufixos societários
+  'brasil', 'br', 'banco', 'ltda', 'sa', 'me',
+  // conectivos
+  'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'no', 'na', 'com', 'a', 'o',
+]);
+
+/**
+ * A descrição-base tem algo que identifique a compra? Conta só as letras dos tokens fora de `GENERIC_WORDS`
+ * (pelo menos 3); números não contam ("Loja 123", "Compra 2026" continuam genéricas).
+ */
+function isDistinctive(base: string): boolean {
+  const letters = normalizeForMatch(base)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w && !GENERIC_WORDS.has(w))
+    .join('')
+    .replace(/[^a-z]/g, '');
+  return letters.length >= 3;
+}
+
 export type LearnedMatch = Pick<CategorizationRule, 'matchField' | 'matchType' | 'pattern'>;
 
 /**
  * Padrão da regra aprendida a partir de uma transação recategorizada pelo usuário:
  * - com estabelecimento → `merchant` `equals` nome;
- * - parcela com descrição-base de pelo menos 8 caracteres → `description` `starts_with` base (pega as outras parcelas);
+ * - parcela com descrição-base de pelo menos 8 caracteres e com algum termo distintivo (não só palavras genéricas,
+ *   ver `GENERIC_WORDS`) → `description` `starts_with` base (pega as outras parcelas);
  * - senão → `description` `equals` descrição inteira (nunca um `contains` genérico).
  */
 export function learnedMatchFor(tx: {
@@ -49,7 +82,7 @@ export function learnedMatchFor(tx: {
   if (tx.merchantName) return { matchField: 'merchant', matchType: 'equals', pattern: tx.merchantName };
   const text = tx.description.trim();
   const base = descriptionBase(text, tx.installmentTotal);
-  if (base !== text && normalizeForMatch(base).length >= MIN_STARTS_WITH) {
+  if (base !== text && normalizeForMatch(base).length >= MIN_STARTS_WITH && isDistinctive(base)) {
     return { matchField: 'description', matchType: 'starts_with', pattern: base };
   }
   return { matchField: 'description', matchType: 'equals', pattern: text };

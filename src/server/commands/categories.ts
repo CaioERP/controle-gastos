@@ -143,6 +143,12 @@ export async function upsertCategory(
   }
 }
 
+/**
+ * Mantém `categorization_rules.updated_at` em UPDATEs automáticos: o desempate entre regras (`sortRules`) usa essa
+ * coluna como "última decisão do usuário ou aprendizado", e redirecionar ao arquivar não é uma nova decisão.
+ */
+const keepUpdatedAt = sql`${categorizationRules.updatedAt}`;
+
 const archiveCategoryInput = z.object({
   categoryId: z.string().uuid(),
   moveTransactionsTo: z.string().uuid().nullable(),
@@ -199,7 +205,7 @@ export async function archiveCategory(
           .where(inArray(transactions.categoryId, ids));
         await tx
           .update(categorizationRules)
-          .set({ setCategoryId: moveTransactionsTo })
+          .set({ setCategoryId: moveTransactionsTo, updatedAt: keepUpdatedAt })
           .where(inArray(categorizationRules.setCategoryId, ids));
         await tx
           .update(merchants)
@@ -221,7 +227,7 @@ export async function archiveCategory(
         // Sem destino: as regras param de valer e as memórias/mapeamentos deixam de apontar para a categoria
         await tx
           .update(categorizationRules)
-          .set({ enabled: false })
+          .set({ enabled: false, updatedAt: keepUpdatedAt })
           .where(inArray(categorizationRules.setCategoryId, ids));
         await tx
           .update(merchants)

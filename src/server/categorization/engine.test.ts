@@ -17,6 +17,10 @@ import type { NewTransaction } from '@/server/domain/types';
 import { markReviewed } from '@/server/commands/transactions';
 import { categorizeTransactions, notUserCategorized } from './engine';
 
+// UUIDs determinísticos para testes de desempate (ID_A < ID_B)
+const ID_A = '00000000-0000-4000-8000-00000000000a';
+const ID_B = '00000000-0000-4000-8000-00000000000b';
+
 async function setup() {
   const db = await createTestDb();
   await seedBase(db);
@@ -272,17 +276,55 @@ describe('categorizeTransactions', () => {
     expect(b.categorySource).toBe('rule');
   });
 
-  it('empate total entre regras: vence sempre a de menor id, qualquer que seja a ordem de criação', async () => {
+  it('empate de critério: vence a regra alterada mais recentemente', async () => {
     const { db, catId, insertTx, insertRule, getTx } = await setup();
     const padaria = await catId('alimentacao-padaria-cafe');
     const restaurante = await catId('alimentacao-restaurante');
-    const r1 = await insertRule('padaria', padaria);
-    const r2 = await insertRule('padaria', restaurante);
-    const winner = r1.id < r2.id ? r1 : r2;
+    // ids fixos: a mais recente tem o MAIOR id, então o teste falha sempre que o updatedAt for ignorado
+    await insertRule('padaria', padaria, { id: ID_B, updatedAt: new Date('2026-10-02T10:00:00Z') });
+    await insertRule('padaria', restaurante, { id: ID_A, updatedAt: new Date('2026-10-01T10:00:00Z') });
     const t = await insertTx();
 
     await categorizeTransactions(db, [t.id]);
-    expect((await getTx(t.id)).categoryId).toBe(winner.setCategoryId);
+    expect((await getTx(t.id)).categoryId).toBe(padaria);
+  });
+
+  it('empate total entre regras (inclusive updatedAt): vence sempre a de menor id', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    const padaria = await catId('alimentacao-padaria-cafe');
+    const restaurante = await catId('alimentacao-restaurante');
+    const same = new Date('2026-10-01T10:00:00Z');
+    // A de maior id é criada primeiro: a ordem de criação não pode decidir
+    await insertRule('padaria', restaurante, { id: ID_B, updatedAt: same });
+    await insertRule('padaria', padaria, { id: ID_A, updatedAt: same });
+    const t = await insertTx();
+
+    await categorizeTransactions(db, [t.id]);
+    expect((await getTx(t.id)).categoryId).toBe(padaria);
+  });
+
+  it('contar acertos não renova o updatedAt: o desempate não alterna entre sincronizações', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    const app = await catId('transporte-app');
+    const delivery = await catId('alimentacao-delivery');
+    // Mesmo tamanho de padrão e prioridade: decide o updatedAt (a de "eats" é a decisão mais recente)
+    const antiga = await insertRule('uber', app, { id: ID_B, updatedAt: new Date('2026-10-01T10:00:00Z') });
+    await insertRule('eats', delivery, { id: ID_A, updatedAt: new Date('2026-10-02T10:00:00Z') });
+    const eats = await insertTx({ description: 'Uber Eats', descriptionRaw: 'UBER EATS' });
+
+    await categorizeTransactions(db, [eats.id]);
+    expect((await getTx(eats.id)).categoryId).toBe(delivery);
+
+    // Rodada seguinte: uma corrida acerta a regra antiga (hitCount sobe) e o Uber Eats é reprocessado
+    const corrida = await insertTx({ description: 'Uber Trip', descriptionRaw: 'UBER TRIP' });
+    await categorizeTransactions(db, [corrida.id, eats.id]);
+    expect((await getTx(corrida.id)).categoryId).toBe(app);
+    const [regraAntiga] = await db.select().from(categorizationRules).where(eq(categorizationRules.id, antiga.id));
+    expect(regraAntiga!.hitCount).toBe(1);
+    expect(regraAntiga!.updatedAt.toISOString()).toBe('2026-10-01T10:00:00.000Z');
+
+    await categorizeTransactions(db, [eats.id]);
+    expect((await getTx(eats.id)).categoryId).toBe(delivery);
   });
 
   it('integração com os dados fictícios: regra "contém uber" categoriza todas as corridas', async () => {

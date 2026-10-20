@@ -136,6 +136,29 @@ describe('recategorize: rule', () => {
     expect(await getTx(nova.id)).toMatchObject({ categoryId: saidas.id, categorySource: 'rule' });
   });
 
+  it('regra do usuário com o mesmo critério e prioridade: a aprendida, mais recente, vence', async () => {
+    const { db, cat, insertTx, insertMerchant, getTx } = await setupCommandsDb();
+    const m = await insertMerchant('Uber');
+    const compras = cat('compras');
+    const app = cat('transporte-app');
+    await db
+      .insert(categorizationRules)
+      .values({ matchField: 'merchant', matchType: 'equals', pattern: 'Uber', setCategoryId: compras.id });
+    const a = await insertTx({ description: 'Uber', merchantId: m.id });
+    const b = await insertTx({ description: 'Uber', merchantId: m.id });
+    await categorizeTransactions(db, [a.id, b.id]);
+    expect((await getTx(b.id)).categoryId).toBe(compras.id);
+
+    await recategorize(db, { transactionId: a.id, categoryId: app.id, scope: 'rule' });
+    expect(await db.select().from(categorizationRules)).toHaveLength(2);
+    expect(await getTx(b.id)).toMatchObject({ categoryId: app.id, categorySource: 'rule' });
+
+    const nova = await insertTx({ description: 'Uber', merchantId: m.id });
+    await categorizeTransactions(db, [b.id, nova.id]);
+    expect((await getTx(b.id)).categoryId).toBe(app.id);
+    expect((await getTx(nova.id)).categoryId).toBe(app.id);
+  });
+
   it('respeita regra de prioridade maior e reprocessar não alterna (Uber Eats)', async () => {
     const { db, cat, insertTx, insertMerchant, getTx } = await setupCommandsDb();
     const m = await insertMerchant('Uber');
