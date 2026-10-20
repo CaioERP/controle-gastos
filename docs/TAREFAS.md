@@ -82,7 +82,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B1-06 | Telas de contas, cartões e conexões | B | B1-02 (widget Pluggy real: A1-01) | ✅ |
 | B1-07 | Tela de faturas | B | B1-02 | ✅ |
 | B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | ✅ |
-| B1-09 | Tela de categorias e regras | B | B1-02 | ✅ (prévia de regra pendente, ver Pendências) |
+| B1-09 | Tela de categorias e regras | B | B1-02 | ✅ |
 | B1-10 | Fila de revisão | B | B1-05 | ✅ |
 | B1-11 | Links de detalhamento com contas fora dos totais | B | B1-04, B1-08 | ⬜ |
 
@@ -145,9 +145,9 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [A1-06] PLUGGY_CATEGORY_SEED vazio até a F0-07 rodar (precisa de H-01/H-02) — Agente A, 2026-10-18. Ao preencher: rodar o seed de novo NÃO troca uma categoria ativa por outra ativa no provider_category_map; corrigir entrada já gravada exige migração de dados (ver provider-map.ts)
 - [A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18
 - ~~[B1-03] FilterBar descartava parâmetros da página (dim, cartao, fatura, aba); datas da URL dependiam do fuso~~ — resolvido no PR #19, 2026-10-19
-- [B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19 · PR #22 em revisão
+- ~~[B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19~~ — feito no PR #22, 2026-10-19
 - [B1-04/B1-08] Regra no-restricted-imports no ESLint para garantir que queries/stats.ts e queries/analysis.ts (usados no cliente) nunca importem o banco — Coordenador, 2026-10-19 · 🔴 bloqueada: o hook local config-protection impede agentes de editar eslint.config.mjs. A regra está pronta e validada; o usuário precisa aplicá-la à mão ou liberar o hook
-- [B1-03] e2e filters.spec.ts falhou 1 vez em 4 execuções seguidas (passou isolado logo depois): provável instabilidade de tempo — Coordenador, 2026-10-19 · PR #24 (espera de hidratação) em revisão
+- ~~[B1-03] e2e filters.spec.ts falhou 1 vez em 4 execuções seguidas (passou isolado logo depois): provável instabilidade de tempo — Coordenador, 2026-10-19~~ — PR #24 (espera de hidratação), 2026-10-19
 - ~~[A1-08] archiveCategory não redireciona categorization_rules.set_category_id nem merchants.default_category_id da categoria arquivada (o motor já ignora categorias arquivadas) — Coordenador, 2026-10-19~~ — resolvido no PR #20 (regras, memória e mapa da fonte redirecionados; sem destino, regras desabilitadas), 2026-10-19
 - ~~[B1-03/B1-04/B1-08] 🟠 Links de detalhamento do dashboard e da análise para /transacoes não levam `natureza`, e a lista agora mostra todas as naturezas por padrão: o total da lista deixa de bater com o gráfico (ex.: forma=pix inclui transferências). Mesma causa: marcar exatamente despesa+receita+estorno na FilterBar tira `natureza` da URL. Gravar `natureza` sempre que houver seleção ou mandá-la nos links — Revisor, 2026-10-19~~ — resolvido no PR #23; sobrou o caso das contas fora dos totais, que virou a B1-11, 2026-10-19
 - ~~[B1-05] e2e de naturezas usa mes=2026-10 fixo (dados fictícios são gerados a partir da data real; quebra por volta de 04/2027) e a checagem de valor positivo não lê linhas fora da tela — Revisor, 2026-10-19~~ — resolvido no PR #23, 2026-10-19
