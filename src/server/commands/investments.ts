@@ -21,6 +21,12 @@ import { CommandError } from '@/server/domain/errors';
 import { slugify } from '@/server/ingestion/institutions';
 import { fromScaledQty, toScaledQty } from '@/server/investments/math';
 import { linkInvestmentTransactionsToChecking } from '@/server/investments/sync';
+import {
+  updateMarketPricesAndBenchmarks,
+  type PriceUpdateStats,
+} from '@/server/investments/update-prices';
+
+export type { PriceUpdateStats };
 
 const ZERO = BigInt(0);
 
@@ -82,14 +88,6 @@ const recordInvestmentTransactionSchema = z.object({
   linkedTransactionId: z.string().uuid().nullable().optional(),
 });
 
-export type PriceUpdateStats = {
-  b3Updated: number;
-  treasuryUpdated: number;
-  cryptoUpdated: number;
-  benchmarksUpdated: number;
-  holdingsRevalued: number;
-  errors: string[];
-};
 
 export type NetWorthComputation = {
   date: string;
@@ -574,8 +572,7 @@ export async function deleteInvestmentTransaction(
 export async function refreshMarketPrices(
   db: Db,
 ): Promise<PriceUpdateStats> {
-  void db;
-  throw new CommandError('VALIDATION', 'refreshMarketPrices ainda não implementado (A3-02)');
+  return updateMarketPricesAndBenchmarks(db);
 }
 
 export async function captureNetWorthSnapshot(

@@ -6,12 +6,14 @@ import { invoices, syncRuns, transactions } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
 import { checkConnectionsLifecycle } from '@/server/ingestion/connection-lifecycle';
 import { computeInvoiceStatus } from '@/server/ingestion/invoices';
+import { updateMarketPricesAndBenchmarks } from '@/server/investments/update-prices';
 
 export type JobName =
   | 'sync-all'
   | 'categorize-pending'
   | 'invoice-status'
-  | 'connection-health';
+  | 'connection-health'
+  | 'prices-daily';
 
 export type JobDef = {
   name: JobName;
@@ -87,6 +89,11 @@ export const JOBS: JobDef[] = [
     name: 'connection-health',
     intervalMinutes: 1440,
     run: (db) => checkConnectionsLifecycle(db),
+  },
+  {
+    name: 'prices-daily',
+    intervalMinutes: 1440,
+    run: (db) => updateMarketPricesAndBenchmarks(db),
   },
 ];
 
