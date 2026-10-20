@@ -9,6 +9,7 @@ import {
   institutions,
   invoices,
   merchants,
+  syncRuns,
   transactions,
   transactionSources,
   transactionTags,
@@ -34,7 +35,34 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
     await tx.delete(invoices);
     await tx.delete(cards);
     await tx.delete(accounts);
+    await tx.delete(syncRuns);
     await tx.delete(connections);
+
+    // 2b. Inserir conexão fictícia para a tela de conexões e saúde
+    const nubankInstId = instMap.get('nubank');
+    if (nubankInstId) {
+      const connId = randomUUID();
+      const syncDate = new Date(`${opts.referenceDate}T12:00:00Z`);
+      const expiresDate = new Date(syncDate.getTime() + 90 * 86_400_000);
+      await tx.insert(connections).values({
+        id: connId,
+        provider: 'pluggy',
+        institutionId: nubankInstId,
+        externalId: 'fixture-item-nubank',
+        status: 'active',
+        consentExpiresAt: expiresDate,
+        lastSyncedAt: syncDate,
+      });
+      await tx.insert(syncRuns).values({
+        id: randomUUID(),
+        connectionId: connId,
+        job: 'pluggy-sync',
+        startedAt: syncDate,
+        finishedAt: new Date(syncDate.getTime() + 1500),
+        status: 'success',
+        stats: { accounts: 2, created: 14, updated: 1 },
+      });
+    }
 
     // 3. Inserir contas
     const accountMap = new Map<string, string>();

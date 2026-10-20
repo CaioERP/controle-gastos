@@ -15,8 +15,8 @@ export function createFakePluggyApi(data: FakePluggyData = {}): PluggyApi {
   const bills = [...(data.bills ?? [])];
 
   return {
-    async createConnectToken(): Promise<string> {
-      return 'fake-connect-token-123';
+    async createConnectToken(itemId?: string): Promise<string> {
+      return itemId ? `fake-connect-token:${itemId}` : 'fake-connect-token-123';
     },
 
     async fetchItem(itemId: string): Promise<PluggyItem> {

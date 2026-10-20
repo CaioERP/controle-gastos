@@ -55,7 +55,7 @@ export type PluggyBill = {
 };
 
 export interface PluggyApi {
-  createConnectToken(): Promise<string>;
+  createConnectToken(itemId?: string): Promise<string>;
   fetchItem(itemId: string): Promise<PluggyItem>;
   fetchAccounts(itemId: string): Promise<PluggyAccount[]>;
   /** Todas as transações a partir de `from` (YYYY-MM-DD). */

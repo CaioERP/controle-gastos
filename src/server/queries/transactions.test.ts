@@ -58,6 +58,13 @@ describe('queries / transactions', () => {
     }
   });
 
+  it('busca com % não casa com todas as transações (escapeLike funciona)', async () => {
+    const all = await listTransactions(db, { from: '2026-05-01', to: '2026-10-15' }, { limit: 100 });
+    const percentSearch = await listTransactions(db, { from: '2026-05-01', to: '2026-10-15', search: '%' });
+    // Se % não fosse escapado, casaria com tudo. Como é escapado, só casa se houver '%' literal na descrição.
+    expect(percentSearch.items.length).toBeLessThan(all.items.length);
+  });
+
   it('getTransaction retorna dados completos com fontes', async () => {
     const list = await listTransactions(db, { from: '2026-05-01', to: '2026-10-15' }, { limit: 1 });
     const id = list.items[0]!.id;
@@ -78,7 +85,7 @@ describe('queries / transactions', () => {
     const group = await getInstallmentGroup(db, parcelada!.installment!.groupId!);
     expect(group.length).toBeGreaterThan(1);
     for (let i = 1; i < group.length; i++) {
-      expect((group[i]!.installment?.number ?? 0)).toBeGreaterThan((group[i - 1]!.installment?.number ?? 0));
+      expect(group[i]!.installment?.number ?? 0).toBeGreaterThan(group[i - 1]!.installment?.number ?? 0);
     }
   });
 

@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { RefreshCwIcon, AlertTriangleIcon, CheckCircle2Icon, ClockIcon, XCircleIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ReconnectButton } from '@/components/connections/reconnect-button';
 import { triggerSyncAction } from '@/app/(app)/conexoes/actions';
 import { CONNECTION_STATUS_LABELS } from '@/server/domain/labels';
 import { formatDateBR } from '@/server/domain/dates';
@@ -69,9 +71,25 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
     ? formatDistanceToNow(new Date(connection.lastSyncedAt), { addSuffix: true, locale: ptBR })
     : 'Nunca sincronizado';
 
-  const isConsentExpiringSoon = connection.consentExpiresAt && isValid(new Date(connection.consentExpiresAt))
-    ? differenceInDays(new Date(connection.consentExpiresAt), new Date()) <= 15
-    : false;
+  const isConsentExpiringSoon =
+    connection.health?.consentExpiringSoon ??
+    (connection.consentExpiresAt && isValid(new Date(connection.consentExpiresAt))
+      ? differenceInDays(new Date(connection.consentExpiresAt), new Date()) <= 15
+      : false);
+
+  const isConsentExpired =
+    connection.health?.consentExpired ??
+    (connection.consentExpiresAt && isValid(new Date(connection.consentExpiresAt))
+      ? differenceInDays(new Date(connection.consentExpiresAt), new Date()) <= 0
+      : false);
+
+  const needsReconnect =
+    connection.status === 'error' ||
+    connection.status === 'expired' ||
+    connection.status === 'revoked' ||
+    isConsentExpiringSoon ||
+    isConsentExpired ||
+    Boolean(connection.health?.isPausedByErrors);
 
   return (
     <div className="flex flex-col justify-between p-4 rounded-xl border bg-card gap-4 shadow-2xs hover:border-foreground/20 transition-all">
@@ -104,7 +122,16 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
           <span className="text-foreground font-medium">{syncTimeAgo}</span>
         </div>
 
-        {connection.lastError && (
+        {connection.health?.isPausedByErrors && (
+          <div className="flex items-start gap-1.5 p-2 rounded-md bg-destructive/10 text-destructive text-[11px]">
+            <AlertTriangleIcon className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>
+              Sincronização pausada ({connection.health.consecutiveErrors} falhas seguidas). Reconecte para retomar.
+            </span>
+          </div>
+        )}
+
+        {connection.lastError && !connection.health?.isPausedByErrors && (
           <div className="flex items-start gap-1.5 p-2 rounded-md bg-destructive/10 text-destructive text-[11px]">
             <AlertTriangleIcon className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>{connection.lastError}</span>
@@ -119,17 +146,32 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
         )}
       </div>
 
-      <div className="flex items-center justify-end pt-1 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={isPending}
-          className="text-xs gap-1.5 h-8"
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t">
+        <Link
+          href={`/conexoes/${connection.id}`}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
         >
-          <RefreshCwIcon className={`h-3.5 w-3.5 ${isPending ? 'animate-spin' : ''}`} />
-          <span>{isPending ? 'Sincronizando...' : 'Sincronizar agora'}</span>
-        </Button>
+          Ver saúde e histórico →
+        </Link>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {needsReconnect && (
+            <ReconnectButton
+              connectionId={connection.id}
+              externalItemId={connection.externalId}
+            />
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSync}
+            disabled={isPending}
+            className="text-xs gap-1.5 h-8"
+          >
+            <RefreshCwIcon className={`h-3.5 w-3.5 ${isPending ? 'animate-spin' : ''}`} />
+            <span>{isPending ? 'Sincronizando...' : 'Sincronizar agora'}</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

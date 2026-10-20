@@ -1,8 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createTestDb } from '../../../tests/helpers/db';
 import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from '../../../tests/fixtures/load';
 import type { Db } from '@/server/db/client';
+import { accounts, institutions, transactions } from '@/server/db/schema';
 import { globalSearch } from './search';
 
 const REF = '2026-10-15';
@@ -50,5 +52,55 @@ describe('globalSearch', () => {
 
     const resultDouble = await globalSearch(db, '%%');
     expect(resultDouble.transactions).toEqual([]);
+  });
+
+  it('não devolve transações de contas ocultas nem parcelas com status projected', async () => {
+    const [inst] = await db.select().from(institutions).limit(1);
+
+    // Conta oculta
+    const [hiddenAcc] = await db
+      .insert(accounts)
+      .values({
+        institutionId: inst!.id,
+        name: 'Conta Oculta Especial',
+        type: 'checking',
+        isHidden: true,
+      })
+      .returning();
+
+    await db.insert(transactions).values({
+      accountId: hiddenAcc!.id,
+      date: '2026-10-10',
+      amountCents: -5000,
+      descriptionRaw: 'Gasto Oculto Secreto',
+      description: 'Gasto Oculto Secreto',
+      kind: 'expense',
+      paymentMethod: 'pix',
+      status: 'posted',
+    });
+
+    // Transação projetada em conta visível
+    const [visibleAcc] = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.isHidden, false))
+      .limit(1);
+
+    await db.insert(transactions).values({
+      accountId: visibleAcc ? visibleAcc.id : hiddenAcc!.id,
+      date: '2026-11-10',
+      amountCents: -5000,
+      descriptionRaw: 'Gasto Previsto Futuro',
+      description: 'Gasto Previsto Futuro',
+      kind: 'expense',
+      paymentMethod: 'pix',
+      status: 'projected',
+    });
+
+    const hiddenRes = await globalSearch(db, 'Gasto Oculto Secreto');
+    expect(hiddenRes.transactions).toEqual([]);
+
+    const projectedRes = await globalSearch(db, 'Gasto Previsto Futuro');
+    expect(projectedRes.transactions).toEqual([]);
   });
 });

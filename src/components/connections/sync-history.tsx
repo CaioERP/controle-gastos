@@ -10,6 +10,15 @@ type SyncHistoryProps = {
   runs: SyncRunRow[];
 };
 
+function formatRunStats(stats: unknown): string | null {
+  if (!stats || typeof stats !== 'object') return null;
+  const s = stats as { created?: number; updated?: number };
+  if (typeof s.created !== 'number' && typeof s.updated !== 'number') return null;
+  const created = s.created ?? 0;
+  const updated = s.updated ?? 0;
+  return `+${created} ${created === 1 ? 'nova' : 'novas'}, ${updated} ${updated === 1 ? 'atualizada' : 'atualizadas'}`;
+}
+
 export function SyncHistory({ runs }: SyncHistoryProps) {
   if (runs.length === 0) {
     return (
@@ -20,7 +29,7 @@ export function SyncHistory({ runs }: SyncHistoryProps) {
   }
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden shadow-2xs">
+    <div className="rounded-xl border bg-card overflow-hidden shadow-2xs" data-testid="sync-history">
       <div className="p-3 border-b bg-muted/20">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Últimas Execuções ({runs.length})
@@ -40,6 +49,7 @@ export function SyncHistory({ runs }: SyncHistoryProps) {
           }
 
           const isSuccess = run.status === 'success';
+          const statsText = formatRunStats(run.stats);
 
           return (
             <div
@@ -47,7 +57,7 @@ export function SyncHistory({ runs }: SyncHistoryProps) {
               className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-2 text-xs hover:bg-muted/30 transition-colors"
             >
               <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center flex-wrap gap-2">
                   <span className="font-medium text-foreground">{run.job}</span>
                   <Badge
                     variant={isSuccess ? 'outline' : 'destructive'}
@@ -59,6 +69,11 @@ export function SyncHistory({ runs }: SyncHistoryProps) {
                   >
                     {run.status}
                   </Badge>
+                  {statsText && (
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      ({statsText})
+                    </span>
+                  )}
                 </div>
                 <span className="text-[11px] text-muted-foreground">
                   Iniciado em {started} · Duração: {duration}

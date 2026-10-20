@@ -4,9 +4,14 @@ import { triggerSync } from '@/server/commands/sync';
 import type { Db } from '@/server/db/client';
 import { invoices, syncRuns, transactions } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
+import { checkConnectionsLifecycle } from '@/server/ingestion/connection-lifecycle';
 import { computeInvoiceStatus } from '@/server/ingestion/invoices';
 
-export type JobName = 'sync-all' | 'categorize-pending' | 'invoice-status';
+export type JobName =
+  | 'sync-all'
+  | 'categorize-pending'
+  | 'invoice-status'
+  | 'connection-health';
 
 export type JobDef = {
   name: JobName;
@@ -77,6 +82,11 @@ export const JOBS: JobDef[] = [
       }
       return { checked: unpaid.length, updated };
     },
+  },
+  {
+    name: 'connection-health',
+    intervalMinutes: 1440,
+    run: (db) => checkConnectionsLifecycle(db),
   },
 ];
 
