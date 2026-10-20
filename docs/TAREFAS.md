@@ -68,7 +68,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
 | A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ✅ (teste com a API real pendente: H-03) |
 | A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | 🟡 Agente A — PR #38 em revisão (passos 3 a 5; PR #20 na main) |
-| A1-09 | Jobs e agendamento | A | A1-03, A1-07 | 🟡 Agente A |
+| A1-09 | Jobs e agendamento | A | A1-03, A1-07 | 🟡 Agente A — PR #39 em revisão |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
 
@@ -104,7 +104,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
 | P2-00 | Detalhar a Fase 2 | forte | M1 (antecipada) | ✅ |
-| A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | ⬜ |
+| A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | 🟡 Agente A |
 | A2-02 | Importação de fatura em PDF via IA | A | A2-01, H-03, H-04 | ⬜ |
 | A2-03 | Deduplicação entre fontes | A | A2-01 | ⬜ |
 | A2-04 | Conferência de faturas (total do PDF × lançamentos) | A | A2-02, A2-03, H-03, H-04 | ⬜ |
