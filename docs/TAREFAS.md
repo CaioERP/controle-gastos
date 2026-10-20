@@ -98,7 +98,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 > Antes de iniciar cada fase, a tarefa `Px-00` detalha as tarefas no mesmo formato das Fases 0 e 1.
 > **`Px-00` deve ser feita por um modelo forte** (ex.: Claude Opus), com base no que foi aprendido nas fases anteriores.
-> **Antecipadas** (não dependem do Pluggy nem de contrato, já detalhadas): B2-04, em `tarefas/fase-2-interface.md`.
+> **Antecipadas** (não dependem do Pluggy nem de contrato, já detalhadas): B2-04 e B2-03a, em `tarefas/fase-2-interface.md`.
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
@@ -110,7 +110,8 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00 | ⬜ |
 | B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00 | ⬜ |
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00 | ⬜ |
-| B2-03 | Lançamento manual e divisão de transação | B | P2-00 | ⬜ |
+| B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ⬜ |
+| B2-03b | Divisão de transação (`parent_transaction_id`) | B | P2-00 | ⬜ |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — PRs #26 e #27 em revisão |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
 | A3-01 | Schema de investimentos e sincronização Pluggy | A | P3-00 | ⬜ |

@@ -126,3 +126,98 @@
 - [ ] `Ctrl+K` abre a busca em qualquer tela e `Esc` fecha
 - [ ] Digitar parte do nome de um estabelecimento mostra o estabelecimento e as transações dele, e escolher um item leva à tela certa
 - [ ] Funciona em 390 px de largura
+
+---
+
+## B2-03a — Lançamento manual (contas manuais e transações manuais)
+
+**Depende de:** B1-05, B1-06 · **Tamanho:** médio · **Contrato:** comandos novos (mudança aditiva, já registrada em `CONTRATOS.md` §5.4) · **Entrega:** 2 PRs
+
+> Antecipada da B2-03. A **divisão de transação** fica para a B2-03b, que continua esperando a `P2-00`, porque muda a regra dos totais.
+> Esta tarefa toca as duas trilhas: o Agente B está **autorizado** a criar `src/server/commands/manual.ts` (pasta do Agente A). Não altere outros arquivos de `commands/`, `categorization/` ou `ingestion/`.
+
+### Regras de negócio desta tarefa
+- **Transação manual só em conta manual** (`accounts.connection_id IS NULL`). Lançar numa conta sincronizada pelo Pluggy duplicaria a transação quando ela chegasse pela sincronização. O comando recusa com `VALIDATION`.
+- **Sinal (R1):** a UI mostra valor positivo e o tipo (Despesa ou Receita), e o comando recebe `amountCents` **com sinal**:
+  - `expense`: obrigatoriamente < 0;
+  - `income` e `refund`: obrigatoriamente > 0;
+  - `transfer`, `investment` e `adjustment`: qualquer valor ≠ 0;
+  - zero é sempre recusado.
+- **Saldo da conta manual:** `accounts.balance_cents` acompanha os lançamentos:
+  - criar soma `amountCents`;
+  - alterar o valor soma a diferença (novo − antigo);
+  - excluir subtrai o valor.
+  - Faça isso **na mesma transação de banco** (`db.transaction`).
+- **Origem:** toda transação manual ganha uma linha em `transaction_sources` com `source: 'manual'` e `externalId` igual ao próprio id da transação (R10).
+- **Categoria:**
+  - Se o usuário escolheu, grave `categorySource: 'user'`, `userEditedFields: ['category']` e `needsReview: false` (R9). A categoria precisa existir, não estar arquivada e ter o tipo certo para a natureza: use `categoryKindFor` de `src/server/categorization/engine.ts`.
+  - Se não escolheu e a natureza é categorizável, chame `categorizeTransactions(db, [id])` depois de inserir, para que regras e memória de estabelecimento sugiram uma categoria.
+- **Excluir** é soft delete (`deleted_at = now()`) e só vale para transações manuais. Para saber se é manual, procure uma linha com `source = 'manual'` em `transaction_sources`.
+
+### PR 1 — Comandos (branch `b/B2-03a-comandos`)
+
+#### Arquivos
+- **Criar:** `src/server/commands/manual.ts` e `src/server/commands/manual.test.ts`
+- **Editar:** `src/server/commands/index.ts` (acrescentar `export * from './manual';`)
+
+#### Passo a passo
+1. Implemente os 4 comandos com as assinaturas de `CONTRATOS.md` §5.4: `createManualAccount`, `createManualTransaction`, `updateManualTransaction` e `deleteManualTransaction`.
+   - Siga o padrão dos outros comandos: Zod na entrada, `CommandError` em erro de regra de negócio e `toCommandError` no `catch`. Use `src/server/commands/accounts.ts` como exemplo.
+2. Em `createManualAccount`:
+   - Use `institutionId` informado ou, por padrão, a instituição de slug `carteira` (já está no seed).
+   - Grave `connectionId: null`, `externalId: null` e `balanceCents: initialBalanceCents ?? 0`.
+   - `type` precisa ser um de `wallet`, `checking`, `savings`, `benefit` ou `investment`. Cartão de crédito manual fica fora desta tarefa.
+3. Em `createManualTransaction`:
+   - Valide a conta (existe e é manual), o sinal, a data (`YYYY-MM-DD`) e a categoria.
+   - Insira com `descriptionRaw = description`, `status: 'posted'` e `merchantId: null`.
+   - Grave as tags, se vierem. Use o mesmo jeito que `updateTransaction` usa para gravar `tagIds`.
+   - Insira a fonte em `transaction_sources`, atualize o saldo e categorize quando não houver categoria (regras acima).
+4. `updateManualTransaction` só altera `date` e `amountCents`. O resto (descrição, natureza, forma, notas, tags e categoria) já tem comando: `updateTransaction` e `recategorize`. Valide o sinal contra a natureza **atual** da transação e ajuste o saldo pela diferença.
+5. `deleteManualTransaction`: soft delete e saldo − valor. Excluir de novo uma transação já excluída dá `NOT_FOUND`.
+6. **Testes** (`manual.test.ts`, um `describe` e só o essencial):
+   - criar uma conta manual e uma despesa: o saldo cai, a fonte `manual` existe e a categoria escolhida fica com origem `user`;
+   - sinal errado e conta não manual são recusados;
+   - alterar o valor ajusta o saldo pela diferença;
+   - excluir faz soft delete e devolve o saldo.
+
+### PR 2 — Telas (branch `b/B2-03a-telas`, a partir da branch do PR 1)
+
+#### Arquivos
+- **Criar:**
+  - `src/components/manual/manual-account-dialog.tsx`
+  - `src/components/manual/manual-transaction-dialog.tsx`
+- **Editar:**
+  - `src/app/(app)/contas/page.tsx` e `src/app/(app)/contas/actions.ts`
+  - `src/app/(app)/transacoes/page.tsx` e `src/app/(app)/transacoes/actions.ts`
+  - `src/components/transactions/transaction-sheet.tsx`
+
+#### Passo a passo
+1. **Server Actions:** `createManualAccountAction`, `createManualTransactionAction`, `updateManualTransactionAction` e `deleteManualTransactionAction`, no padrão `runAction` + `revalidatePath('/', 'layout')` ("Padrões desta trilha").
+2. **`/contas`:** botão "Nova conta manual", que abre `ManualAccountDialog` com:
+   - Nome (obrigatório);
+   - Tipo: Carteira (dinheiro), Conta corrente, Poupança, Vale-refeição/alimentação ou Investimento. Use `ACCOUNT_TYPE_LABELS`.
+   - Saldo inicial: campo de dinheiro em pt-BR, opcional. Converta com o mesmo parser de valor do formulário de regra, `parseOptionalAmount` em `src/components/catalog/catalog-helpers.ts`.
+3. **`/transacoes`:** botão "Novo lançamento" ao lado de "Exportar CSV", que abre `ManualTransactionDialog` com:
+   - Tipo: alternador **Despesa** (padrão) ou **Receita**. Ele define `kind` (`expense`/`income`) e o sinal do valor.
+   - Valor: obrigatório, maior que zero, em pt-BR.
+   - Descrição: obrigatória.
+   - Data: `input type="date"`, padrão hoje (`today()` de `src/server/domain/dates.ts`, calculado no servidor e passado por prop).
+   - Conta: só as contas manuais. Sem nenhuma, mostre "Crie uma conta manual em Contas e cartões" com link para `/contas`, e o formulário fica desabilitado.
+   - Forma de pagamento: padrão `cash` se a conta for `wallet`, senão `pix`.
+   - Categoria: `CategoryPicker` já existente, filtrado pelo tipo; opcional.
+   - Observações: opcional.
+   - Botões "Salvar" e "Salvar e lançar outro". O segundo limpa valor e descrição e mantém o dialog aberto.
+   - Toast de sucesso ou erro (sonner).
+4. **Detalhe da transação** (`transaction-sheet.tsx`): se a transação é manual (`sources` contém `manual`, em `getTransaction`), mostre:
+   - campos de **data** e **valor** editáveis, que chamam `updateManualTransactionAction`;
+   - botão **Excluir**, com confirmação, que chama `deleteManualTransactionAction` e fecha o sheet.
+
+   Transações de outras fontes não mostram nada disso.
+5. **Teste:** **um** e2e de fumaça. Crie a conta "Carteira teste" em `/contas`, lance uma despesa de R$ 12,34 em `/transacoes` e confira que ela aparece na lista.
+
+### Critérios de aceite
+- [ ] Dá para criar uma conta manual e lançar despesas e receitas nela, com o saldo da conta acompanhando
+- [ ] O lançamento aparece na lista, no dashboard e nos totais como qualquer outra transação
+- [ ] Não é possível lançar em conta sincronizada pelo Pluggy
+- [ ] Transação manual pode ter data e valor editados e pode ser excluída; as de outras fontes, não
+- [ ] Funciona em 390 px de largura

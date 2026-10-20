@@ -420,6 +420,12 @@ updateMerchant(input: { merchantId: string; patch: Partial<{ name: string; defau
 triggerSync(input: { connectionId: string | null }): Promise<{ syncRunId: string }>;
 registerConnection(input: { provider: 'pluggy'; externalId: string }): Promise<{ connectionId: string }>;
 
+// Lançamento manual (B2-03a) — src/server/commands/manual.ts. Só para contas com connection_id NULL.
+createManualAccount(input: { name: string; type: 'wallet' | 'checking' | 'savings' | 'benefit' | 'investment'; institutionId?: string | null; initialBalanceCents?: number }): Promise<{ accountId: string }>; // institutionId padrão: instituição 'carteira'
+createManualTransaction(input: { accountId: string; date: string; amountCents: number; description: string; kind: TxKind; paymentMethod: PaymentMethod; categoryId: string | null; notes?: string | null; tagIds?: string[] }): Promise<{ transactionId: string }>; // amountCents com sinal (R1); atualiza accounts.balance_cents; grava transaction_sources com source manual
+updateManualTransaction(input: { transactionId: string; patch: Partial<{ date: string; amountCents: number }> }): Promise<void>; // só transações manuais; ajusta o saldo pela diferença
+deleteManualTransaction(input: { transactionId: string }): Promise<void>; // soft delete; só transações manuais; devolve o saldo
+
 type RuleInput = {
   id?: string;
   priority: number;
@@ -477,3 +483,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 |---|---|---|---|
 | 2026-10-18 | Agente A | F0-03 | Versão inicial implementada |
 | 2026-10-18 | Agente A | F0-03 | Adicionado helper toCommandError em domain/errors |
+| 2026-10-19 | Coordenador | B2-03a | Comandos de lançamento manual: createManualAccount, createManualTransaction, updateManualTransaction, deleteManualTransaction (aditivo, sem mudança de schema) |
