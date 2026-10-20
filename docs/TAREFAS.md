@@ -5,7 +5,7 @@
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída
 
-**Regra para pegar tarefa:** status ⬜ **e** todas as dependências ✅ **e** é da sua trilha (A ou B). Tarefas `H-*` são do usuário.
+**Regra para pegar tarefa:** status ⬜ **e** todas as dependências ✅ **e** é da sua trilha (A ou B). Tarefas `H-*` são do usuário. Sem antecipar tarefas (ver `AGENTS.md` §3). Prompts de cada rodada, em ordem: [`PROMPTS.md`](./PROMPTS.md).
 
 ---
 
@@ -60,15 +60,15 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
-| A1-01 | Cliente Pluggy, rota de connect token e comando `registerConnection` | A | F0-03, F0-07 | 🟡 Agente A |
-| A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | ⬜ |
-| A1-03 | Motor de sincronização | A | A1-01, A1-02 | ⬜ |
-| A1-04 | Faturas e parcelas futuras | A | A1-03 | ⬜ |
-| A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ⬜ |
+| A1-01 | Cliente Pluggy, rota de connect token e comando `registerConnection` | A | F0-03, F0-07 | 🟡 Agente A — PR #33 em revisão |
+| A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | 🟡 Agente A — PR #34 em revisão |
+| A1-03 | Motor de sincronização | A | A1-01, A1-02 | 🟡 Agente A — PR #35 em revisão |
+| A1-04 | Faturas e parcelas futuras | A | A1-03 | 🟡 Agente A — PR #36 em revisão |
+| A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | 🟡 Agente A — PR #37 em revisão |
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
 | A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ✅ (teste com a API real pendente: H-03) |
-| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | 🟡 parcial — recategorize, upsertRule e archiveCategory na main (PR #20); passos 3 a 5 aguardam A1-03/A1-04 |
-| A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ⬜ |
+| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | 🟡 Agente A — PR #38 em revisão (passos 3 a 5; PR #20 na main) |
+| A1-09 | Jobs e agendamento | A | A1-03, A1-07 | 🟡 Agente A |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
 
@@ -94,23 +94,24 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 ---
 
-## Fases 2 a 5 · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
+## Fase 2 — Robustez · specs: [`tarefas/fase-2-dados.md`](./tarefas/fase-2-dados.md) e [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)
+
+## Fases 3 a 5 · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
 
 > Antes de iniciar cada fase, a tarefa `Px-00` detalha as tarefas no mesmo formato das Fases 0 e 1.
 > **`Px-00` deve ser feita por um modelo forte** (ex.: Claude Opus), com base no que foi aprendido nas fases anteriores.
-> **Antecipadas** (não dependem do Pluggy nem de contrato, já detalhadas): B2-04 e B2-03a, em `tarefas/fase-2-interface.md`.
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
-| P2-00 | Detalhar a Fase 2 | forte | M1 | ⬜ |
-| A2-01 | Importação de OFX e CSV | A | P2-00 | ⬜ |
-| A2-02 | Importação de fatura em PDF via IA | A | P2-00 | ⬜ |
+| P2-00 | Detalhar a Fase 2 | forte | M1 (antecipada) | ✅ |
+| A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | ⬜ |
+| A2-02 | Importação de fatura em PDF via IA | A | A2-01, H-03, H-04 | ⬜ |
 | A2-03 | Deduplicação entre fontes | A | A2-01 | ⬜ |
-| A2-04 | Conferência de faturas (total do PDF × lançamentos) | A | A2-02, A2-03 | ⬜ |
-| A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00 | ⬜ |
-| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00 | ⬜ |
-| B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00 | ⬜ |
-| B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — comandos na main (PR #28); telas em revisão (PR #29) |
+| A2-04 | Conferência de faturas (total do PDF × lançamentos) | A | A2-02, A2-03, H-03, H-04 | ⬜ |
+| A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00, A1-01, A1-03, A1-09 | ⬜ |
+| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | ⬜ |
+| B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00, B1-06, A2-05 | 🟡 Agente B |
+| B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — PRs #31 (comandos) e #32 (telas) em revisão |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
@@ -144,7 +145,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 > Formato: `- [ID] pergunta ou pedido objetivo — Agente X, AAAA-MM-DD`. Quem resolver, risca (`~~...~~`) e anota a decisão.
 
 - [A1-06] PLUGGY_CATEGORY_SEED vazio até a F0-07 rodar (precisa de H-01/H-02) — Agente A, 2026-10-18. Ao preencher: rodar o seed de novo NÃO troca uma categoria ativa por outra ativa no provider_category_map; corrigir entrada já gravada exige migração de dados (ver provider-map.ts)
-- [A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18
+- ~~[A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18~~ — feito no PR #35 (com `{ llm: categorizeWithLlm }`), 2026-10-20
 - ~~[B1-03] FilterBar descartava parâmetros da página (dim, cartao, fatura, aba); datas da URL dependiam do fuso~~ — resolvido no PR #19, 2026-10-19
 - ~~[B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19~~ — feito no PR #22, 2026-10-19
 - [B1-04/B1-08] Regra no-restricted-imports no ESLint para garantir que queries/stats.ts e queries/analysis.ts (usados no cliente) nunca importem o banco — Coordenador, 2026-10-19 · 🔴 bloqueada: o hook local config-protection impede agentes de editar eslint.config.mjs. A regra está pronta e validada; o usuário precisa aplicá-la à mão ou liberar o hook
