@@ -38,7 +38,6 @@ function mapPluggyStatus(status: string): ConnectionStatus {
       return 'pending';
   }
 }
-
 export async function registerConnection(
   db: Db,
   input: z.infer<typeof registerConnectionInput>,
