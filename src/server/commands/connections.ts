@@ -5,8 +5,10 @@ import { connections } from '@/server/db/schema';
 import type { ConnectionStatus } from '@/server/domain/enums';
 import { toCommandError } from '@/server/domain/errors';
 import { resolveInstitution } from '@/server/ingestion/institutions';
+import { createPluggyAdapter } from '@/server/ingestion/pluggy/adapter';
 import type { PluggyApi } from '@/server/ingestion/pluggy/api';
 import { getPluggyApi } from '@/server/ingestion/pluggy/client';
+import { triggerSync } from './sync';
 
 const registerConnectionInput = z.object({
   provider: z.literal('pluggy'),
@@ -57,6 +59,7 @@ export async function registerConnection(
       .from(connections)
       .where(and(eq(connections.provider, data.provider), eq(connections.externalId, data.externalId)));
 
+    let connectionId: string;
     if (existing) {
       await db
         .update(connections)
@@ -68,21 +71,29 @@ export async function registerConnection(
         })
         .where(eq(connections.id, existing.id));
 
-      return { connectionId: existing.id };
+      connectionId = existing.id;
+    } else {
+      const [created] = await db
+        .insert(connections)
+        .values({
+          provider: data.provider,
+          externalId: data.externalId,
+          status,
+          consentExpiresAt,
+          institutionId,
+        })
+        .returning({ id: connections.id });
+
+      connectionId = created!.id;
     }
 
-    const [created] = await db
-      .insert(connections)
-      .values({
-        provider: data.provider,
-        externalId: data.externalId,
-        status,
-        consentExpiresAt,
-        institutionId,
-      })
-      .returning({ id: connections.id });
+    try {
+      await triggerSync(db, { connectionId }, { adapter: createPluggyAdapter(pluggy) });
+    } catch {
+      // Se a sincronização falhar, o registro da conexão continua válido (o erro fica em sync_runs)
+    }
 
-    return { connectionId: created!.id };
+    return { connectionId };
   } catch (err) {
     throw toCommandError(err);
   }

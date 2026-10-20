@@ -32,27 +32,32 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
 }
 
 export class RealPluggyApi implements PluggyApi {
-  private client: PluggyClient;
+  private client: PluggyClient | null;
 
   constructor(client?: PluggyClient) {
-    this.client =
-      client ??
-      new PluggyClient({
+    this.client = client ?? null;
+  }
+
+  private getClient(): PluggyClient {
+    if (!this.client) {
+      this.client = new PluggyClient({
         clientId: requireEnv('PLUGGY_CLIENT_ID'),
         clientSecret: requireEnv('PLUGGY_CLIENT_SECRET'),
       });
+    }
+    return this.client;
   }
 
   async createConnectToken(): Promise<string> {
     return withRetry(async () => {
-      const res = await this.client.createConnectToken();
+      const res = await this.getClient().createConnectToken();
       return res.accessToken;
     });
   }
 
   async fetchItem(itemId: string): Promise<PluggyItem> {
     return withRetry(async () => {
-      const item = await this.client.fetchItem(itemId);
+      const item = await this.getClient().fetchItem(itemId);
       return {
         id: item.id,
         status: item.status,
@@ -65,7 +70,7 @@ export class RealPluggyApi implements PluggyApi {
 
   async fetchAccounts(itemId: string): Promise<PluggyAccount[]> {
     return withRetry(async () => {
-      const res = await this.client.fetchAccounts(itemId);
+      const res = await this.getClient().fetchAccounts(itemId);
       return res.results.map((acc) => ({
         id: acc.id,
         itemId: acc.itemId,
@@ -93,7 +98,7 @@ export class RealPluggyApi implements PluggyApi {
 
   async fetchTransactions(accountId: string, from: string): Promise<PluggyTransaction[]> {
     return withRetry(async () => {
-      const txs = await this.client.fetchAllTransactions(accountId, { dateFrom: from });
+      const txs = await this.getClient().fetchAllTransactions(accountId, { dateFrom: from });
       return txs.map((t) => {
         const dateStr = t.date instanceof Date ? t.date.toISOString().slice(0, 10) : String(t.date).slice(0, 10);
         return {
@@ -130,7 +135,7 @@ export class RealPluggyApi implements PluggyApi {
   async fetchBills(accountId: string): Promise<PluggyBill[]> {
     return withRetry(async () => {
       try {
-        const res = await this.client.fetchCreditCardBills(accountId);
+        const res = await this.getClient().fetchCreditCardBills(accountId);
         return res.results.map((b) => {
           const dueDateStr =
             b.dueDate instanceof Date ? b.dueDate.toISOString().slice(0, 10) : String(b.dueDate).slice(0, 10);
