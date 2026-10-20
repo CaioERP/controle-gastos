@@ -2,6 +2,7 @@
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
+> **Última atualização por:** Coordenador / Revisor (2026-10-20 — integração dos PRs #30 a #44).
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída
 
@@ -60,15 +61,15 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
-| A1-01 | Cliente Pluggy, rota de connect token e comando `registerConnection` | A | F0-03, F0-07 | 🟡 Agente A — PR #33 em revisão |
-| A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | 🟡 Agente A — PR #34 em revisão |
-| A1-03 | Motor de sincronização | A | A1-01, A1-02 | 🟡 Agente A — PR #35 em revisão |
-| A1-04 | Faturas e parcelas futuras | A | A1-03 | 🟡 Agente A — PR #36 em revisão |
-| A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | 🟡 Agente A — PR #37 em revisão |
+| A1-01 | Cliente Pluggy, rota de connect token e comando `registerConnection` | A | F0-03, F0-07 | ✅ (PR #33) |
+| A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | ✅ (PR #34) |
+| A1-03 | Motor de sincronização | A | A1-01, A1-02 | ✅ (PR #35) |
+| A1-04 | Faturas e parcelas futuras | A | A1-03 | ✅ (PR #36) |
+| A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ✅ (PR #37) |
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
 | A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ✅ (teste com a API real pendente: H-03) |
-| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | 🟡 Agente A — PR #38 em revisão (passos 3 a 5; PR #20 na main) |
-| A1-09 | Jobs e agendamento | A | A1-03, A1-07 | 🟡 Agente A — PR #39 em revisão |
+| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | ✅ (PRs #20, #38) |
+| A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ✅ (PR #39) |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
 
@@ -104,16 +105,16 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
 | P2-00 | Detalhar a Fase 2 | forte | M1 (antecipada) | ✅ |
-| A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | 🟡 Agente A — PR #40 em revisão |
+| A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | ✅ (PR #40) |
 | A2-02 | Importação de fatura em PDF via IA | A | A2-01, H-03, H-04 | ⬜ |
-| A2-03 | Deduplicação entre fontes | A | A2-01 | 🟡 Agente A — PR #42 em revisão |
+| A2-03 | Deduplicação entre fontes | A | A2-01 | ✅ (PR #42) |
 | A2-04 | Conferência de faturas (total do PDF × lançamentos) | A | A2-02, A2-03, H-03, H-04 | ⬜ |
-| A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00, A1-01, A1-03, A1-09 | 🟡 Agente A — PR #43 em revisão |
-| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | 🟡 Agente B — PR #44 em revisão |
-| B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00, B1-06, A2-05 | 🟡 Agente B — PR #41 em revisão |
+| A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00, A1-01, A1-03, A1-09 | ✅ (PR #43) |
+| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | ✅ (PR #44) |
+| B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00, B1-06, A2-05 | ✅ (PR #41) |
 | B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
-| B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — PRs #31 (comandos) e #32 (telas) em revisão |
-| B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
+| B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #31, #32) |
+| B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #29, #30) |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
 | A3-01 | Schema de investimentos e sincronização Pluggy | A | P3-00 | ⬜ |
 | A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) | A | P3-00 | ⬜ |
@@ -159,6 +160,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - ~~[A1-06/A1-08] Regra do usuário e regra aprendida com o mesmo critério empatam pelo UUID (desempatar por updatedAt desc); starts_with aprendido pode ficar genérico ("Compra parcelada PARC 02/05"); db:seed de novo desfaz o redirecionamento do provider_category_map feito pelo archiveCategory — Revisor, 2026-10-19~~ — resolvido no PR #21 (desempate por updatedAt, que só muda por decisão do usuário ou aprendizado; GENERIC_WORDS; seed não sobrescreve categoria ativa), 2026-10-19
 - [e2e] revisao.spec.ts e transacoes.spec.ts esvaziam a fila de revisão e só passam depois de db:reset. Aceito por ora (prioridade: construir o app) — Coordenador, 2026-10-19
 - ~~[B2-04] Busca global encontra transações de contas ocultas e previstas, mas /transacoes as esconde (abre vazia); busca da lista em base.ts não escapa % e _; CSV usa account.name em vez de displayName~~ — resolvido no PR #30, 2026-10-19
-- [B2-03b] Contrato aditivo aplicado na main: coluna transactions.parent_transaction_id, índice e comandos splitTransaction/unsplitTransaction documentados. Rodar npm run db:migrate após rebase — Agente B, 2026-10-19
+- ~~[B2-03b] Contrato aditivo aplicado na main: coluna transactions.parent_transaction_id, índice e comandos splitTransaction/unsplitTransaction documentados. Rodar npm run db:migrate após rebase — Agente B, 2026-10-19~~ — integrado nos PRs #31 e #32, 2026-10-20
 - [A2-01] Validar parsers de OFX e CSV contra amostras reais em `.data/samples/` quando H-04 for concluída — Agente A, 2026-10-20
+- [B2-03b] 🟢 Consultas secundárias `getInvoices`/`getInvoiceItems` (`queries/invoices.ts`), `getReviewCount` (`queries/transactions.ts`) e `globalSearch` (`queries/search.ts`) ainda não filtram transações-mãe divididas (`not exists child com parent_transaction_id`), já filtradas em `baseWhere` (`queries/base.ts`) e `recalculateInvoices` (`ingestion/invoices.ts`) — Revisor, 2026-10-20
 
