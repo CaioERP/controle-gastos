@@ -61,7 +61,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
 | A1-01 | Cliente Pluggy, rota de connect token e comando `registerConnection` | A | F0-03, F0-07 | 🟡 Agente A — PR #33 em revisão |
-| A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | 🟡 Agente A |
+| A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | 🟡 Agente A — PR #34 em revisão |
 | A1-03 | Motor de sincronização | A | A1-01, A1-02 | ⬜ |
 | A1-04 | Faturas e parcelas futuras | A | A1-03 | ⬜ |
 | A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ⬜ |
