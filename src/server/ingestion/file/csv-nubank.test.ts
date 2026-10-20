@@ -61,4 +61,10 @@ describe('parseNubankCsv (A2-01)', () => {
     // Pagamento recebido (-800.00 no CSV) -> +80000
     expect(res.transactions[3]?.amountCents).toBe(80000);
   });
+
+  it('aceita valor com milhar no formato pt-BR (CSV salvo pelo Excel) sem descartar a linha', () => {
+    const content = 'Data;Valor;Identificador;Descrição\n05/04/2026;1.500,00;a1;Salário\n06/04/2026;-10,50;a2;Padaria\n';
+    const res = parseNubankCsv(content, { id: accountId, type: 'checking' });
+    expect(res.transactions.map((t) => t.amountCents)).toEqual([150000, -1050]);
+  });
 });
