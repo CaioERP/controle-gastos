@@ -49,3 +49,9 @@ export type CategoryKind = (typeof CATEGORY_KINDS)[number];
 
 /** Natureza que entra nos relatórios de gasto/receita (regra R2). */
 export const REPORTABLE_KINDS: readonly TxKind[] = ['expense', 'income', 'refund'];
+
+export const IMPORT_BATCH_STATUSES = ['preview', 'confirmed', 'discarded'] as const;
+export const IMPORT_FORMATS = ['ofx', 'csv_nubank_checking', 'csv_nubank_card', 'pdf_invoice'] as const;
+export type ImportBatchStatus = (typeof IMPORT_BATCH_STATUSES)[number];
+export type ImportFormat = (typeof IMPORT_FORMATS)[number];
+

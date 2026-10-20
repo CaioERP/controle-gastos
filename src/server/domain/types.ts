@@ -12,3 +12,5 @@ export type NewTransaction = typeof s.transactions.$inferInsert;
 export type Tag = typeof s.tags.$inferSelect;
 export type CategorizationRule = typeof s.categorizationRules.$inferSelect;
 export type SyncRun = typeof s.syncRuns.$inferSelect;
+export type ImportBatch = typeof s.importBatches.$inferSelect;
+
