@@ -14,6 +14,7 @@ import {
   triggerSync,
 } from './index';
 import { CommandError } from '../domain/errors';
+import { createFakePluggyApi } from '../ingestion/pluggy/fake';
 import { eq } from 'drizzle-orm';
 
 describe('additional command stubs', () => {
@@ -302,7 +303,11 @@ describe('additional command stubs', () => {
 
   it('registerConnection cria conexão stub e triggerSync registra execução', async () => {
     const { db } = await setup();
-    const conn = await registerConnection(db, { provider: 'pluggy', externalId: 'item-123' });
+    const conn = await registerConnection(
+      db,
+      { provider: 'pluggy', externalId: 'item-123' },
+      { pluggy: createFakePluggyApi({ items: [{ id: 'item-123', status: 'UPDATED' }] }) },
+    );
     expect(conn.connectionId).toBeDefined();
 
     const sync = await triggerSync(db, { connectionId: conn.connectionId });

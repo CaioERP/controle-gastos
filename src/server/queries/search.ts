@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, ne, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db } from '@/server/db/client';
 import { accounts, categories, merchants, transactions } from '@/server/db/schema';
@@ -83,6 +83,8 @@ export async function globalSearch(db: Db, q: string): Promise<GlobalSearchResul
       .where(
         and(
           isNull(transactions.deletedAt),
+          eq(accounts.isHidden, false),
+          ne(transactions.status, 'projected'),
           or(ilike(transactions.description, pattern), ilike(transactions.descriptionRaw, pattern))
         )
       )

@@ -3,73 +3,19 @@ import type { Db } from '@/server/db/client';
 import { accounts, connections, institutions, syncRuns } from '@/server/db/schema';
 import { addDaysISO, today } from '@/server/domain/dates';
 import type { AccountType, ConnectionStatus, Source } from '@/server/domain/enums';
+import {
+  CONSENT_WARNING_DAYS,
+  evaluateConnectionHealth,
+  MAX_CONSECUTIVE_SYNC_ERRORS,
+  type ConnectionHealth,
+} from '@/server/ingestion/connection-lifecycle';
 
-export const MAX_CONSECUTIVE_SYNC_ERRORS = 3;
-export const CONSENT_WARNING_DAYS = 15;
-
-export type ConnectionHealth = {
-  consecutiveErrors: number;
-  isPausedByErrors: boolean;
-  consentExpiringSoon: boolean;
-  consentDaysRemaining: number | null;
-  consentExpired: boolean;
-  recommendedAction: string | null;
+export {
+  CONSENT_WARNING_DAYS,
+  evaluateConnectionHealth,
+  MAX_CONSECUTIVE_SYNC_ERRORS,
+  type ConnectionHealth,
 };
-
-/**
- * Calcula a saúde da conexão a partir dos seus dados e das últimas execuções
- * (ordenadas da mais recente para a mais antiga).
- */
-export function evaluateConnectionHealth(
-  conn: { status: ConnectionStatus; consentExpiresAt: Date | null; lastError: string | null },
-  recentRuns: Array<{ status: string }>,
-  now: Date = new Date(),
-): ConnectionHealth {
-  let consecutiveErrors = 0;
-  for (const run of recentRuns) {
-    if (run.status === 'running') continue;
-    if (run.status === 'error') {
-      consecutiveErrors++;
-    } else if (run.status === 'success') {
-      break;
-    }
-  }
-
-  const isPausedByErrors = consecutiveErrors >= MAX_CONSECUTIVE_SYNC_ERRORS;
-
-  const consentDaysRemaining =
-    conn.consentExpiresAt && !Number.isNaN(new Date(conn.consentExpiresAt).getTime())
-      ? Math.ceil((new Date(conn.consentExpiresAt).getTime() - now.getTime()) / 86_400_000)
-      : null;
-
-  const consentExpired = consentDaysRemaining !== null && consentDaysRemaining <= 0;
-  const consentExpiringSoon =
-    consentDaysRemaining !== null && consentDaysRemaining > 0 && consentDaysRemaining <= CONSENT_WARNING_DAYS;
-
-  let recommendedAction: string | null = null;
-  if (conn.status === 'expired' || consentExpired) {
-    recommendedAction = 'O consentimento do Open Finance expirou. Clique em Reconectar para renovar o acesso.';
-  } else if (conn.status === 'revoked') {
-    recommendedAction = 'O acesso foi revogado no banco. Clique em Reconectar para autorizar novamente.';
-  } else if (isPausedByErrors) {
-    recommendedAction =
-      'Sincronização pausada após 3 falhas seguidas. Clique em Reconectar para atualizar suas credenciais no Meu Pluggy.';
-  } else if (conn.status === 'error') {
-    recommendedAction =
-      'A última sincronização falhou. Tente sincronizar agora ou clique em Reconectar se o banco pediu nova autenticação.';
-  } else if (consentExpiringSoon) {
-    recommendedAction = `O consentimento expira em ${consentDaysRemaining} ${consentDaysRemaining === 1 ? 'dia' : 'dias'}. Renove a conexão em breve para não interromper a sincronização.`;
-  }
-
-  return {
-    consecutiveErrors,
-    isPausedByErrors,
-    consentExpiringSoon,
-    consentDaysRemaining,
-    consentExpired,
-    recommendedAction,
-  };
-}
 
 export type ConnectionRow = {
   id: string;

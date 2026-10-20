@@ -15,6 +15,13 @@
       "when": 1792465002763,
       "tag": "0001_tricky_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792500595218,
+      "tag": "0002_unknown_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }

@@ -104,13 +104,13 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
 | P2-00 | Detalhar a Fase 2 | forte | M1 (antecipada) | ✅ |
-| A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | 🟡 Agente A |
+| A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | 🟡 Agente A — PR #40 em revisão |
 | A2-02 | Importação de fatura em PDF via IA | A | A2-01, H-03, H-04 | ⬜ |
-| A2-03 | Deduplicação entre fontes | A | A2-01 | ⬜ |
+| A2-03 | Deduplicação entre fontes | A | A2-01 | 🟡 Agente A — PR #42 em revisão |
 | A2-04 | Conferência de faturas (total do PDF × lançamentos) | A | A2-02, A2-03, H-03, H-04 | ⬜ |
-| A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00, A1-01, A1-03, A1-09 | ⬜ |
-| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | ⬜ |
-| B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00, B1-06, A2-05 | 🟡 Agente B |
+| A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00, A1-01, A1-03, A1-09 | 🟡 Agente A — PR #43 em revisão |
+| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | 🟡 Agente B — PR #44 em revisão |
+| B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00, B1-06, A2-05 | 🟡 Agente B — PR #41 em revisão |
 | B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — PRs #31 (comandos) e #32 (telas) em revisão |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
@@ -160,3 +160,5 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [e2e] revisao.spec.ts e transacoes.spec.ts esvaziam a fila de revisão e só passam depois de db:reset. Aceito por ora (prioridade: construir o app) — Coordenador, 2026-10-19
 - ~~[B2-04] Busca global encontra transações de contas ocultas e previstas, mas /transacoes as esconde (abre vazia); busca da lista em base.ts não escapa % e _; CSV usa account.name em vez de displayName~~ — resolvido no PR #30, 2026-10-19
 - [B2-03b] Contrato aditivo aplicado na main: coluna transactions.parent_transaction_id, índice e comandos splitTransaction/unsplitTransaction documentados. Rodar npm run db:migrate após rebase — Agente B, 2026-10-19
+- [A2-01] Validar parsers de OFX e CSV contra amostras reais em `.data/samples/` quando H-04 for concluída — Agente A, 2026-10-20
+

@@ -22,6 +22,7 @@ import {
   CATEGORY_KINDS,
   CATEGORY_SOURCES,
   CONNECTION_STATUSES,
+  IMPORT_BATCH_STATUSES,
   INVOICE_STATUSES,
   PAYMENT_METHODS,
   SOURCES,
@@ -39,6 +40,7 @@ export const categorySourceEnum = pgEnum('category_source', CATEGORY_SOURCES);
 export const invoiceStatusEnum = pgEnum('invoice_status', INVOICE_STATUSES);
 export const connectionStatusEnum = pgEnum('connection_status', CONNECTION_STATUSES);
 export const categoryKindEnum = pgEnum('category_kind', CATEGORY_KINDS);
+export const importBatchStatusEnum = pgEnum('import_batch_status', IMPORT_BATCH_STATUSES);
 
 // ---------- helpers ----------
 const id = () => uuid('id').primaryKey().defaultRandom();
@@ -199,6 +201,23 @@ export const transactions = pgTable(
   ],
 );
 
+export const importBatches = pgTable(
+  'import_batches',
+  {
+    id: id(),
+    accountId: uuid('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+    invoiceId: uuid('invoice_id').references(() => invoices.id, { onDelete: 'set null' }),
+    filename: text('filename').notNull(),
+    format: text('format').notNull(), // valores de IMPORT_FORMATS
+    fileHash: text('file_hash').notNull(), // sha256 hex do conteúdo bruto
+    status: importBatchStatusEnum('status').notNull().default('preview'),
+    previewData: jsonb('preview_data').notNull().default({}),
+    stats: jsonb('stats').notNull().default({}),
+    ...timestamps,
+  },
+  (t) => [index('import_batches_account_status_idx').on(t.accountId, t.status)],
+);
+
 export const transactionSources = pgTable(
   'transaction_sources',
   {
@@ -208,6 +227,7 @@ export const transactionSources = pgTable(
     externalId: text('external_id').notNull(),
     raw: jsonb('raw'),
     fetchedAt: tstz('fetched_at').notNull().defaultNow(),
+    importBatchId: uuid('import_batch_id').references(() => importBatches.id, { onDelete: 'set null' }),
   },
   (t) => [
     uniqueIndex('transaction_sources_source_external_uq').on(t.source, t.externalId),
