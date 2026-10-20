@@ -7,3 +7,4 @@ export * from './merchants';
 export * from './connections';
 export * from './sync';
 export * from './manual';
+export * from './split';

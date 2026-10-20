@@ -107,4 +107,13 @@ describe('exportação para CSV', () => {
     // Revisar: Sim
     expect(cols[15]).toBe('Sim');
   });
+
+  it('usa displayName na coluna Conta quando disponível', () => {
+    const row = makeRow({
+      account: { id: 'a1', name: 'Conta Original', displayName: 'Minha Conta Principal', type: 'checking' },
+    });
+    const csv = transactionsToCsv([row]);
+    const lines = csv.split('\r\n');
+    expect(lines[1]!.split(';')[8]).toBe('Minha Conta Principal');
+  });
 });

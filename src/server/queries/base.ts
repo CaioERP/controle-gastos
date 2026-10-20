@@ -13,6 +13,7 @@ import {
 import { REPORTABLE_KINDS } from '@/server/domain/enums';
 import type { Dimension, TxFilters } from '@/server/domain/filters';
 import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
+import { escapeLike } from './search';
 
 export const parentCategories = alias(categories, 'parent_categories');
 
@@ -38,6 +39,7 @@ export function buildTxWhere(f: TxFilters, opts: WhereOptions): SQL {
   const d = effectiveDate(f.basis);
   const conds: (SQL | undefined)[] = [
     isNull(transactions.deletedAt),
+    sql`not exists (select 1 from ${transactions} child where child.parent_transaction_id = ${transactions.id} and child.deleted_at is null)`,
     sql`${d} >= ${f.from}`,
     sql`${d} <= ${f.to}`,
     eq(accounts.isHidden, false),
@@ -53,7 +55,7 @@ export function buildTxWhere(f: TxFilters, opts: WhereOptions): SQL {
     f.tagIds?.length
       ? sql`exists (select 1 from ${transactionTags} tt where tt.transaction_id = ${transactions.id} and ${inArray(transactionTags.tagId, f.tagIds)})`
       : undefined,
-    f.search ? sql`lower(${transactions.description}) like ${'%' + f.search.toLowerCase() + '%'}` : undefined,
+    f.search ? sql`lower(${transactions.description}) like ${'%' + escapeLike(f.search.toLowerCase()) + '%'}` : undefined,
     f.needsReview !== undefined ? eq(transactions.needsReview, f.needsReview) : undefined,
   ];
   return and(...conds.filter(Boolean))!;
