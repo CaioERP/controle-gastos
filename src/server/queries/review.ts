@@ -3,11 +3,15 @@ import type { Db } from '@/server/db/client';
 import { transactions } from '@/server/db/schema';
 import { baseTransactionQuery, toTransactionRows, type TransactionRow } from './transaction-row';
 import { decodeCursor, encodeCursor } from './transactions';
+import { notSplitParent } from './split-filter';
 
 export type ReviewQueuePage = { items: TransactionRow[]; nextCursor: string | null };
 
-/** Mesmo critério de `getReviewCount`: needsReview e não excluída, de qualquer data, natureza ou conta. */
-const reviewWhere = and(eq(transactions.needsReview, true), isNull(transactions.deletedAt));
+/**
+ * Mesmo critério de `getReviewCount`: needsReview e não excluída, de qualquer data, natureza ou conta.
+ * A mãe de uma divisão ativa sai da fila (as partes entram no lugar).
+ */
+const reviewWhere = and(eq(transactions.needsReview, true), isNull(transactions.deletedAt), notSplitParent);
 
 /**
  * Fila de revisão, da mais recente para a mais antiga, paginada por cursor (mesmo formato de listTransactions).

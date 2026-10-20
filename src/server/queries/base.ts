@@ -14,6 +14,7 @@ import { REPORTABLE_KINDS } from '@/server/domain/enums';
 import type { Dimension, TxFilters } from '@/server/domain/filters';
 import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
 import { escapeLike } from './search';
+import { notSplitParent } from './split-filter';
 
 export const parentCategories = alias(categories, 'parent_categories');
 
@@ -39,7 +40,7 @@ export function buildTxWhere(f: TxFilters, opts: WhereOptions): SQL {
   const d = effectiveDate(f.basis);
   const conds: (SQL | undefined)[] = [
     isNull(transactions.deletedAt),
-    sql`not exists (select 1 from ${transactions} child where child.parent_transaction_id = ${transactions.id} and child.deleted_at is null)`,
+    notSplitParent,
     sql`${d} >= ${f.from}`,
     sql`${d} <= ${f.to}`,
     eq(accounts.isHidden, false),

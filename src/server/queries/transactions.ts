@@ -4,6 +4,7 @@ import { transactions, transactionSources } from '@/server/db/schema';
 import { TX_KINDS, type Source } from '@/server/domain/enums';
 import type { TxFilters } from '@/server/domain/filters';
 import { buildTxWhere } from './base';
+import { notSplitParent } from './split-filter';
 import {
   baseTransactionQuery,
   loadTagsByTransaction,
@@ -104,7 +105,7 @@ export async function getTransaction(db: Db, id: string): Promise<TransactionDet
 export async function getInstallmentGroup(db: Db, groupId: string): Promise<TransactionRow[]> {
   if (!UUID.test(groupId)) return [];
   const rows = await baseTransactionQuery(db)
-    .where(and(eq(transactions.installmentGroupId, groupId), isNull(transactions.deletedAt)))
+    .where(and(eq(transactions.installmentGroupId, groupId), isNull(transactions.deletedAt), notSplitParent))
     .orderBy(transactions.installmentNumber, transactions.date);
   return toTransactionRows(db, rows);
 }
@@ -136,6 +137,6 @@ export async function getReviewCount(db: Db): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
     .from(transactions)
-    .where(and(eq(transactions.needsReview, true), isNull(transactions.deletedAt)));
+    .where(and(eq(transactions.needsReview, true), isNull(transactions.deletedAt), notSplitParent));
   return Number(row?.count ?? 0);
 }
