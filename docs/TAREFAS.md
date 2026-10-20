@@ -64,10 +64,10 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | 🟡 Agente A — PR #34 em revisão |
 | A1-03 | Motor de sincronização | A | A1-01, A1-02 | 🟡 Agente A — PR #35 em revisão |
 | A1-04 | Faturas e parcelas futuras | A | A1-03 | 🟡 Agente A — PR #36 em revisão |
-| A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | 🟡 Agente A |
+| A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | 🟡 Agente A — PR #37 em revisão |
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
 | A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ✅ (teste com a API real pendente: H-03) |
-| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | 🟡 parcial — recategorize, upsertRule e archiveCategory na main (PR #20); passos 3 a 5 aguardam A1-03/A1-04 |
+| A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | 🟡 Agente A (passos 3 a 5; PR #20 na main) |
 | A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ⬜ |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
