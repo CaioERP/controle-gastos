@@ -7,6 +7,7 @@ import {
   Inbox,
   Tags,
   PlugZap,
+  Upload,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -18,4 +19,5 @@ export const NAV_ITEMS = [
   { href: '/revisao', label: 'Revisão', icon: Inbox },
   { href: '/categorias', label: 'Categorias e regras', icon: Tags },
   { href: '/conexoes', label: 'Conexões', icon: PlugZap },
+  { href: '/importar', label: 'Importar', icon: Upload },
 ] as const;

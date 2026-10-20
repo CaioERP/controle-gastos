@@ -24,6 +24,7 @@ const MANUAL_TYPES = [
   { value: 'wallet', label: 'Carteira (dinheiro)' },
   { value: 'checking', label: ACCOUNT_TYPE_LABELS.checking },
   { value: 'savings', label: ACCOUNT_TYPE_LABELS.savings },
+  { value: 'credit_card', label: ACCOUNT_TYPE_LABELS.credit_card },
   { value: 'benefit', label: 'Vale-refeição/alimentação' },
   { value: 'investment', label: ACCOUNT_TYPE_LABELS.investment },
 ] as const;
@@ -38,12 +39,18 @@ export function ManualAccountDialog() {
   const [name, setName] = React.useState('');
   const [type, setType] = React.useState<ManualType>('wallet');
   const [initialBalance, setInitialBalance] = React.useState('');
+  const [closingDay, setClosingDay] = React.useState('3');
+  const [dueDay, setDueDay] = React.useState('10');
+  const [creditLimit, setCreditLimit] = React.useState('');
   const [loading, startTransition] = React.useTransition();
 
   const resetForm = () => {
     setName('');
     setType('wallet');
     setInitialBalance('');
+    setClosingDay('3');
+    setDueDay('10');
+    setCreditLimit('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,7 +62,33 @@ export function ManualAccountDialog() {
     }
 
     let initialBalanceCents: number | undefined;
-    if (initialBalance.trim() !== '') {
+    let parsedClosingDay: number | null | undefined;
+    let parsedDueDay: number | null | undefined;
+    let creditLimitCents: number | null | undefined;
+
+    if (type === 'credit_card') {
+      const cDay = Number(closingDay);
+      const dDay = Number(dueDay);
+      if (!Number.isInteger(cDay) || cDay < 1 || cDay > 31) {
+        toast.error('Informe um dia de fechamento entre 1 e 31');
+        return;
+      }
+      if (!Number.isInteger(dDay) || dDay < 1 || dDay > 31) {
+        toast.error('Informe um dia de vencimento entre 1 e 31');
+        return;
+      }
+      parsedClosingDay = cDay;
+      parsedDueDay = dDay;
+
+      if (creditLimit.trim() !== '') {
+        const parsedLimit = parseOptionalAmount(creditLimit);
+        if (parsedLimit === undefined || (parsedLimit !== null && parsedLimit < 0)) {
+          toast.error('Informe um limite de crédito válido');
+          return;
+        }
+        creditLimitCents = parsedLimit;
+      }
+    } else if (initialBalance.trim() !== '') {
       const parsed = parseOptionalAmount(initialBalance);
       if (parsed === undefined) {
         toast.error('Informe um valor de saldo válido');
@@ -71,6 +104,9 @@ export function ManualAccountDialog() {
         name: trimmedName,
         type,
         initialBalanceCents,
+        closingDay: parsedClosingDay,
+        dueDay: parsedDueDay,
+        creditLimitCents,
       });
 
       if (!res.ok) {
@@ -98,7 +134,7 @@ export function ManualAccountDialog() {
         <DialogHeader>
           <DialogTitle>Nova conta manual</DialogTitle>
           <DialogDescription>
-            Cadastre uma conta ou carteira para lançamentos manuais não sincronizados pelo banco.
+            Cadastre uma conta, cartão ou carteira para lançamentos e importações sem sincronização automática.
           </DialogDescription>
         </DialogHeader>
 
@@ -131,16 +167,60 @@ export function ManualAccountDialog() {
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="manual-acc-balance">Saldo inicial (R$)</Label>
-            <Input
-              id="manual-acc-balance"
-              placeholder="0,00"
-              value={initialBalance}
-              onChange={(e) => setInitialBalance(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">Opcional. Pode ser ajustado depois por lançamentos.</p>
-          </div>
+          {type === 'credit_card' ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-acc-closing-day">Dia de fechamento *</Label>
+                  <Input
+                    id="manual-acc-closing-day"
+                    type="number"
+                    min={1}
+                    max={31}
+                    placeholder="3"
+                    value={closingDay}
+                    onChange={(e) => setClosingDay(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-acc-due-day">Dia de vencimento *</Label>
+                  <Input
+                    id="manual-acc-due-day"
+                    type="number"
+                    min={1}
+                    max={31}
+                    placeholder="10"
+                    value={dueDay}
+                    onChange={(e) => setDueDay(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="manual-acc-limit">Limite total (R$)</Label>
+                <Input
+                  id="manual-acc-limit"
+                  placeholder="0,00"
+                  value={creditLimit}
+                  onChange={(e) => setCreditLimit(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Opcional.</p>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="manual-acc-balance">Saldo inicial (R$)</Label>
+              <Input
+                id="manual-acc-balance"
+                placeholder="0,00"
+                value={initialBalance}
+                onChange={(e) => setInitialBalance(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Opcional. Pode ser ajustado depois por lançamentos.</p>
+            </div>
+          )}
 
           <DialogFooter className="mt-6">
             <DialogClose
