@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { TZDate } from '@date-fns/tz';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
-import { and, eq, gt, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { transactions, transactionSources } from '@/server/db/schema';
 import { addMonthsISO, today as getToday, TZ } from '@/server/domain/dates';
@@ -205,7 +205,9 @@ export async function linkInstallments(
     let effectiveCategoryConfidence = tx.categoryConfidence;
     let effectiveUserEditedFields = tx.userEditedFields;
 
-    // Substitui parcela projetada de mesmo installmentNumber se existir no grupo
+    // Substitui parcela projetada de mesmo installmentNumber se existir no grupo. Só a "mãe" ativa:
+    // uma parte de divisão (dados antigos) também tem status projected, e apagar só ela deixaria
+    // a projetada ao lado da real. Apagar a mãe leva as partes junto (FK em cascata).
     const [existingProjected] = await db
       .select()
       .from(transactions)
@@ -214,8 +216,11 @@ export async function linkInstallments(
           eq(transactions.installmentGroupId, groupId),
           eq(transactions.installmentNumber, installmentNumber),
           eq(transactions.status, 'projected'),
+          isNull(transactions.deletedAt),
+          isNull(transactions.parentTransactionId),
         ),
-      );
+      )
+      .orderBy(asc(transactions.date), asc(transactions.id));
 
     if (existingProjected) {
       const projHasUserCategory =

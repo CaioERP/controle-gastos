@@ -264,4 +264,56 @@ describe('linkInstallments (A1-04)', () => {
     const [after] = await db.select().from(transactions).where(eq(transactions.id, tx2!.id));
     expect(after!.categoryId).toBe(cat!.id);
   });
+
+  it('parcela real substitui a projetada mesmo quando a projetada tem partes de divisão (dados antigos)', async () => {
+    const { db, card } = await setupCardDb();
+    const base = {
+      accountId: card.id,
+      amountCents: -10000,
+      kind: 'expense' as const,
+      paymentMethod: 'credit_card_installment' as const,
+      installmentTotal: 3,
+    };
+    const [tx1] = await db
+      .insert(transactions)
+      .values({ ...base, date: '2026-08-10', descriptionRaw: 'LOJA Y 1/3', description: 'Loja Y 1/3', installmentNumber: 1 })
+      .returning();
+    await linkInstallments(db, [tx1!.id], '2026-08-15');
+    const [proj2] = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.installmentNumber, 2), eq(transactions.status, 'projected')));
+    // Divisão da projetada feita antes de o comando passar a recusar; depois o usuário categoriza a mãe
+    // (a nova versão da linha da mãe fica depois das partes, que passam a vir primeiro na consulta)
+    await db.insert(transactions).values(
+      [-6000, -4000].map((amountCents) => ({
+        ...base,
+        amountCents,
+        date: proj2!.date,
+        descriptionRaw: proj2!.descriptionRaw,
+        description: proj2!.description,
+        status: 'projected' as const,
+        installmentGroupId: proj2!.installmentGroupId,
+        installmentNumber: 2,
+        parentTransactionId: proj2!.id,
+      })),
+    );
+    const [cat] = await db.select().from(categories).where(eq(categories.kind, 'expense')).limit(1);
+    await db
+      .update(transactions)
+      .set({ categoryId: cat!.id, installmentGroupId: proj2!.installmentGroupId })
+      .where(eq(transactions.id, proj2!.id));
+
+    const [tx2] = await db
+      .insert(transactions)
+      .values({ ...base, date: '2026-09-10', descriptionRaw: 'LOJA Y 2/3', description: 'Loja Y 2/3', installmentNumber: 2 })
+      .returning();
+    await linkInstallments(db, [tx2!.id], '2026-09-15');
+
+    const leftover = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.installmentNumber, 2), eq(transactions.status, 'projected')));
+    expect(leftover).toHaveLength(0);
+  });
 });
