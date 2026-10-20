@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { accounts } from '@/server/db/schema';
 import { CommandError, toCommandError } from '@/server/domain/errors';
+import { assignInvoices, recalculateInvoices } from '@/server/ingestion/invoices';
 
 const updateAccountInput = z.object({
   accountId: z.string().uuid(),
@@ -18,8 +19,23 @@ const updateAccountInput = z.object({
 export async function updateAccount(db: Db, input: z.infer<typeof updateAccountInput>): Promise<void> {
   const { accountId, patch } = updateAccountInput.parse(input);
   try {
-    const res = await db.update(accounts).set(patch).where(eq(accounts.id, accountId)).returning({ id: accounts.id });
-    if (res.length === 0) throw new CommandError('NOT_FOUND', 'Conta não encontrada');
+    const [before] = await db.select().from(accounts).where(eq(accounts.id, accountId));
+    if (!before) throw new CommandError('NOT_FOUND', 'Conta não encontrada');
+
+    const [after] = await db
+      .update(accounts)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(accounts.id, accountId))
+      .returning();
+
+    const cycleChanged =
+      (patch.closingDay !== undefined && patch.closingDay !== before.closingDay) ||
+      (patch.dueDay !== undefined && patch.dueDay !== before.dueDay);
+
+    if (cycleChanged && after) {
+      await assignInvoices(db, [accountId]);
+      await recalculateInvoices(db, [accountId]);
+    }
   } catch (err) {
     throw toCommandError(err);
   }
