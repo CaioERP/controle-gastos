@@ -45,6 +45,20 @@ function decodeBufferText(buffer: ArrayBuffer): string {
   }
 }
 
+const SEND_FAILED = {
+  ok: false as const,
+  error: { code: 'SEND_FAILED', message: 'Não foi possível enviar o arquivo. Tente um arquivo menor ou tente novamente.' },
+};
+
+/** Falha de transporte da Server Action (limite de corpo, rede) vira mensagem amigável em vez da tela de erro. */
+async function safeSend<T>(call: () => Promise<T>): Promise<T | typeof SEND_FAILED> {
+  try {
+    return await call();
+  } catch {
+    return SEND_FAILED;
+  }
+}
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -107,11 +121,13 @@ export function ImportDropzone({
     if (isPdf) {
       const pdfBase64 = arrayBufferToBase64(buffer);
       startTransition(async () => {
-        const res = await previewPdfInvoiceImportAction({
-          accountId: currentAccount.id,
-          filename: file.name,
-          pdfBase64,
-        });
+        const res = await safeSend(() =>
+          previewPdfInvoiceImportAction({
+            accountId: currentAccount.id,
+            filename: file.name,
+            pdfBase64,
+          }),
+        );
 
         if (!res.ok) {
           if (
@@ -137,11 +153,13 @@ export function ImportDropzone({
 
     const content = decodeBufferText(buffer);
     startTransition(async () => {
-      const res = await previewFileImportAction({
-        accountId: currentAccount.id,
-        filename: file.name,
-        content,
-      });
+      const res = await safeSend(() =>
+        previewFileImportAction({
+          accountId: currentAccount.id,
+          filename: file.name,
+          content,
+        }),
+      );
 
       if (!res.ok) {
         toast.error(res.error.message);
@@ -164,12 +182,14 @@ export function ImportDropzone({
 
     const passwordToSend = pdfPassword;
     startTransition(async () => {
-      const res = await previewPdfInvoiceImportAction({
-        accountId: currentAccount.id,
-        filename: pendingPdf.filename,
-        pdfBase64: pendingPdf.pdfBase64,
-        password: passwordToSend,
-      });
+      const res = await safeSend(() =>
+        previewPdfInvoiceImportAction({
+          accountId: currentAccount.id,
+          filename: pendingPdf.filename,
+          pdfBase64: pendingPdf.pdfBase64,
+          password: passwordToSend,
+        }),
+      );
 
       // Limpa a senha do estado imediatamente após o envio
       setPdfPassword('');
