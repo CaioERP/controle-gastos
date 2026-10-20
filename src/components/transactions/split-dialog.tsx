@@ -16,13 +16,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatAmountInput, parseOptionalAmount } from '@/components/catalog/catalog-helpers';
 import { formatBRL } from '@/server/domain/money';
-import { categoryKindFor } from '@/server/categorization/engine';
 import type { CategoryTree } from '@/server/queries/catalog';
 import type { TransactionRow as Tx } from '@/server/queries/transaction-row';
 import { splitTransactionAction } from '@/app/(app)/transacoes/actions';
 import { CategoryPicker } from './category-picker';
 import { CategoryBadgeContent, type BadgeCategory } from './category-badge';
-import type { FlatCategory } from './tx-utils';
+import { categoryKindFor, type FlatCategory } from './tx-utils';
 
 type SplitDialogProps = {
   tx: Tx;
