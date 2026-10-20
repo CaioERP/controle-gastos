@@ -135,7 +135,7 @@ Categoria · Forma de pagamento · Instituição · Conta/Cartão · Natureza ·
 | **Importar** | Arrastar PDF/CSV/OFX, pré-visualizar, confirmar | 2 |
 | **Investimentos** | Posições, alocação por classe, rentabilidade vs CDI/IPCA/Ibovespa, proventos | 3 |
 | **Patrimônio** | Ativos − dívidas (faturas + parcelas futuras), evolução mensal | 3 |
-| **Orçamentos / Assinaturas / Projeção / Perguntas** | Orçamento sugerido, assinaturas detectadas, saldo projetado 6 meses, perguntas em linguagem natural | 4 |
+| **Limites de gasto / Orçamentos / Assinaturas / Projeção / Perguntas** | Limites e metas por categoria e/ou forma de pagamento com avisos (80%, 100%, ritmo), orçamento sugerido, assinaturas detectadas, saldo projetado 6 meses, perguntas em linguagem natural | 4 |
 
 ---
 
@@ -147,7 +147,7 @@ Categoria · Forma de pagamento · Instituição · Conta/Cartão · Natureza ·
 | **1. MVP** | Dados reais dos 3 bancos sincronizando sozinhos, categorizados, visíveis nas visões agregada e separada | **M1:** usuário abre o sistema e vê o mês atual correto sem digitar nada |
 | **2. Robustez** | Importação de arquivos, deduplicação entre fontes, conferência de faturas, ciclo de vida das conexões | Sistema funciona mesmo se o Pluggy falhar |
 | **3. Patrimônio** | Investimentos, cotações, rentabilidade, patrimônio líquido | Visão completa do patrimônio |
-| **4. Inteligência** | Assinaturas, orçamentos sugeridos, alertas, projeção, perguntas em linguagem natural | Sistema avisa antes do problema |
+| **4. Inteligência** | Limites de gasto com notificações, assinaturas, orçamentos sugeridos, alertas, projeção, perguntas em linguagem natural | Sistema avisa antes do problema |
 | **5. Deploy** | GitHub + Vercel + Neon, CI, segurança | Acessível de qualquer lugar com segurança |
 
 Quadro de status em [`TAREFAS.md`](./TAREFAS.md); especificação passo a passo de cada tarefa em [`tarefas/`](./tarefas/).

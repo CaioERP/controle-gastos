@@ -127,14 +127,14 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | ⬜ |
 | P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ⬜ |
 | A4-01 | Detecção de recorrências e assinaturas | A | P4-00 | ⬜ |
-| A4-02 | Orçamentos sugeridos e motor de alertas | A | P4-00 | ⬜ |
+| A4-02 | Limites de gasto (categoria e/ou forma de pagamento), orçamentos sugeridos e motor de alertas | A | P4-00 (antecipável) | ⬜ |
 | A4-03 | Projeção de fluxo de caixa | A | A4-01 | ⬜ |
 | A4-04 | Perguntas em linguagem natural (IA sobre as consultas) | A | P4-00 | ⬜ |
-| B4-01 | Tela de orçamentos | B | A4-02 | ⬜ |
+| B4-01 | Tela de limites e orçamentos | B | A4-02 | ⬜ |
 | B4-02 | Tela de assinaturas | B | A4-01 | ⬜ |
 | B4-03 | Tela de projeção | B | A4-03 | ⬜ |
 | B4-04 | Tela de perguntas (chat) | B | A4-04 | ⬜ |
-| B4-05 | Central de notificações | B | A4-02 | ⬜ |
+| B4-05 | Central de notificações e preferências de alerta | B | A4-02 | ⬜ |
 | P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
 | A5-01 | Banco Neon, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
 | A5-02 | Vercel Cron, webhook Pluggy, segredos | A | A5-01 | ⬜ |
@@ -168,3 +168,4 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [Revisão pós-merge #30–#44] 🟠 corrigidos nos PRs #45–#48. 🟢 restantes (detalhes nos corpos dos PRs): datas do Pluggy em T00:00Z podem cair um dia antes (conferir na F0-07); item em LOGIN_ERROR/OUTDATED marca conexão como active; erro de fetchBills derruba a conexão; parcelas idênticas no mesmo grupo; dedupe automático com candidata única a ±2 dias; CSV genérico data,descricao,valor tratado como cartão; jobs sem backoff e trava só no processo; webhook sem await e segredo na query (F5); partes de divisão ficam pending quando a mãe é lançada; falta "ver a mãe" na divisão; histórico de sync com textos em inglês e dia em UTC; pré-visualização de CSV enorme lenta — Coordenador, 2026-10-20
 - [A3-01/F0-07] Normalizador de investimentos da A3-01 foi especificado sobre os tipos de `pluggy-sdk`; validar os subtipos e campos retornados pelas corretoras reais do usuário quando F0-07 rodar — Planejador (P3-00), 2026-10-20
 - [A3-02] `brapi.dev` sem `BRAPI_TOKEN` permite apenas `PETR4`, `VALE3`, `MGLU3` e `ITUB4` (plano gratuito com token dá 15.000 req/mês, 1 ativo por requisição). Configurar `BRAPI_TOKEN` (e opcionalmente `COINGECKO_API_KEY`) no `.env.local` para cotar demais tickers da B3 — Planejador (P3-00), 2026-10-20
+- [A4-02/B4-01/B4-05] Nova feature pedida pelo usuário: limites e metas de gasto por categoria e/ou forma de pagamento, com avisos (80%/100%, ritmo) e notificações. Incluída no roadmap da Fase 4 (fases-2-a-5.md). Não depende do Pluggy: pode ser antecipada se o usuário decidir — Coordenador, 2026-10-20

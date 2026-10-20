@@ -44,7 +44,7 @@
 ---
 
 ## 1. Bot no Telegram
-- **O que é:** um bot privado para lançar gastos rápidos ("50 uber", "32,90 farmácia pix"), mandar foto de recibo, receber alertas (orçamento, fatura vencendo, gasto fora do padrão) e o resumo semanal/mensal.
+- **O que é:** um bot privado para lançar gastos rápidos ("50 uber", "32,90 farmácia pix"), mandar foto de recibo, receber alertas (limite de gasto atingido ou no ritmo de estourar, fatura vencendo, gasto fora do padrão) e o resumo semanal/mensal.
 - **Valor:** é o canal de entrada mais rápido para gastos em dinheiro e torna os alertas da Fase 4 realmente úteis (chegam no celular).
 - **Esforço:** M. Interpretação da mensagem com Claude Haiku (texto → valor, descrição, categoria, forma de pagamento), confirmação com botões ("✅ Confirmar / ✏️ Editar"), envio de alertas, comandos `/resumo`, `/hoje`, `/fatura`.
 - **Custo mensal:** R$ 0 (a API do Telegram é gratuita) + centavos de IA por mensagem interpretada.

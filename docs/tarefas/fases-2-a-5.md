@@ -85,13 +85,22 @@ Formulários de posição manual; lista de proventos recebidos (dividendos, JCP,
 ## Fase 4 — Inteligência
 
 ### P4-00 — Detalhar a Fase 4 (modelo forte)
-Definir `budgets`, `recurrences` e `notifications`; desenhar o motor de alertas e a ferramenta de perguntas (quais consultas serão expostas como ferramentas para o Claude).
+Definir `spending_limits` (limites e metas de gasto, incluindo os orçamentos sugeridos), `recurrences` e `notifications`; desenhar o motor de alertas e a ferramenta de perguntas (quais consultas serão expostas como ferramentas para o Claude).
+**Limites de gasto** (pedido do usuário em 2026-10-20): A4-02, B4-01 e B4-05 não dependem do Pluggy nem das recorrências e **podem ser antecipadas** antes do resto da Fase 4, se o usuário decidir. Nesse caso a `P4-00` detalha primeiro essas três tarefas.
 
 ### A4-01 — Detecção de recorrências e assinaturas
 Agrupar por estabelecimento; recorrente = 3+ ocorrências com intervalo regular (mensal ±3 dias, anual) e valor estável (±10%). Detectar aumento de preço e assinatura que parou de ser cobrada.
 
-### A4-02 — Orçamentos sugeridos e motor de alertas
-Orçamento por categoria sugerido pela média dos últimos 3 meses (arredondado). Alertas: 80% e 100% do orçamento, gasto fora do padrão (> 2 desvios da média da categoria), fatura vencendo em 3 dias, consentimento expirando, sincronização com erro. Gravados em `notifications`.
+### A4-02 — Limites de gasto, orçamentos sugeridos e motor de alertas
+- **Objetivo:** o usuário define metas ou limites de gasto e é avisado quando se aproxima deles ou os ultrapassa.
+- **Escopo de um limite:** uma **categoria** (a categoria pai inclui as filhas) e/ou uma **forma de pagamento** (ex.: "Delivery ≤ R$ 400/mês", "Crédito parcelado ≤ R$ 1.500/mês", "Lazer no cartão de crédito ≤ R$ 300/mês"); opcionalmente restrito a uma conta ou cartão.
+- **Período:** mensal (padrão), semanal ou anual. Soma o gasto pelo regime de competência (R5), com estorno abatendo (R2) e só naturezas reportáveis; transações divididas contam pelas partes.
+- **Avisos:** limiares configuráveis por limite (padrão 80% e 100%). Cada limiar dispara **uma vez por período**, e o período seguinte recomeça do zero. Alerta de **ritmo**: "no ritmo atual, você vai passar do limite em N dias", quando a projeção linear do mês ultrapassa 100% antes do fim do período.
+- **Orçamento sugerido:** valor sugerido pela média dos últimos 3 meses (arredondado), que o usuário aceita e transforma em limite com um clique.
+- **Quando avaliar:** depois de cada sincronização, importação ou lançamento manual (gancho no pipeline) e num job diário. A avaliação é idempotente: rodar duas vezes não gera notificação repetida.
+- **Outros alertas que usam o mesmo motor:** gasto fora do padrão (> 2 desvios da média da categoria), fatura vencendo em 3 dias, consentimento expirando e sincronização com erro.
+- **Saída:** linhas em `notifications` (tipo, título, mensagem, link para a tela filtrada, lida/não lida). **Canais:** dentro do app agora; Telegram (MELHORIAS #1), e-mail e push no celular (depende do PWA da B5-01) ficam como canais futuros que leem a mesma tabela.
+- **Aceite:** com um limite de Delivery de R$ 400 e R$ 330 gastos, um lançamento de R$ 10 gera o aviso de 80%, e ultrapassar R$ 400 gera o de 100%; reprocessar não repete os avisos; no mês seguinte eles voltam a valer.
 
 ### A4-03 — Projeção de fluxo de caixa
 Saldo projetado para os próximos 6 meses: saldo atual + receitas recorrentes + despesas recorrentes + parcelas futuras + média de gastos variáveis por categoria.
@@ -100,7 +109,7 @@ Saldo projetado para os próximos 6 meses: saldo atual + receitas recorrentes + 
 O Claude responde perguntas ("quanto gastei com Uber em 2026?") usando **ferramentas somente de leitura** que chamam as consultas da Trilha B (`getBreakdown`, `getMonthlySeries`, `listTransactions`). Nenhum SQL gerado pela IA. Dados pessoais mascarados como em A1-07.
 
 ### B4-01 a B4-05 — Telas
-Orçamentos (barras de progresso por categoria, edição), Assinaturas (lista com custo mensal e anual total), Projeção (gráfico de linha com faixa de incerteza), Perguntas (chat com respostas que linkam para as telas filtradas), Central de notificações (sino no topo, marcar como lida).
+Limites e orçamentos (B4-01: criar, editar e pausar limites por categoria e/ou forma de pagamento; barra de progresso por limite com a cor mudando nos limiares; previsão de ritmo; aceitar o orçamento sugerido; indicador nos cartões do dashboard), Assinaturas (lista com custo mensal e anual total), Projeção (gráfico de linha com faixa de incerteza), Perguntas (chat com respostas que linkam para as telas filtradas), Central de notificações (B4-05: sino no topo com contador de não lidas, lista com link para a tela filtrada, marcar como lida, e preferências: quais tipos de alerta receber).
 
 ---
 
