@@ -9,10 +9,12 @@ type PaymentMethodBarsProps = {
   items: BreakdownItem[];
   totalCents: number;
   filters: TxFilters;
+  totalsAccountIds?: string[];
 };
 
 /** Gastos por forma de pagamento; clique leva para /transacoes?forma=... */
-export function PaymentMethodBars({ items, totalCents, filters }: PaymentMethodBarsProps) {
+export function PaymentMethodBars({ items, totalCents, filters, totalsAccountIds }: PaymentMethodBarsProps) {
+  const linkOpts = totalsAccountIds ? { totalsAccountIds } : undefined;
   return (
     <HorizontalBars
       ariaLabel="Gastos por forma de pagamento"
@@ -23,7 +25,7 @@ export function PaymentMethodBars({ items, totalCents, filters }: PaymentMethodB
         color: paymentMethodColor(i.key),
         totalCents: i.totalCents,
         count: i.count,
-        href: paymentMethodTransactionsHref(filters, i.key),
+        href: paymentMethodTransactionsHref(filters, i.key, linkOpts),
       }))}
     />
   );

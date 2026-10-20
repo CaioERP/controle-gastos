@@ -8,6 +8,13 @@
       "when": 1792355181979,
       "tag": "0000_cuddly_mongoose",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792465002763,
+      "tag": "0001_tricky_champions",
+      "breakpoints": true
     }
   ]
 }

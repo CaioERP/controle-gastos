@@ -31,16 +31,31 @@ export function spendKinds(current: TxFilters): TxKind[] {
  * inclui as filhas, então a linha "transações lançadas direto no pai" não tem link que reproduza
  * só o seu valor e fica sem link.
  */
-export type CategoryLinkOptions = { parentIds?: ReadonlySet<string> };
+export type CategoryLinkOptions = {
+  parentIds?: ReadonlySet<string>;
+  totalsAccountIds?: string[];
+};
+
+export type LinkOptions = {
+  totalsAccountIds?: string[];
+};
 
 function categoryLinkable(categoryId: string, opts: CategoryLinkOptions): boolean {
   return isFilterableId(categoryId) && !opts.parentIds?.has(categoryId);
 }
 
-function transactionsHref(current: TxFilters, patch: Partial<TxFilters>): string | null {
+function transactionsHref(
+  current: TxFilters,
+  patch: Partial<TxFilters>,
+  opts: LinkOptions = {}
+): string | null {
   const kinds = spendKinds(current);
   if (kinds.length === 0) return null;
-  return withFilters('/transacoes', { ...patch, kinds }, current);
+  const effectivePatch: Partial<TxFilters> = { ...patch, kinds };
+  if (opts.totalsAccountIds && (!current.accountIds || current.accountIds.length === 0)) {
+    effectivePatch.accountIds = opts.totalsAccountIds;
+  }
+  return withFilters('/transacoes', effectivePatch, current);
 }
 
 /** Link para /transacoes mantendo período, visão e regime atuais, filtrando pela categoria. */
@@ -50,13 +65,17 @@ export function categoryTransactionsHref(
   opts: CategoryLinkOptions = {}
 ): string | null {
   if (!categoryLinkable(categoryId, opts)) return null;
-  return transactionsHref(current, { categoryIds: [categoryId] });
+  return transactionsHref(current, { categoryIds: [categoryId] }, opts);
 }
 
 /** Link para /transacoes filtrando pela forma de pagamento. */
-export function paymentMethodTransactionsHref(current: TxFilters, method: string): string | null {
+export function paymentMethodTransactionsHref(
+  current: TxFilters,
+  method: string,
+  opts: LinkOptions = {}
+): string | null {
   if (!isPaymentMethod(method)) return null;
-  return transactionsHref(current, { paymentMethods: [method] });
+  return transactionsHref(current, { paymentMethods: [method] }, opts);
 }
 
 /** Link para /transacoes filtrando por categoria e forma de pagamento (célula da matriz). */
@@ -67,10 +86,21 @@ export function crossTransactionsHref(
   opts: CategoryLinkOptions = {}
 ): string | null {
   if (!categoryLinkable(categoryId, opts) || !isPaymentMethod(method)) return null;
-  return transactionsHref(current, { categoryIds: [categoryId], paymentMethods: [method] });
+  return transactionsHref(current, { categoryIds: [categoryId], paymentMethods: [method] }, opts);
 }
 
 /** Ids das categorias que têm filhas (para `CategoryLinkOptions.parentIds`). */
 export function parentCategoryIds(tree: ReadonlyArray<{ id: string; children: ReadonlyArray<unknown> }>): Set<string> {
   return new Set(tree.filter((c) => c.children.length > 0).map((c) => c.id));
+}
+
+/** Extrai contas incluídas nos totais e indica se há alguma excluída (R11). */
+export function accountsTotals(
+  overview: ReadonlyArray<{ accounts: ReadonlyArray<{ id: string; includeInTotals: boolean }> }>
+): { totalsAccountIds: string[]; hasExcluded: boolean } {
+  const all = overview.flatMap((i) => i.accounts);
+  return {
+    totalsAccountIds: all.filter((a) => a.includeInTotals).map((a) => a.id),
+    hasExcluded: all.some((a) => !a.includeInTotals),
+  };
 }

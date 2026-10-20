@@ -235,10 +235,11 @@ Seed completo na tarefa F0-03.
 | installment_number / installment_total | smallint null | |
 | transfer_group_id | uuid null | R7 |
 | notes | text null | |
+| parent_transaction_id | fk null (cascade) | aponta para a transação mãe quando dividida (B2-03b) |
 | user_edited_fields | text[] | R9; default `{}` |
 | deleted_at | timestamptz null | soft delete |
 
-Índices: `(account_id, date)`, `(date)`, `(category_id)`, `(installment_group_id)`, `(invoice_id)`.
+Índices: `(account_id, date)`, `(date)`, `(category_id)`, `(installment_group_id)`, `(invoice_id)`, `(parent_transaction_id)`.
 
 ### `transaction_sources` — origem de cada transação (R10)
 | Coluna | Tipo | Observação |
@@ -426,6 +427,10 @@ createManualTransaction(input: { accountId: string; date: string; amountCents: n
 updateManualTransaction(input: { transactionId: string; patch: Partial<{ date: string; amountCents: number }> }): Promise<void>; // só transações manuais; ajusta o saldo pela diferença
 deleteManualTransaction(input: { transactionId: string }): Promise<void>; // soft delete; só transações manuais; devolve o saldo
 
+// Divisão de transação (B2-03b) — src/server/commands/split.ts
+splitTransaction(input: { transactionId: string; parts: Array<{ amountCents: number; categoryId: string | null; description?: string; notes?: string | null }> }): Promise<{ splitIds: string[] }>; // soma das partes == total da mãe; mãe sai dos totais
+unsplitTransaction(input: { transactionId: string }): Promise<void>; // soft delete nas filhas; mãe volta aos totais
+
 type RuleInput = {
   id?: string;
   priority: number;
@@ -484,3 +489,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-18 | Agente A | F0-03 | Versão inicial implementada |
 | 2026-10-18 | Agente A | F0-03 | Adicionado helper toCommandError em domain/errors |
 | 2026-10-19 | Coordenador | B2-03a | Comandos de lançamento manual: createManualAccount, createManualTransaction, updateManualTransaction, deleteManualTransaction (aditivo, sem mudança de schema) |
+| 2026-10-19 | Agente B | B2-03b | Coluna parent_transaction_id em transactions, índice e comandos splitTransaction e unsplitTransaction (aditivo) |

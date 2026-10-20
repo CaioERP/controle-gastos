@@ -58,3 +58,21 @@ test('aplica a fonte Geist (e não a fonte padrão do navegador)', async ({ page
   const fontFamily = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
   expect(fontFamily).toContain('Geist');
 });
+
+test('busca global (Ctrl+K) abre a busca e navega para tela ao pressionar Enter', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('h1')).toHaveText('Dashboard');
+
+  // Abre com Ctrl+K
+  await page.keyboard.press('Control+k');
+  const dialog = page.locator('div[role="dialog"]');
+  await expect(dialog).toBeVisible();
+
+  // Digita "transa" e aperta Enter
+  await page.keyboard.type('transa');
+  await page.keyboard.press('Enter');
+
+  // A URL passa a ser /transacoes
+  await expect(page).toHaveURL('/transacoes');
+  await expect(page.locator('h1')).toHaveText('Transações');
+});

@@ -21,6 +21,7 @@ import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
 import {
+  accountsTotals,
   categoryTransactionsHref,
   isFilterableId,
   parentCategoryIds,
@@ -82,7 +83,12 @@ export default async function AnalisePage({ searchParams }: Props) {
   const comparison = comparePeriods(byCategory, previousByCategory);
   const prevLabel = previousPeriodLabel(filters);
   const path = filters.categoryIds?.length === 1 ? categoryPath(categories, filters.categoryIds[0]!) : [];
-  const linkOpts = drilled ? { parentIds: parentCategoryIds(categories) } : {};
+    const { totalsAccountIds, hasExcluded } = accountsTotals(overview);
+  const linkOpts = {
+    ...(drilled ? { parentIds: parentCategoryIds(categories) } : {}),
+    ...(hasExcluded ? { totalsAccountIds } : {}),
+  };
+  const pmLinkOpts = hasExcluded ? { totalsAccountIds } : undefined;
 
   return (
     <div className="space-y-6">
@@ -101,7 +107,7 @@ export default async function AnalisePage({ searchParams }: Props) {
                   items={byPayment}
                   totalCents={totalCents}
                   colorFor={(i) => paymentMethodColor(i.key)}
-                  hrefFor={(i) => paymentMethodTransactionsHref(filters, i.key)}
+                  hrefFor={(i) => paymentMethodTransactionsHref(filters, i.key, pmLinkOpts)}
                 />
               ) : (
                 <SectionEmpty />

@@ -8,6 +8,7 @@ import { ThemeToggle } from './theme-toggle';
 import { cn } from '@/lib/utils';
 import { Wallet } from 'lucide-react';
 import { ReviewCountBadge } from '@/components/review/review-count-badge';
+import { SearchTrigger } from './command-palette';
 
 export interface AppSidebarProps {
   footerSlot?: React.ReactNode;
@@ -26,7 +27,11 @@ export function AppSidebar({ footerSlot, reviewCount = 0 }: AppSidebarProps) {
         <span className="font-semibold text-base tracking-tight">Controle de Gastos</span>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      <div className="px-3 pt-3">
+        <SearchTrigger />
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
         {NAV_ITEMS.map((item) => {
           const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
           const Icon = item.icon;

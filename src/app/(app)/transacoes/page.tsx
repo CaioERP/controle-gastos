@@ -8,6 +8,7 @@ import { parseFilters, serializeFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { ManualTransactionDialog } from '@/components/manual/manual-transaction-dialog';
+import { ExportButton } from '@/components/transactions/export-button';
 import { SearchInput } from '@/components/transactions/search-input';
 import { TransactionList } from '@/components/transactions/transaction-list';
 
@@ -48,11 +49,10 @@ export default async function Page({ searchParams }: Props) {
         title="Transações"
         description="Extrato unificado com busca, filtros e edição de categoria."
         actions={
-          <ManualTransactionDialog
-            accounts={manualAccounts}
-            categories={categories}
-            today={today()}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButton filters={filters} />
+            <ManualTransactionDialog accounts={manualAccounts} categories={categories} today={today()} />
+          </div>
         }
       />
       <SearchInput />
