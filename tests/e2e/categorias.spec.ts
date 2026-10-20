@@ -109,6 +109,39 @@ test.describe('Tela de categorias, regras e estabelecimentos', () => {
     await expect(row).toHaveCount(0);
   });
 
+  test('prévia da regra mostra quantas transações dos últimos 90 dias casariam e se atualiza ao editar', async ({
+    page,
+  }) => {
+    await page.goto('/categorias?aba=regras');
+    await page.getByRole('button', { name: 'Nova regra' }).click();
+    const dialog = page.getByRole('dialog');
+    const preview = dialog.getByTestId('rule-preview');
+    const summary = preview.getByTestId('rule-preview-summary');
+    await expect(preview).toContainText('Digite o texto da condição');
+
+    // Os dados fictícios têm corridas de Uber todo mês
+    await dialog.getByLabel('Texto').fill('uber');
+    await expect(summary).toHaveText(/^Esta regra casaria com \d+ transaç(ão|ões) dos últimos 90 dias$/);
+    const total = Number((await summary.textContent())!.match(/\d+/)![0]);
+    expect(total).toBeGreaterThan(0);
+    await expect(preview.getByTestId('rule-preview-sample')).toHaveCount(Math.min(total, 5));
+    await expect(preview.getByTestId('rule-preview-sample').first()).toContainText(/\d{2}\/\d{2}\/\d{4}/);
+    await expect(preview.getByTestId('rule-preview-sample').first()).toContainText('R$');
+
+    // Mudar um campo de match atualiza a prévia
+    await dialog.getByLabel('Texto').fill(`nada casa ${stamp}`);
+    await expect(summary).toHaveText('Esta regra casaria com 0 transações dos últimos 90 dias');
+    await expect(preview.getByTestId('rule-preview-sample')).toHaveCount(0);
+
+    await dialog.getByLabel('Comparação').selectOption('regex');
+    await dialog.getByLabel('Texto').fill('(');
+    await expect(preview).toContainText('Expressão regular inválida.');
+
+    // Fechar sem salvar não cria regra
+    await dialog.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
   test('estabelecimentos: busca na URL e edição do nome de exibição', async ({ page }) => {
     await page.goto('/categorias?aba=estabelecimentos');
     await page.getByLabel('Buscar estabelecimento').fill('ifood');
