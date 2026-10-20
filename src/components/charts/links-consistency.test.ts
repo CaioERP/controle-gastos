@@ -1,15 +1,19 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createTestDb } from '../../../tests/helpers/db';
+import { accounts } from '@/server/db/schema';
 import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from '../../../tests/fixtures/load';
 import type { Db } from '@/server/db/client';
 import type { TxFilters } from '@/server/domain/filters';
+import { getAccountsOverview } from '@/server/queries/accounts';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories } from '@/server/queries/catalog';
 import { getCrossTab } from '@/server/queries/crosstab';
 import { listTransactions } from '@/server/queries/transactions';
 import { parseFilters } from '@/server/queries/url-filters';
 import {
+  accountsTotals,
   categoryTransactionsHref,
   crossTransactionsHref,
   parentCategoryIds,
@@ -96,6 +100,64 @@ describe('links de detalhamento reproduzem o valor do gráfico', () => {
       }
     }
     expect(checked).toBeGreaterThan(5);
+  });
+
+  it('com uma conta fora dos totais, os links reproduzem o valor do gráfico', async () => {
+    // Marca uma conta como fora dos totais
+    const allAccs = await db.select({ id: accounts.id }).from(accounts).limit(1);
+    const excludedAccountId = allAccs[0]!.id;
+    await db
+      .update(accounts)
+      .set({ includeInTotals: false })
+      .where(eq(accounts.id, excludedAccountId));
+
+    const overview = await getAccountsOverview(db);
+    const { totalsAccountIds, hasExcluded } = accountsTotals(overview);
+    expect(hasExcluded).toBe(true);
+
+    const filters: TxFilters = parseFilters('mes=2026-10', REF);
+    const linkOpts = { totalsAccountIds };
+
+    let checked = 0;
+    // Forma de pagamento
+    for (const item of await getBreakdown(db, filters, 'paymentMethod')) {
+      const href = paymentMethodTransactionsHref(filters, item.key, linkOpts);
+      if (!href) continue;
+      expect(await listSpend(href), `forma ${item.key}`).toBe(item.totalCents);
+      checked++;
+    }
+    // Categoria pai
+    for (const item of await getBreakdown(db, filters, 'parentCategory')) {
+      const href = categoryTransactionsHref(filters, item.key, linkOpts);
+      if (!href) continue;
+      expect(await listSpend(href), `categoria pai ${item.label}`).toBe(item.totalCents);
+      checked++;
+    }
+    // Categoria exata
+    for (const item of await getBreakdown(db, filters, 'category')) {
+      const href = categoryTransactionsHref(filters, item.key, { ...linkOpts, parentIds });
+      if (!href) continue;
+      expect(await listSpend(href), `categoria ${item.label}`).toBe(item.totalCents);
+      checked++;
+    }
+    // Célula da matriz
+    const cross = await getCrossTab(db, filters, 'parentCategory', 'paymentMethod');
+    for (const [rowKey, cols] of Object.entries(cross.cells)) {
+      for (const [colKey, cents] of Object.entries(cols)) {
+        if (cents === 0) continue;
+        const href = crossTransactionsHref(filters, rowKey, colKey, linkOpts);
+        if (!href) continue;
+        expect(await listSpend(href), `${rowKey} × ${colKey}`).toBe(cents);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(10);
+
+    // Restaura a conta para não afetar outros testes
+    await db
+      .update(accounts)
+      .set({ includeInTotals: true })
+      .where(eq(accounts.id, excludedAccountId));
   });
 
   it('sem natureza na URL a lista traz naturezas que o gráfico não soma (por isso o link manda natureza)', async () => {

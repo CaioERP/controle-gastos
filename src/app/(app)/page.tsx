@@ -14,7 +14,7 @@ import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
 import { buttonVariants } from '@/components/ui/button';
-import { categoryTransactionsHref, parentCategoryIds } from '@/components/charts/links';
+import { accountsTotals, categoryTransactionsHref, parentCategoryIds } from '@/components/charts/links';
 import { NEUTRAL_COLOR, seriesColor } from '@/components/charts/palette';
 import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
 import { KpiCard } from '@/components/dashboard/kpi-card';
@@ -69,7 +69,11 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   const prevLabel = previousPeriodLabel(filters);
   const totalCents = kpis.expenseCents;
-  const linkOpts = catDim === 'category' ? { parentIds: parentCategoryIds(categories) } : {};
+  const { totalsAccountIds, hasExcluded } = accountsTotals(overview);
+  const linkOpts = {
+    ...(catDim === 'category' ? { parentIds: parentCategoryIds(categories) } : {}),
+    ...(hasExcluded ? { totalsAccountIds } : {}),
+  };
 
   const slices = topWithOthers(byCategory, 7).map((item, i) => ({
     key: item.key,
@@ -129,7 +133,12 @@ export default async function DashboardPage({ searchParams }: Props) {
         </SectionCard>
         <SectionCard title="Gastos por forma de pagamento">
           {byPaymentMethod.length > 0 ? (
-            <PaymentMethodBars items={byPaymentMethod} totalCents={totalCents} filters={filters} />
+            <PaymentMethodBars
+              items={byPaymentMethod}
+              totalCents={totalCents}
+              filters={filters}
+              totalsAccountIds={hasExcluded ? totalsAccountIds : undefined}
+            />
           ) : (
             <SectionEmpty />
           )}
