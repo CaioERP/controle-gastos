@@ -140,7 +140,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 > Formato: `- [ID] pergunta ou pedido objetivo — Agente X, AAAA-MM-DD`. Quem resolver, risca (`~~...~~`) e anota a decisão.
 
-- [A1-06] PLUGGY_CATEGORY_SEED vazio até a F0-07 rodar (precisa de H-01/H-02) — Agente A, 2026-10-18
+- [A1-06] PLUGGY_CATEGORY_SEED vazio até a F0-07 rodar (precisa de H-01/H-02) — Agente A, 2026-10-18. Ao preencher: rodar o seed de novo NÃO troca uma categoria ativa por outra ativa no provider_category_map; corrigir entrada já gravada exige migração de dados (ver provider-map.ts)
 - [A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18
 - ~~[B1-03] FilterBar descartava parâmetros da página (dim, cartao, fatura, aba); datas da URL dependiam do fuso~~ — resolvido no PR #19, 2026-10-19
 - [B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19 · 🟡 em andamento (Agente B, Claude agente 6)
@@ -152,4 +152,4 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [B1-10] Confirmação em lote fica presa em "Confirmando X de N..." após falha de rede, com atalhos desligados: envolver o laço em try/finally — Revisor, 2026-10-19
 - [A1-08] recategorize com escopo similar grava origem merchant (camada 2). Se uma dessas transações casar com uma regra (camada 1), o próximo reprocessamento devolve a categoria da regra. Decidir se "aplicar a todas as parecidas" deve ser durável (criar ou ajustar regra, ou proteger as transações) ou se fica como a spec define. — Revisor, 2026-10-19
 - [A1-08] applyRuleToExisting lê todas as transações não excluídas e filtra em JS (~70 ms para 274 transações). Acrescentar pré-filtro SQL (ILIKE) para contains/starts_with/equals quando o volume justificar. — Revisor, 2026-10-19
-- [A1-06/A1-08] Regra do usuário e regra aprendida com o mesmo critério empatam pelo UUID (desempatar por updatedAt desc); starts_with aprendido pode ficar genérico ("Compra parcelada PARC 02/05"); db:seed de novo desfaz o redirecionamento do provider_category_map feito pelo archiveCategory — Revisor, 2026-10-19
+- ~~[A1-06/A1-08] Regra do usuário e regra aprendida com o mesmo critério empatam pelo UUID (desempatar por updatedAt desc); starts_with aprendido pode ficar genérico ("Compra parcelada PARC 02/05"); db:seed de novo desfaz o redirecionamento do provider_category_map feito pelo archiveCategory — Revisor, 2026-10-19~~ — resolvido no PR #21 (desempate por updatedAt, que só muda por decisão do usuário ou aprendizado; GENERIC_WORDS; seed não sobrescreve categoria ativa), 2026-10-19
