@@ -84,7 +84,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | ✅ |
 | B1-09 | Tela de categorias e regras | B | B1-02 | ✅ |
 | B1-10 | Fila de revisão | B | B1-05 | ✅ |
-| B1-11 | Links de detalhamento com contas fora dos totais | B | B1-04, B1-08 | 🟡 Agente B — PR #25 em revisão |
+| B1-11 | Links de detalhamento com contas fora dos totais | B | B1-04, B1-08 | ✅ |
 
 ## Fase 1 — Integração
 
@@ -112,7 +112,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00 | ⬜ |
 | B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B (PR 1 em andamento) |
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | P2-00 | ⬜ |
-| B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — PRs #26 e #27 em revisão |
+| B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
 | A3-01 | Schema de investimentos e sincronização Pluggy | A | P3-00 | ⬜ |
 | A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) | A | P3-00 | ⬜ |
@@ -157,3 +157,4 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [A1-08] applyRuleToExisting lê todas as transações não excluídas e filtra em JS (~70 ms para 274 transações). Acrescentar pré-filtro SQL (ILIKE) para contains/starts_with/equals quando o volume justificar. — Revisor, 2026-10-19
 - ~~[A1-06/A1-08] Regra do usuário e regra aprendida com o mesmo critério empatam pelo UUID (desempatar por updatedAt desc); starts_with aprendido pode ficar genérico ("Compra parcelada PARC 02/05"); db:seed de novo desfaz o redirecionamento do provider_category_map feito pelo archiveCategory — Revisor, 2026-10-19~~ — resolvido no PR #21 (desempate por updatedAt, que só muda por decisão do usuário ou aprendizado; GENERIC_WORDS; seed não sobrescreve categoria ativa), 2026-10-19
 - [e2e] revisao.spec.ts e transacoes.spec.ts esvaziam a fila de revisão e só passam depois de db:reset. Aceito por ora (prioridade: construir o app) — Coordenador, 2026-10-19
+- [B2-04] Busca global encontra transações de contas ocultas e previstas, mas /transacoes as esconde (abre vazia); busca da lista em base.ts não escapa % e _; CSV usa account.name em vez de displayName — Revisor, 2026-10-19
