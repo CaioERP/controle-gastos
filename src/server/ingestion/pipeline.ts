@@ -1,6 +1,8 @@
 import { categorizeTransactions } from '@/server/categorization/engine';
 import { categorizeWithLlm } from '@/server/categorization/llm';
 import type { Db } from '@/server/db/client';
+import { runInstallmentsPipelineStep } from './installments';
+import { runInvoicesPipelineStep } from './invoices';
 import type { RawInvoice } from './types';
 
 export type PipelineContext = {
@@ -18,8 +20,16 @@ export type PipelineStep = {
   run: (ctx: PipelineContext) => Promise<void>;
 };
 
-/** Ordem importa: faturas → natureza → categorização. As tarefas A1-04..A1-07 acrescentam seus passos aqui. */
+/** Ordem importa: faturas → parcelas → natureza → categorização. As tarefas A1-04..A1-07 acrescentam seus passos aqui. */
 export const PIPELINE_STEPS: PipelineStep[] = [
+  {
+    name: 'invoices',
+    run: runInvoicesPipelineStep,
+  },
+  {
+    name: 'installments',
+    run: runInstallmentsPipelineStep,
+  },
   {
     name: 'categorize',
     run: async (ctx) => {
