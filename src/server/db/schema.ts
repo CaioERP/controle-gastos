@@ -181,6 +181,9 @@ export const transactions = pgTable(
     installmentNumber: smallint('installment_number'),
     installmentTotal: smallint('installment_total'),
     transferGroupId: uuid('transfer_group_id'),
+    parentTransactionId: uuid('parent_transaction_id').references((): AnyPgColumn => transactions.id, {
+      onDelete: 'cascade',
+    }),
     notes: text('notes'),
     userEditedFields: text('user_edited_fields').array().notNull().default(sql`'{}'::text[]`),
     deletedAt: tstz('deleted_at'),
@@ -192,6 +195,7 @@ export const transactions = pgTable(
     index('transactions_category_idx').on(t.categoryId),
     index('transactions_installment_group_idx').on(t.installmentGroupId),
     index('transactions_invoice_idx').on(t.invoiceId),
+    index('transactions_parent_transaction_idx').on(t.parentTransactionId),
   ],
 );
 
