@@ -39,6 +39,7 @@ export function buildTxWhere(f: TxFilters, opts: WhereOptions): SQL {
   const d = effectiveDate(f.basis);
   const conds: (SQL | undefined)[] = [
     isNull(transactions.deletedAt),
+    sql`not exists (select 1 from ${transactions} child where child.parent_transaction_id = ${transactions.id} and child.deleted_at is null)`,
     sql`${d} >= ${f.from}`,
     sql`${d} <= ${f.to}`,
     eq(accounts.isHidden, false),
