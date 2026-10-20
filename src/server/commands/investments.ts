@@ -56,42 +56,53 @@ export type NetWorthComputation = {
 };
 
 export async function upsertManualHolding(
-  _db: Db,
-  _input: UpsertManualHoldingInput,
+  db: Db,
+  input: UpsertManualHoldingInput,
 ): Promise<{ holdingId: string; assetId: string }> {
-  throw new CommandError('INTERNAL', 'upsertManualHolding ainda não implementado (A3-04)');
+  void db;
+  void input;
+  throw new CommandError('VALIDATION', 'upsertManualHolding ainda não implementado (A3-04)');
 }
 
 export async function deleteManualHolding(
-  _db: Db,
-  _input: { holdingId: string },
+  db: Db,
+  input: { holdingId: string },
 ): Promise<void> {
-  throw new CommandError('INTERNAL', 'deleteManualHolding ainda não implementado (A3-04)');
+  void db;
+  void input;
+  throw new CommandError('VALIDATION', 'deleteManualHolding ainda não implementado (A3-04)');
 }
 
 export async function recordInvestmentTransaction(
-  _db: Db,
-  _input: RecordInvestmentTransactionInput,
+  db: Db,
+  input: RecordInvestmentTransactionInput,
 ): Promise<{ investmentTransactionId: string }> {
-  throw new CommandError('INTERNAL', 'recordInvestmentTransaction ainda não implementado (A3-04)');
+  void db;
+  void input;
+  throw new CommandError('VALIDATION', 'recordInvestmentTransaction ainda não implementado (A3-04)');
 }
 
 export async function deleteInvestmentTransaction(
-  _db: Db,
-  _input: { investmentTransactionId: string },
+  db: Db,
+  input: { investmentTransactionId: string },
 ): Promise<void> {
-  throw new CommandError('INTERNAL', 'deleteInvestmentTransaction ainda não implementado (A3-04)');
+  void db;
+  void input;
+  throw new CommandError('VALIDATION', 'deleteInvestmentTransaction ainda não implementado (A3-04)');
 }
 
 export async function refreshMarketPrices(
-  _db: Db,
+  db: Db,
 ): Promise<PriceUpdateStats> {
-  throw new CommandError('INTERNAL', 'refreshMarketPrices ainda não implementado (A3-02)');
+  void db;
+  throw new CommandError('VALIDATION', 'refreshMarketPrices ainda não implementado (A3-02)');
 }
 
 export async function captureNetWorthSnapshot(
-  _db: Db,
-  _refDate?: string,
+  db: Db,
+  refDate?: string,
 ): Promise<NetWorthComputation> {
-  throw new CommandError('INTERNAL', 'captureNetWorthSnapshot ainda não implementado (A3-03)');
+  void db;
+  void refDate;
+  throw new CommandError('VALIDATION', 'captureNetWorthSnapshot ainda não implementado (A3-03)');
 }

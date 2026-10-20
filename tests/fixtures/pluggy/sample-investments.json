@@ -1,0 +1,105 @@
+{
+  "account": {
+    "id": "acc-inv-1",
+    "itemId": "item-1",
+    "type": "BANK",
+    "subtype": "CHECKING_ACCOUNT",
+    "name": "Investimentos",
+    "balance": 46018.5,
+    "currencyCode": "BRL"
+  },
+  "transactions": [],
+  "investments": [
+    {
+      "id": "inv-inter-cdb-1",
+      "itemId": "item-1",
+      "name": "CDB Banco Inter 102% CDI",
+      "type": "FIXED_INCOME",
+      "subtype": "CDB",
+      "currencyCode": "BRL",
+      "balance": 10500,
+      "amount": 10500,
+      "amountOriginal": 10000,
+      "amountProfit": 500,
+      "rate": 102,
+      "rateType": "CDI",
+      "dueDate": "2027-12-31",
+      "date": "2026-10-20",
+      "institution": { "name": "Banco Inter" }
+    },
+    {
+      "id": "inv-tesouro-selic-1",
+      "itemId": "item-1",
+      "name": "Tesouro Selic 2029",
+      "type": "FIXED_INCOME",
+      "subtype": "TREASURY",
+      "currencyCode": "BRL",
+      "balance": 15200.5,
+      "amount": 15200.5,
+      "quantity": 1.05,
+      "value": 14476.67,
+      "rate": 100,
+      "rateType": "SELIC",
+      "dueDate": "2029-03-01",
+      "date": "2026-10-20",
+      "institution": { "name": "Tesouro Direto" }
+    },
+    {
+      "id": "inv-petr4-1",
+      "itemId": "item-1",
+      "code": "PETR4",
+      "isin": "BRPETRACNPR6",
+      "name": "Petroleo Brasileiro S.A. Petrobras",
+      "type": "EQUITY",
+      "subtype": "STOCK",
+      "currencyCode": "BRL",
+      "balance": 4118,
+      "amount": 4118,
+      "amountOriginal": 3800,
+      "quantity": 100,
+      "value": 41.18,
+      "date": "2026-10-20",
+      "institution": { "name": "Nubank" }
+    },
+    {
+      "id": "inv-hglg11-1",
+      "itemId": "item-1",
+      "code": "HGLG11",
+      "name": "CSHG Logística FII",
+      "type": "SECURITY",
+      "subtype": "REAL_ESTATE_FUND",
+      "currencyCode": "BRL",
+      "balance": 16200,
+      "amount": 16200,
+      "amountOriginal": 15500,
+      "quantity": 100,
+      "value": 162,
+      "date": "2026-10-20",
+      "institution": { "name": "Nubank" }
+    }
+  ],
+  "investmentTransactions": {
+    "inv-inter-cdb-1": [
+      {
+        "id": "inv-tx-cdb-buy-1",
+        "investmentId": "inv-inter-cdb-1",
+        "type": "BUY",
+        "amount": 1000,
+        "date": "2026-10-10",
+        "description": "Aplicação CDB 102% CDI"
+      }
+    ],
+    "inv-petr4-1": [
+      {
+        "id": "inv-tx-petr4-buy-1",
+        "investmentId": "inv-petr4-1",
+        "type": "BUY",
+        "amount": 4000,
+        "quantity": 100,
+        "value": 40,
+        "date": "2026-10-15",
+        "description": "Compra 100 PETR4"
+      }
+    ]
+  }
+}
