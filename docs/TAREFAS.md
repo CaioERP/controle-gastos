@@ -109,7 +109,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A2-03 | Deduplicação entre fontes | A | A2-01 | 🟡 Agente A — PR #42 em revisão |
 | A2-04 | Conferência de faturas (total do PDF × lançamentos) | A | A2-02, A2-03, H-03, H-04 | ⬜ |
 | A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00, A1-01, A1-03, A1-09 | 🟡 Agente A — PR #43 em revisão |
-| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | 🟡 Agente B |
+| B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | 🟡 Agente B — PR #44 em revisão |
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00, B1-06, A2-05 | 🟡 Agente B — PR #41 em revisão |
 | B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — PRs #31 (comandos) e #32 (telas) em revisão |
