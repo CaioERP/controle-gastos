@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { accounts, cards, transactions, transactionSources } from '@/server/db/schema';
+import { findCrossSourceMatches, linkSourceToTransaction } from './dedupe';
 import { resolveInstitution } from './institutions';
 import { findOrCreateMerchant } from './merchants';
 import type { NormalizedTransaction, RawAccount } from './types';
@@ -128,6 +129,24 @@ export async function upsertTransaction(
   const installmentTotal = n.installment?.total ?? null;
 
   if (!existingSource) {
+    if (n.source === 'pluggy') {
+      const crossMatch = await findCrossSourceMatches(db, accountId, {
+        source: n.source,
+        date: n.date,
+        amountCents: n.amountCents,
+        description: n.description,
+        descriptionRaw: n.descriptionRaw,
+      });
+      if (crossMatch.status === 'fuzzy_duplicate' && crossMatch.matchedTransactionId) {
+        await linkSourceToTransaction(db, {
+          transactionId: crossMatch.matchedTransactionId,
+          incoming: n,
+          importBatchId: opts?.importBatchId ?? null,
+        });
+        return { id: crossMatch.matchedTransactionId, created: false, changed: true };
+      }
+    }
+
     const [created] = await db
       .insert(transactions)
       .values({

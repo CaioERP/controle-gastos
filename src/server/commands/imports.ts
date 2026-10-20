@@ -135,6 +135,7 @@ export async function previewFileImport(
     }
 
     const items: PreviewTransactionItem[] = [];
+    const matchedInBatch = new Set<string>();
     let newCount = 0;
     let exactDuplicateCount = 0;
     let fuzzyDuplicateCount = 0;
@@ -151,19 +152,27 @@ export async function previewFileImport(
       if (exactTxId) {
         status = 'exact_duplicate';
         matchedTransactionId = exactTxId;
+        matchedInBatch.add(exactTxId);
         exactDuplicateCount++;
       } else {
-        const crossMatch = await findCrossSourceMatches(db, account.id, {
-          source: 'file',
-          date: n.date,
-          amountCents: n.amountCents,
-          descriptionRaw: n.descriptionRaw,
-        });
+        const crossMatch = await findCrossSourceMatches(
+          db,
+          account.id,
+          {
+            source: 'file',
+            date: n.date,
+            amountCents: n.amountCents,
+            description: n.description,
+            descriptionRaw: n.descriptionRaw,
+          },
+          { excludeTransactionIds: matchedInBatch },
+        );
         status = crossMatch.status;
         matchedTransactionId = crossMatch.matchedTransactionId;
         candidates = crossMatch.candidates;
 
         if (status === 'fuzzy_duplicate') {
+          if (matchedTransactionId) matchedInBatch.add(matchedTransactionId);
           fuzzyDuplicateCount++;
         } else if (status === 'ambiguous_duplicate') {
           ambiguousCount++;
@@ -333,9 +342,14 @@ export async function confirmFileImport(
             ? decision.linkTransactionId
             : item.matchedTransactionId;
         if (targetId) {
-          await linkSourceToTransaction(db, targetId, item.normalized, {
+          const linkRes = await linkSourceToTransaction(db, {
+            transactionId: targetId,
+            incoming: item.normalized,
             importBatchId: batch.id,
           });
+          if (linkRes.updated) {
+            createdOrChangedIds.push(targetId);
+          }
           linked++;
         } else {
           skippedDuplicates++;
@@ -345,12 +359,14 @@ export async function confirmFileImport(
 
       if (item.status === 'ambiguous_duplicate') {
         if (typeof decision === 'object' && decision !== null) {
-          await linkSourceToTransaction(
-            db,
-            decision.linkTransactionId,
-            item.normalized,
-            { importBatchId: batch.id },
-          );
+          const linkRes = await linkSourceToTransaction(db, {
+            transactionId: decision.linkTransactionId,
+            incoming: item.normalized,
+            importBatchId: batch.id,
+          });
+          if (linkRes.updated) {
+            createdOrChangedIds.push(decision.linkTransactionId);
+          }
           linked++;
         } else if (decision === 'import_as_new') {
           const res = await upsertTransaction(db, batch.accountId, item.normalized, {
