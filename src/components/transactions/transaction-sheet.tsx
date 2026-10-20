@@ -73,7 +73,11 @@ function SheetBody({
   const [saving, startSave] = React.useTransition();
   const [splitOpen, setSplitOpen] = React.useState(false);
 
-  const canSplit = (tx.kind === 'expense' || tx.kind === 'income') && !tx.parentTransactionId && !hasSplitParts;
+  const canSplit =
+    (tx.kind === 'expense' || tx.kind === 'income') &&
+    tx.status !== 'projected' &&
+    !tx.parentTransactionId &&
+    !hasSplitParts;
 
   React.useEffect(() => {
     let active = true;
