@@ -118,7 +118,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #31, #32) |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #29, #30) |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ✅ |
-| A3-01 | Schema de investimentos, aritmética de cotas e sincronização Pluggy | A | P3-00, A1-01, A1-03 (validação real: F0-07) | 🟡 Agente A |
+| A3-01 | Schema de investimentos, aritmética de cotas e sincronização Pluggy | A | P3-00, A1-01, A1-03 (validação real: F0-07) | 🟡 Agente A — PR #49 em revisão |
 | A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) + job `prices-daily` | A | P3-00, A3-01 | ⬜ |
 | A3-03 | Rentabilidade (TWR mensal) e snapshots de patrimônio | A | P3-00, A3-01, A3-02 | ⬜ |
 | A3-04 | Posições manuais e proventos (backend + fixtures) | A | P3-00, A3-01 | ⬜ |
