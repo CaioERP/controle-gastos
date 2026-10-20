@@ -22,11 +22,15 @@ import { slugify } from '@/server/ingestion/institutions';
 import { fromScaledQty, toScaledQty } from '@/server/investments/math';
 import { linkInvestmentTransactionsToChecking } from '@/server/investments/sync';
 import {
+  captureNetWorthSnapshot as captureNetWorthSnapshotImpl,
+  type NetWorthComputation,
+} from '@/server/investments/net-worth';
+import {
   updateMarketPricesAndBenchmarks,
   type PriceUpdateStats,
 } from '@/server/investments/update-prices';
 
-export type { PriceUpdateStats };
+export type { PriceUpdateStats, NetWorthComputation };
 
 const ZERO = BigInt(0);
 
@@ -89,20 +93,7 @@ const recordInvestmentTransactionSchema = z.object({
 });
 
 
-export type NetWorthComputation = {
-  date: string;
-  cashAccountsCents: number;
-  investmentsCents: number;
-  openInvoicesCents: number;
-  futureInstallmentsCents: number;
-  assetsCents: number;
-  liabilitiesCents: number;
-  netWorthCents: number;
-  breakdown: {
-    byAssetClass: Partial<Record<AssetClass, number>>;
-    byInstitution: Array<{ institutionId: string; name: string; assetsCents: number; liabilitiesCents: number }>;
-  };
-};
+
 
 async function updateInvestmentAccountBalance(db: Db, accountId: string): Promise<void> {
   const [sumResult] = await db
@@ -579,7 +570,5 @@ export async function captureNetWorthSnapshot(
   db: Db,
   refDate?: string,
 ): Promise<NetWorthComputation> {
-  void db;
-  void refDate;
-  throw new CommandError('VALIDATION', 'captureNetWorthSnapshot ainda não implementado (A3-03)');
+  return captureNetWorthSnapshotImpl(db, refDate);
 }

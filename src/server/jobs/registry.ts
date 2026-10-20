@@ -6,6 +6,7 @@ import { invoices, syncRuns, transactions } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
 import { checkConnectionsLifecycle } from '@/server/ingestion/connection-lifecycle';
 import { computeInvoiceStatus } from '@/server/ingestion/invoices';
+import { captureNetWorthSnapshot } from '@/server/investments/net-worth';
 import { updateMarketPricesAndBenchmarks } from '@/server/investments/update-prices';
 
 export type JobName =
@@ -13,7 +14,8 @@ export type JobName =
   | 'categorize-pending'
   | 'invoice-status'
   | 'connection-health'
-  | 'prices-daily';
+  | 'prices-daily'
+  | 'net-worth-snapshot';
 
 export type JobDef = {
   name: JobName;
@@ -25,7 +27,11 @@ export const JOBS: JobDef[] = [
   {
     name: 'sync-all',
     intervalMinutes: 360,
-    run: (db) => triggerSync(db, { connectionId: null }),
+    run: async (db) => {
+      const res = await triggerSync(db, { connectionId: null });
+      await captureNetWorthSnapshot(db);
+      return res;
+    },
   },
   {
     name: 'categorize-pending',
@@ -93,7 +99,19 @@ export const JOBS: JobDef[] = [
   {
     name: 'prices-daily',
     intervalMinutes: 1440,
-    run: (db) => updateMarketPricesAndBenchmarks(db),
+    run: async (db) => {
+      const stats = await updateMarketPricesAndBenchmarks(db);
+      await captureNetWorthSnapshot(db);
+      return stats;
+    },
+  },
+  {
+    name: 'net-worth-snapshot',
+    intervalMinutes: 1440,
+    run: async (db) => {
+      const nw = await captureNetWorthSnapshot(db);
+      return nw as unknown as Record<string, unknown>;
+    },
   },
 ];
 
