@@ -120,12 +120,21 @@ Nunca use `git push --force` na main, `git reset --hard` na main ou `--no-verify
 ## 6. Definição de pronto (vale para toda tarefa)
 
 - [ ] Todos os itens de **Critérios de aceite** da tarefa estão atendidos
-- [ ] Os testes pedidos na tarefa existem e passam
+- [ ] Os testes pedidos na tarefa existem e passam (veja "Quanto testar" abaixo)
 - [ ] `npm run check` passa sem erros e sem warnings novos
 - [ ] Nenhum `console.log` de depuração, `any` sem justificativa ou `TODO` sem tarefa associada
 - [ ] Textos da interface em pt-BR; valores em `R$ 1.234,56`; datas em `dd/mm/aaaa`
 - [ ] Se mexeu em contrato: `CONTRATOS.md` atualizado + linha no log de mudanças
 - [ ] Status atualizado em `docs/TAREFAS.md`
+
+### Quanto testar (prioridade atual: construir o app)
+
+- Teste unitário **só** para lógica pura e cálculos de dinheiro e datas: parsers, formatação e regras de negócio R1–R12.
+- Consulta nova: **um** teste simples com os dados fictícios, conferindo o caso principal. Não precisa de oráculo independente.
+- Tela nova: no máximo **um** e2e de fumaça, que abre a tela e faz a ação principal. Ajustes visuais e correções pequenas não precisam de e2e.
+- Não escreva testes para cada observação de revisão e não rode e2e repetido para caçar instabilidade.
+- `npm run check` continua obrigatório (typecheck, lint e os testes que já existem).
+- Revisão: uma rodada, focada em bugs reais (🔴/🟠). Observações 🟢 vão para *Pendências de coordenação* e não bloqueiam o merge.
 
 ### Modelo do corpo do PR (relatório da tarefa)
 

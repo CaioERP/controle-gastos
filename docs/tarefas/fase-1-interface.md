@@ -66,8 +66,7 @@ No cliente: chame a action, mostre `toast.success(...)` ou `toast.error(result.e
 ### Consultas
 - Ficam em `src/server/queries/`, recebem `db` como primeiro parâmetro e **somente leem**.
 - Valores de gasto retornados como **positivos** (`CONTRATOS.md` §5.3).
-- Toda consulta nova tem teste usando os dados fictícios (`referenceDate: '2026-10-15'`, `months: 6`, `seed: 42`).
-- **Oráculo de teste:** compare o resultado da consulta com um cálculo independente, feito em JavaScript sobre o retorno de `generateFixtures(...)`. Assim o teste não repete a lógica SQL.
+- Consulta nova tem **um** teste simples com os dados fictícios (`referenceDate: '2026-10-15'`, `months: 6`, `seed: 42`), conferindo o caso principal. Veja `AGENTS.md` §6, "Quanto testar".
 
 ### Visual
 - pt-BR em tudo. Dinheiro com `<Money />`, datas com `<DateBR />`, mês com `formatMonthBR`.
@@ -517,3 +516,36 @@ Criar: `src/app/(app)/revisao/{page,actions}.tsx|ts`, `src/components/review/{re
 ### Critérios de aceite
 - [ ] É possível revisar 20 transações só pelo teclado
 - [ ] O badge do menu reflete a contagem real
+
+---
+
+## B1-11 — Links de detalhamento com contas fora dos totais
+
+**Depende de:** B1-04, B1-08 · **Tamanho:** pequeno
+
+### Problema
+Sem filtro de contas, os gráficos do dashboard e da análise não somam as contas com `includeInTotals = false` (R11): `buildTxWhere` roda com `forTotals: true`. Já a lista `/transacoes` inclui essas contas (`forTotals: false`). Por isso o link de uma barra, fatia ou célula abre uma lista com transações a mais.
+
+### Arquivos
+Editar:
+- `src/components/charts/links.ts` (e `src/components/analysis/links.ts`, se precisar);
+- as páginas `src/app/(app)/page.tsx` e `src/app/(app)/analise/page.tsx`, e os componentes que montam os links;
+- `src/components/filters/filter-bar.tsx` (passo 4).
+
+### Passo a passo
+1. Nas páginas do dashboard e da análise, carregue as contas com `getAccountsOverview(db)` no `Promise.all`, se ainda não carregam. Calcule:
+   - `totalsAccountIds`: ids das contas com `includeInTotals = true`;
+   - `hasExcluded`: se existe alguma conta com `includeInTotals = false`.
+2. Nos construtores de link para `/transacoes` (`categoryTransactionsHref`, `paymentMethodTransactionsHref`, `crossTransactionsHref`), acrescente um parâmetro opcional `opts?: { totalsAccountIds?: string[] }`. Quem não passar continua igual.
+3. Com `opts.totalsAccountIds` informado, os construtores fazem assim:
+   - se o filtro atual **não** tem `accountIds`, acrescentam `accountIds: opts.totalsAccountIds` ao patch (vira `contas=` na URL);
+   - se já existe filtro de contas, não mexem.
+
+   As páginas só passam `totalsAccountIds` quando `hasExcluded` é verdadeiro. Assim, sem conta excluída, os links continuam iguais.
+4. Na FilterBar, desmarcar a **última** natureza hoje volta ao padrão. Em `/transacoes`, isso marca de novo as 7 caixas, o que confunde. Corrija assim: a caixa fica desabilitada quando é a única marcada, com `title="Pelo menos uma natureza"`.
+5. Teste: acrescente **um** cenário ao teste de consistência de links que já existe (`src/components/charts/links-consistency.test.ts`). Marque uma conta como fora dos totais e confira que o total da lista aberta pelo link é igual ao valor do gráfico.
+
+### Critérios de aceite
+- [ ] Com uma conta fora dos totais, o total da lista aberta por qualquer link do dashboard ou da análise é igual ao valor do gráfico
+- [ ] Sem conta fora dos totais, as URLs dos links não mudam
+- [ ] Não é possível desmarcar todas as naturezas na FilterBar

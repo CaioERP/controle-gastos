@@ -84,6 +84,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B1-08 | Tela de análise (tipo × categoria) | B | B1-01, B1-03 | ✅ |
 | B1-09 | Tela de categorias e regras | B | B1-02 | ✅ (prévia de regra pendente, ver Pendências) |
 | B1-10 | Fila de revisão | B | B1-05 | ✅ |
+| B1-11 | Links de detalhamento com contas fora dos totais | B | B1-04, B1-08 | ⬜ |
 
 ## Fase 1 — Integração
 
@@ -97,6 +98,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 > Antes de iniciar cada fase, a tarefa `Px-00` detalha as tarefas no mesmo formato das Fases 0 e 1.
 > **`Px-00` deve ser feita por um modelo forte** (ex.: Claude Opus), com base no que foi aprendido nas fases anteriores.
+> **Antecipadas** (não dependem do Pluggy nem de contrato, já detalhadas): B2-04, em `tarefas/fase-2-interface.md`.
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
@@ -109,7 +111,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00 | ⬜ |
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00 | ⬜ |
 | B2-03 | Lançamento manual e divisão de transação | B | P2-00 | ⬜ |
-| B2-04 | Exportar CSV e busca global | B | P2-00 | ⬜ |
+| B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ⬜ |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
 | A3-01 | Schema de investimentos e sincronização Pluggy | A | P3-00 | ⬜ |
 | A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) | A | P3-00 | ⬜ |
@@ -143,13 +145,14 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [A1-06] PLUGGY_CATEGORY_SEED vazio até a F0-07 rodar (precisa de H-01/H-02) — Agente A, 2026-10-18. Ao preencher: rodar o seed de novo NÃO troca uma categoria ativa por outra ativa no provider_category_map; corrigir entrada já gravada exige migração de dados (ver provider-map.ts)
 - [A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18
 - ~~[B1-03] FilterBar descartava parâmetros da página (dim, cartao, fatura, aba); datas da URL dependiam do fuso~~ — resolvido no PR #19, 2026-10-19
-- [B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19 · 🟡 em andamento (Agente B, Claude agente 6)
-- [B1-04/B1-08] Regra no-restricted-imports no ESLint para garantir que queries/stats.ts e queries/analysis.ts (usados no cliente) nunca importem o banco — Coordenador, 2026-10-19 · 🟡 em andamento (Agente B, Claude agente 6)
-- [B1-03] e2e filters.spec.ts falhou 1 vez em 4 execuções seguidas (passou isolado logo depois): provável instabilidade de tempo — Coordenador, 2026-10-19 · 🟡 em andamento (Agente B, Claude agente 6)
+- [B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19 · PR #22 em revisão
+- [B1-04/B1-08] Regra no-restricted-imports no ESLint para garantir que queries/stats.ts e queries/analysis.ts (usados no cliente) nunca importem o banco — Coordenador, 2026-10-19 · 🔴 bloqueada: o hook local config-protection impede agentes de editar eslint.config.mjs. A regra está pronta e validada; o usuário precisa aplicá-la à mão ou liberar o hook
+- [B1-03] e2e filters.spec.ts falhou 1 vez em 4 execuções seguidas (passou isolado logo depois): provável instabilidade de tempo — Coordenador, 2026-10-19 · PR #24 (espera de hidratação) em revisão
 - ~~[A1-08] archiveCategory não redireciona categorization_rules.set_category_id nem merchants.default_category_id da categoria arquivada (o motor já ignora categorias arquivadas) — Coordenador, 2026-10-19~~ — resolvido no PR #20 (regras, memória e mapa da fonte redirecionados; sem destino, regras desabilitadas), 2026-10-19
-- [B1-03/B1-04/B1-08] 🟠 Links de detalhamento do dashboard e da análise para /transacoes não levam `natureza`, e a lista agora mostra todas as naturezas por padrão: o total da lista deixa de bater com o gráfico (ex.: forma=pix inclui transferências). Mesma causa: marcar exatamente despesa+receita+estorno na FilterBar tira `natureza` da URL. Gravar `natureza` sempre que houver seleção ou mandá-la nos links — Revisor, 2026-10-19
-- [B1-05] e2e de naturezas usa mes=2026-10 fixo (dados fictícios são gerados a partir da data real; quebra por volta de 04/2027) e a checagem de valor positivo não lê linhas fora da tela — Revisor, 2026-10-19
-- [B1-10] Confirmação em lote fica presa em "Confirmando X de N..." após falha de rede, com atalhos desligados: envolver o laço em try/finally — Revisor, 2026-10-19
+- ~~[B1-03/B1-04/B1-08] 🟠 Links de detalhamento do dashboard e da análise para /transacoes não levam `natureza`, e a lista agora mostra todas as naturezas por padrão: o total da lista deixa de bater com o gráfico (ex.: forma=pix inclui transferências). Mesma causa: marcar exatamente despesa+receita+estorno na FilterBar tira `natureza` da URL. Gravar `natureza` sempre que houver seleção ou mandá-la nos links — Revisor, 2026-10-19~~ — resolvido no PR #23; sobrou o caso das contas fora dos totais, que virou a B1-11, 2026-10-19
+- ~~[B1-05] e2e de naturezas usa mes=2026-10 fixo (dados fictícios são gerados a partir da data real; quebra por volta de 04/2027) e a checagem de valor positivo não lê linhas fora da tela — Revisor, 2026-10-19~~ — resolvido no PR #23, 2026-10-19
+- ~~[B1-10] Confirmação em lote fica presa em "Confirmando X de N..." após falha de rede, com atalhos desligados: envolver o laço em try/finally — Revisor, 2026-10-19~~ — resolvido no PR #23, 2026-10-19
 - [A1-08] recategorize com escopo similar grava origem merchant (camada 2). Se uma dessas transações casar com uma regra (camada 1), o próximo reprocessamento devolve a categoria da regra. Decidir se "aplicar a todas as parecidas" deve ser durável (criar ou ajustar regra, ou proteger as transações) ou se fica como a spec define. — Revisor, 2026-10-19
 - [A1-08] applyRuleToExisting lê todas as transações não excluídas e filtra em JS (~70 ms para 274 transações). Acrescentar pré-filtro SQL (ILIKE) para contains/starts_with/equals quando o volume justificar. — Revisor, 2026-10-19
 - ~~[A1-06/A1-08] Regra do usuário e regra aprendida com o mesmo critério empatam pelo UUID (desempatar por updatedAt desc); starts_with aprendido pode ficar genérico ("Compra parcelada PARC 02/05"); db:seed de novo desfaz o redirecionamento do provider_category_map feito pelo archiveCategory — Revisor, 2026-10-19~~ — resolvido no PR #21 (desempate por updatedAt, que só muda por decisão do usuário ou aprendizado; GENERIC_WORDS; seed não sobrescreve categoria ativa), 2026-10-19
+- [e2e] revisao.spec.ts e transacoes.spec.ts esvaziam a fila de revisão e só passam depois de db:reset. Aceito por ora (prioridade: construir o app) — Coordenador, 2026-10-19
