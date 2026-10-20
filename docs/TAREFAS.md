@@ -111,7 +111,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00 | ⬜ |
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00 | ⬜ |
 | B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — comandos na main (PR #28); telas em revisão (PR #29) |
-| B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B |
+| B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — comandos em revisão (PR #31); telas em andamento |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
 | A3-01 | Schema de investimentos e sincronização Pluggy | A | P3-00 | ⬜ |
