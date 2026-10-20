@@ -1,8 +1,8 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createTestDb } from '../../../tests/helpers/db';
 import { recategorize } from '../commands';
-import { accounts, categories, invoices, institutions, transactions } from '../db/schema';
+import { accounts, categories, invoices, institutions, transactions, transactionSources } from '../db/schema';
 import { seedBase } from '../db/seed';
 import { linkInstallments, parseInstallment } from './installments';
 import { assignInvoices, recalculateInvoices } from './invoices';
@@ -225,5 +225,95 @@ describe('linkInstallments (A1-04)', () => {
 
     const allTxs = await db.select().from(transactions).where(eq(transactions.accountId, card.id));
     expect(allTxs).toHaveLength(4); // 2 reais + 2 projetadas
+  });
+
+  it('parcela real com duas fontes (Pluggy + arquivo) é processada uma vez e herda a categoria do usuário da projetada', async () => {
+    const { db, card } = await setupCardDb();
+    const base = {
+      accountId: card.id,
+      amountCents: -10000,
+      kind: 'expense' as const,
+      paymentMethod: 'credit_card_installment' as const,
+      installmentTotal: 3,
+    };
+    const [tx1] = await db
+      .insert(transactions)
+      .values({ ...base, date: '2026-08-10', descriptionRaw: 'LOJA X 1/3', description: 'Loja X 1/3', installmentNumber: 1 })
+      .returning();
+    await linkInstallments(db, [tx1!.id], '2026-08-15');
+
+    const [proj2] = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.installmentNumber, 2), eq(transactions.status, 'projected')));
+    const [cat] = await db.select().from(categories).where(eq(categories.kind, 'expense')).limit(1);
+    await recategorize(db, { transactionId: proj2!.id, categoryId: cat!.id, scope: 'this' });
+
+    const [tx2] = await db
+      .insert(transactions)
+      .values({ ...base, date: '2026-09-10', descriptionRaw: 'LOJA X 2/3', description: 'Loja X 2/3', installmentNumber: 2 })
+      .returning();
+    await db.insert(transactionSources).values([
+      { transactionId: tx2!.id, source: 'pluggy', externalId: 'pl-2', raw: { creditCardMetadata: { purchaseDate: '2026-08-10' } } },
+      { transactionId: tx2!.id, source: 'file', externalId: 'file-2', raw: { memo: 'LOJA X 2/3' } },
+    ]);
+
+    const res = await linkInstallments(db, [tx2!.id], '2026-09-15');
+
+    expect(res.linked).toBe(1);
+    const [after] = await db.select().from(transactions).where(eq(transactions.id, tx2!.id));
+    expect(after!.categoryId).toBe(cat!.id);
+  });
+
+  it('parcela real substitui a projetada mesmo quando a projetada tem partes de divisão (dados antigos)', async () => {
+    const { db, card } = await setupCardDb();
+    const base = {
+      accountId: card.id,
+      amountCents: -10000,
+      kind: 'expense' as const,
+      paymentMethod: 'credit_card_installment' as const,
+      installmentTotal: 3,
+    };
+    const [tx1] = await db
+      .insert(transactions)
+      .values({ ...base, date: '2026-08-10', descriptionRaw: 'LOJA Y 1/3', description: 'Loja Y 1/3', installmentNumber: 1 })
+      .returning();
+    await linkInstallments(db, [tx1!.id], '2026-08-15');
+    const [proj2] = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.installmentNumber, 2), eq(transactions.status, 'projected')));
+    // Divisão da projetada feita antes de o comando passar a recusar; depois o usuário categoriza a mãe
+    // (a nova versão da linha da mãe fica depois das partes, que passam a vir primeiro na consulta)
+    await db.insert(transactions).values(
+      [-6000, -4000].map((amountCents) => ({
+        ...base,
+        amountCents,
+        date: proj2!.date,
+        descriptionRaw: proj2!.descriptionRaw,
+        description: proj2!.description,
+        status: 'projected' as const,
+        installmentGroupId: proj2!.installmentGroupId,
+        installmentNumber: 2,
+        parentTransactionId: proj2!.id,
+      })),
+    );
+    const [cat] = await db.select().from(categories).where(eq(categories.kind, 'expense')).limit(1);
+    await db
+      .update(transactions)
+      .set({ categoryId: cat!.id, installmentGroupId: proj2!.installmentGroupId })
+      .where(eq(transactions.id, proj2!.id));
+
+    const [tx2] = await db
+      .insert(transactions)
+      .values({ ...base, date: '2026-09-10', descriptionRaw: 'LOJA Y 2/3', description: 'Loja Y 2/3', installmentNumber: 2 })
+      .returning();
+    await linkInstallments(db, [tx2!.id], '2026-09-15');
+
+    const leftover = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.installmentNumber, 2), eq(transactions.status, 'projected')));
+    expect(leftover).toHaveLength(0);
   });
 });
