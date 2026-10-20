@@ -8,6 +8,7 @@ import { addMonthsISO, today as getToday, TZ } from '@/server/domain/dates';
 import { assignInvoices, recalculateInvoices } from './invoices';
 import { normalizeForMatch } from './normalize/text';
 import type { PipelineContext } from './pipeline';
+import { onePerTransaction } from './source-raw';
 import { toDisplayCase } from './strings';
 
 export type ParsedInstallment = {
@@ -88,6 +89,10 @@ function extractPurchaseDateFromRaw(raw: unknown): string | null {
   return format(new TZDate(d, TZ), 'yyyy-MM-dd');
 }
 
+function hasPurchaseDate(raw: unknown): boolean {
+  return extractPurchaseDateFromRaw(raw) !== null;
+}
+
 function computePurchaseDate(date: string, installmentNumber: number, raw: unknown): string {
   return extractPurchaseDateFromRaw(raw) ?? addMonthsISO(date, -(installmentNumber - 1));
 }
@@ -111,9 +116,11 @@ export async function linkInstallments(
     return { linked: 0, projectedCreated: 0, projectedReplaced: 0, createdProjectedIds: [] };
   }
 
-  const rows = await db
+  const joinedRows = await db
     .select({
       tx: transactions,
+      source: transactionSources.source,
+      externalId: transactionSources.externalId,
       raw: transactionSources.raw,
     })
     .from(transactions)
@@ -126,6 +133,9 @@ export async function linkInstallments(
         gt(transactions.installmentTotal, 1),
       ),
     );
+
+  // Uma linha por transação (deduplicada tem várias fontes): prefere a que informa purchaseDate
+  const rows = onePerTransaction(joinedRows, (r) => r.tx.id, hasPurchaseDate);
 
   if (rows.length === 0) {
     return { linked: 0, projectedCreated: 0, projectedReplaced: 0, createdProjectedIds: [] };
@@ -147,9 +157,11 @@ export async function linkInstallments(
     const txPurchaseDate = computePurchaseDate(tx.date, installmentNumber, raw);
 
     // Procura grupo existente na mesma conta
-    const candidates = await db
+    const candidateRows = await db
       .select({
         tx: transactions,
+        source: transactionSources.source,
+        externalId: transactionSources.externalId,
         raw: transactionSources.raw,
       })
       .from(transactions)
@@ -163,6 +175,7 @@ export async function linkInstallments(
           ne(transactions.id, tx.id),
         ),
       );
+    const candidates = onePerTransaction(candidateRows, (r) => r.tx.id, hasPurchaseDate);
 
     let groupId: string | null = null;
     for (const cand of candidates) {
