@@ -1,4 +1,5 @@
 import { getDb } from '@/server/db/client';
+import { today } from '@/server/domain/dates';
 import { TX_KINDS } from '@/server/domain/enums';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { listCategories, listTags } from '@/server/queries/catalog';
@@ -6,6 +7,7 @@ import { listTransactions } from '@/server/queries/transactions';
 import { parseFilters, serializeFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
+import { ManualTransactionDialog } from '@/components/manual/manual-transaction-dialog';
 import { ExportButton } from '@/components/transactions/export-button';
 import { SearchInput } from '@/components/transactions/search-input';
 import { TransactionList } from '@/components/transactions/transaction-list';
@@ -21,20 +23,37 @@ export default async function Page({ searchParams }: Props) {
   // as agregações das outras telas seguem R2. O mesmo objeto vai para o "Carregar mais".
   const filters = parseFilters(await searchParams);
   const db = getDb();
-  const [accounts, categories, tags, page] = await Promise.all([
+  const [accountsOverview, categories, tags, page] = await Promise.all([
     getAccountsOverview(db),
     listCategories(db),
     listTags(db),
     listTransactions(db, filters, { limit: FIRST_PAGE }),
   ]);
 
+  const manualAccounts = accountsOverview.flatMap((inst) =>
+    inst.accounts
+      .filter((a) => a.connection === null)
+      .map((a) => ({
+        id: a.id,
+        name: a.displayName ?? a.name,
+        type: a.type,
+        institutionName: inst.institution.name,
+        institutionColor: inst.institution.color,
+      })),
+  );
+
   return (
     <div className="space-y-6">
-      <FilterBar accounts={accounts} categories={categories} tags={tags} defaultKinds={TX_KINDS} />
+      <FilterBar accounts={accountsOverview} categories={categories} tags={tags} defaultKinds={TX_KINDS} />
       <PageHeader
         title="Transações"
         description="Extrato unificado com busca, filtros e edição de categoria."
-        actions={<ExportButton filters={filters} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButton filters={filters} />
+            <ManualTransactionDialog accounts={manualAccounts} categories={categories} today={today()} />
+          </div>
+        }
       />
       <SearchInput />
       {/* Filtros novos recriam a lista (zera páginas extras e o cursor). */}

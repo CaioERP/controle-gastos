@@ -3,7 +3,16 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getDb } from '@/server/db/client';
-import { recategorize, splitTransaction, unsplitTransaction, updateTransaction, upsertTag } from '@/server/commands';
+import {
+  createManualTransaction,
+  deleteManualTransaction,
+  recategorize,
+  splitTransaction,
+  unsplitTransaction,
+  updateManualTransaction,
+  updateTransaction,
+  upsertTag,
+} from '@/server/commands';
 import { txFiltersSchema, type TxFilters } from '@/server/domain/filters';
 import {
   getInstallmentGroup,
@@ -42,6 +51,24 @@ export async function splitTransactionAction(input: Parameters<typeof splitTrans
 
 export async function unsplitTransactionAction(input: Parameters<typeof unsplitTransaction>[1]) {
   const result = await runAction(() => unsplitTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function createManualTransactionAction(input: Parameters<typeof createManualTransaction>[1]) {
+  const result = await runAction(() => createManualTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function updateManualTransactionAction(input: Parameters<typeof updateManualTransaction>[1]) {
+  const result = await runAction(() => updateManualTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function deleteManualTransactionAction(input: Parameters<typeof deleteManualTransaction>[1]) {
+  const result = await runAction(() => deleteManualTransaction(getDb(), input));
   if (result.ok) revalidatePath('/', 'layout');
   return result;
 }

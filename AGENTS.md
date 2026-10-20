@@ -71,6 +71,8 @@ gh pr create --base main --title "A1-02: normalizador de transações Pluggy" --
 #    Depois do merge, o revisor marca ✅ no quadro.
 ```
 
+**Não antecipe tarefas.** Só comece uma tarefa com status ⬜, **todas** as dependências ✅ (inclusive as tarefas do usuário, `H-*`) e spec detalhada em `docs/tarefas/`. Tarefas que dependem de uma `Px-00` não feita só podem começar se o coordenador as marcou como **antecipadas** no quadro. Faltou algo? Registre em *Pendências de coordenação* e pegue outra tarefa. Os prompts de cada rodada ficam em `docs/PROMPTS.md`.
+
 **Dependência em revisão:** se a tarefa depende de outra cujo PR ainda não foi aceito, crie a branch **a partir da branch da dependência** (`git switch -c a/F0-03-contratos a/F0-02-banco`) e abra o PR com `--base a/F0-02-banco`. Quando a dependência for aceita, o GitHub muda a base para `main` sozinho. Por isso o revisor usa **merge commit**, nunca squash.
 
 **`docs/TAREFAS.md` só é editado no checkout de integração** (`../controle-gastos`, branch main, sempre com `pull` antes e `push` depois), nunca na branch da tarefa. Isso evita conflitos e deixa o status visível na hora para o outro agente.

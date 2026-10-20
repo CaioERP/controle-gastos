@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatAmountInput, parseOptionalAmount } from '@/components/catalog/catalog-helpers';
 import { formatBRL } from '@/server/domain/money';
 import { categoryKindFor } from '@/server/categorization/engine';
 import type { CategoryTree } from '@/server/queries/catalog';
@@ -40,14 +41,13 @@ type PartState = {
 };
 
 function parseInputCents(input: string): number {
-  const clean = input.trim().replace(/^R\$\s*/, '').replace(/\./g, '').replace(',', '.');
-  const num = parseFloat(clean);
-  if (isNaN(num) || num <= 0) return 0;
-  return Math.round(num * 100);
+  const parsed = parseOptionalAmount(input);
+  if (parsed === null || parsed === undefined || parsed <= 0) return 0;
+  return parsed;
 }
 
 function formatCentsToInput(cents: number): string {
-  return (cents / 100).toFixed(2).replace('.', ',');
+  return formatAmountInput(cents);
 }
 
 export function SplitDialog({ tx, categories, open, onOpenChange, onSuccess }: SplitDialogProps) {

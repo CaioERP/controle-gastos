@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScissorsIcon } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -10,11 +11,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Money } from '@/components/format/money';
 import { DateBR } from '@/components/format/date-br';
+import { formatAmountInput, parseOptionalAmount } from '@/components/catalog/catalog-helpers';
 import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
 import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
 import type { CategoryTree, TagWithCount } from '@/server/queries/catalog';
 import type { TransactionRow as Tx, TransactionTag } from '@/server/queries/transaction-row';
-import { updateTransactionAction, upsertTagAction } from '@/app/(app)/transacoes/actions';
+import {
+  deleteManualTransactionAction,
+  loadTransactionDetailAction,
+  updateManualTransactionAction,
+  updateTransactionAction,
+  upsertTagAction,
+} from '@/app/(app)/transacoes/actions';
 import { TagPicker, nextTagColor } from './tag-picker';
 import { TransactionDetailInfo } from './transaction-detail-info';
 import { SplitDialog } from './split-dialog';
@@ -52,16 +60,37 @@ function SheetBody({
   const [kind, setKind] = React.useState<TxKind>(tx.kind);
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(tx.paymentMethod);
   const [notes, setNotes] = React.useState(tx.notes ?? '');
+  const [date, setDate] = React.useState(tx.date);
+  const [amount, setAmount] = React.useState(formatAmountInput(Math.abs(tx.amountCents)));
   const [tagIds, setTagIds] = React.useState(tx.tags.map((t) => t.id));
   const [allTags, setAllTags] = React.useState<TransactionTag[]>(() => {
     const byId = new Map<string, TransactionTag>();
     for (const t of [...tags, ...tx.tags]) byId.set(t.id, { id: t.id, name: t.name, color: t.color });
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   });
+  const [isManual, setIsManual] = React.useState(false);
+  const [hasSplitParts, setHasSplitParts] = React.useState(false);
   const [saving, startSave] = React.useTransition();
   const [splitOpen, setSplitOpen] = React.useState(false);
 
-  const canSplit = (tx.kind === 'expense' || tx.kind === 'income') && !tx.parentTransactionId;
+  const canSplit = (tx.kind === 'expense' || tx.kind === 'income') && !tx.parentTransactionId && !hasSplitParts;
+
+  React.useEffect(() => {
+    let active = true;
+    loadTransactionDetailAction(tx.id).then((res) => {
+      if (!active) return;
+      if (res.ok) {
+        const splitActive = res.data.splitParts.length > 0;
+        setHasSplitParts(splitActive);
+        const manual =
+          !tx.parentTransactionId && !splitActive && res.data.detail.sources.some((s) => s.source === 'manual');
+        setIsManual(manual);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [tx.id, tx.parentTransactionId]);
 
   const createTag = async (name: string): Promise<TransactionTag | null> => {
     const color = nextTagColor(allTags.length);
@@ -76,6 +105,21 @@ function SheetBody({
     return tag;
   };
 
+  const handleDelete = () => {
+    if (!window.confirm('Tem certeza que deseja excluir este lançamento manual? O saldo da conta será recalculado.')) {
+      return;
+    }
+    startSave(async () => {
+      const res = await deleteManualTransactionAction({ transactionId: tx.id });
+      if (!res.ok) {
+        toast.error(res.error.message);
+        return;
+      }
+      toast.success('Lançamento manual excluído');
+      onClose();
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = description.trim();
@@ -83,25 +127,61 @@ function SheetBody({
       toast.error('A descrição não pode ficar vazia');
       return;
     }
+
+    let manualTargetCents = tx.amountCents;
+    let manualDateChanged = false;
+    let manualAmountChanged = false;
+
+    if (isManual) {
+      const parsed = parseOptionalAmount(amount);
+      if (parsed === undefined || parsed === null || parsed <= 0) {
+        toast.error('Informe um valor válido maior que zero');
+        return;
+      }
+      manualTargetCents = kind === 'expense' ? -parsed : parsed;
+      manualDateChanged = date !== tx.date;
+      manualAmountChanged = manualTargetCents !== tx.amountCents;
+    }
+
     const patch = buildEditPatch(tx, { description, kind, paymentMethod, notes, tagIds });
 
-    if (Object.keys(patch).length === 0) {
+    if (Object.keys(patch).length === 0 && !manualDateChanged && !manualAmountChanged) {
       onClose();
       return;
     }
 
     startSave(async () => {
-      const res = await updateTransactionAction({ transactionId: tx.id, patch });
-      if (!res.ok) {
-        toast.error(res.error.message);
-        return;
+      if (isManual && (manualDateChanged || manualAmountChanged)) {
+        const manualRes = await updateManualTransactionAction({
+          transactionId: tx.id,
+          patch: {
+            date: manualDateChanged ? date : undefined,
+            amountCents: manualAmountChanged ? manualTargetCents : undefined,
+          },
+        });
+        if (!manualRes.ok) {
+          toast.error(manualRes.error.message);
+          return;
+        }
       }
+
+      if (Object.keys(patch).length > 0) {
+        const res = await updateTransactionAction({ transactionId: tx.id, patch });
+        if (!res.ok) {
+          toast.error(res.error.message);
+          return;
+        }
+      }
+
       const changes: Partial<Tx> = {};
       if (patch.description !== undefined) changes.description = patch.description;
       if (patch.kind !== undefined) changes.kind = patch.kind;
       if (patch.paymentMethod !== undefined) changes.paymentMethod = patch.paymentMethod;
       if (patch.notes !== undefined) changes.notes = patch.notes;
       if (patch.tagIds !== undefined) changes.tags = allTags.filter((t) => tagIds.includes(t.id));
+      if (manualDateChanged) changes.date = date;
+      if (manualAmountChanged) changes.amountCents = manualTargetCents;
+
       onSaved(tx.id, changes);
       toast.success('Transação atualizada');
       onClose();
@@ -120,6 +200,31 @@ function SheetBody({
       </SheetHeader>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-4 pt-4">
+        {/* Campos editáveis exclusivos de transações manuais: Data e Valor */}
+        {isManual && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="tx-date">Data</Label>
+              <Input
+                id="tx-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tx-amount">Valor (R$)</Label>
+              <Input
+                id="tx-amount"
+                value={amount}
+                placeholder="0,00"
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="tx-description">Descrição</Label>
           <Input
@@ -129,6 +234,7 @@ function SheetBody({
             onChange={(e) => setDescription(e.target.value)}
           />
         </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="tx-kind">Natureza</Label>
@@ -156,6 +262,7 @@ function SheetBody({
             </select>
           </div>
         </div>
+
         <div className="space-y-1.5">
           <Label htmlFor="tx-notes">Observações</Label>
           <Textarea
@@ -166,6 +273,7 @@ function SheetBody({
             placeholder="Anotações sobre esta transação"
           />
         </div>
+
         <div className="space-y-1.5">
           <span className="text-sm font-medium">Tags</span>
           <TagPicker tags={allTags} selectedIds={tagIds} onChange={setTagIds} onCreate={createTag} />
@@ -185,10 +293,12 @@ function SheetBody({
             </Button>
           </div>
         )}
-
         <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-          Campos que você editar não serão sobrescritos pela sincronização.
+          {isManual
+            ? 'Lançamento manual: alterações de data e valor atualizam o saldo da conta.'
+            : 'Campos que você editar não serão sobrescritos pela sincronização.'}
         </p>
+
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
             Cancelar
@@ -197,6 +307,23 @@ function SheetBody({
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>
         </div>
+
+        {/* Botão de Excluir exclusivo de transações manuais */}
+        {isManual && (
+          <div className="pt-2 border-t">
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="w-full gap-1.5"
+              onClick={handleDelete}
+              disabled={saving}
+            >
+              <Trash2 className="size-4" />
+              <span>Excluir transação manual</span>
+            </Button>
+          </div>
+        )}
       </form>
 
       <TransactionDetailInfo tx={tx} onReload={onClose} />
