@@ -599,6 +599,37 @@ Criar: `src/server/jobs/registry.ts`, `src/server/jobs/schedule.ts`, `src/server
 
 ---
 
+## A1-10 — Retirar a integração com a Claude API
+
+**Depende de:** — · **Tamanho:** pequeno · **Origem:** decisão do usuário (2026-10-20): por enquanto o sistema não usa IA; todas as features ficam só em código.
+
+> Esta tarefa autoriza o Agente A a editar também `src/app/(app)/importar/**` e `src/components/imports/**` (pastas do Agente B), só para retirar a opção de PDF.
+
+### O que fica depois
+- Categorização só em código: regras → memória do estabelecimento → categoria da fonte. O que nenhuma camada resolver vai para a **fila de revisão** (`needsReview = true`, sem categoria).
+- Importação só de OFX e CSV. A opção de PDF volta com a A2-02 (parser por banco, sem IA).
+- O enum `CATEGORY_SOURCES` continua com `'llm'` (remover seria mudança que quebra o contrato). Transações antigas com essa origem continuam válidas.
+
+### Passo a passo
+1. `src/server/ingestion/pipeline.ts`: chame `categorizeTransactions` **sem** a opção `llm`. Confira que as transações não resolvidas ficam com `needsReview = true` (como já acontecia sem a chave).
+2. `src/server/jobs/registry.ts`: retire o job que chama `categorizeWithLlm` (e a entrada dele no agendador e na rota `/api/jobs/[job]`, se houver lista fixa).
+3. Apague `src/server/categorization/llm.ts`, `llm-prompt.ts`, `llm.test.ts`, `mask.ts` e `mask.test.ts`. Antes, rode `grep` para confirmar que nada mais importa esses arquivos.
+4. `src/lib/env.ts` e `.env.example`: retire `ANTHROPIC_API_KEY`. Desinstale o pacote: `npm uninstall @anthropic-ai/sdk` (registre o motivo no commit).
+5. Importação (`src/app/(app)/importar/**` e `src/components/imports/**`): retire a opção de PDF:
+   - `accept=".ofx,.csv"` e textos "OFX ou CSV (Nubank)" na área de arrastar e na descrição da página;
+   - estado e formulário de senha de PDF;
+   - `previewPdfInvoiceImportAction` e o fallback que cita `ANTHROPIC_API_KEY`.
+   - Arquivo `.pdf` escolhido mesmo assim → mensagem "Importação de PDF ainda não disponível. Use OFX ou CSV."
+6. Procure por `anthropic`, `ANTHROPIC`, `llm` e `Claude` no código (fora de `docs/`) e retire o que sobrar, exceto o valor de enum `'llm'` e os rótulos que o exibem.
+7. `npm run check` tem que passar. Ajuste só os testes que quebrarem pela remoção; não escreva testes novos.
+
+### Critérios de aceite
+- [ ] Nenhuma chamada à Claude API no código; `@anthropic-ai/sdk` fora do `package.json`
+- [ ] Sincronização e importação continuam categorizando por regras, memória e fonte; o resto vai para a revisão
+- [ ] `/importar` aceita só OFX e CSV
+- [ ] O código removido continua recuperável pelo histórico do Git (cite no PR o último commit com a integração)
+
+---
 ## I1-01 — Integração ponta a ponta com dados reais (A + B) → Marco M1
 
 **Depende de:** todas as A1 e B1 · **Feita pelos dois agentes, com o usuário**

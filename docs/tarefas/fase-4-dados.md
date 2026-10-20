@@ -398,6 +398,8 @@ Calcular a projeção de saldo e fluxo de caixa para os próximos 6 meses (horiz
 
 ## A4-04 — Perguntas em linguagem natural (Claude Tool-Use)
 
+> ⏸️ **Fora do escopo por enquanto** (decisão do usuário, 2026-10-20: o sistema não usa a Claude API). Não implemente. A spec fica guardada para quando a IA voltar (ver `MELHORIAS.md`).
+
 **Depende de:** P4-00, H-03 (`ANTHROPIC_API_KEY`) · **Tamanho:** grande
 
 ### Objetivo

@@ -375,6 +375,8 @@ Permitir ao usuário antecipar seu saldo financeiro para os próximos 6 meses. E
 
 ## B4-04 — Tela de perguntas em linguagem natural (`/perguntas`)
 
+> ⏸️ **Fora do escopo por enquanto** (decisão do usuário, 2026-10-20), junto com a A4-04. Não implemente.
+
 **Depende de:** P4-00, A4-04 · **Tamanho:** médio
 
 ### Objetivo

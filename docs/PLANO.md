@@ -48,7 +48,7 @@ Nenhuma instituição é fixa no código: todas são **cadastro**. Adicionar o I
 | Datas | Tipo `date`, fuso `America/Sao_Paulo`, `date-fns` | Evita erro de fuso em virada de dia/mês |
 | Jobs agendados | Funções em `server/jobs`, expostas em `/api/jobs/*` | Local: agendador dentro do processo Next (`instrumentation.ts`). Vercel: Vercel Cron chama as mesmas rotas |
 | Open Finance | **Pluggy via Meu Pluggy** (gratuito, uso pessoal) | Único caminho oficial e automático; fica atrás da interface `SourceAdapter` para ser substituível |
-| IA | **Claude API** — Haiku (categorização em lote), Sonnet (leitura de PDF de fatura, Fase 2) | Precisão alta com custo baixo |
+| IA | **Desligada por enquanto** (decisão do usuário, 2026-10-20). Tudo é feito em código: categorização por regras, memória e categoria da fonte, com o resto na fila de revisão; PDF por parser de cada banco. A integração com a Claude API está guardada em `MELHORIAS.md` | Custo zero e nenhum dado enviado a terceiros |
 | Autenticação | Senha única + cookie de sessão assinado; desligável em dev | Usuário único. 2FA/passkey listado em MELHORIAS |
 | Pacotes | **npm** | Sem configuração extra |
 | Idioma | Código em **inglês**; interface e docs em **pt-BR** | Padrão de mercado + produto em português |
@@ -68,7 +68,7 @@ Nenhuma instituição é fixa no código: todas são **cadastro**. Adicionar o I
 │ Manual           │──►│ 3. dedupe   mesma transação de fontes diferentes│   │  instituição,    │
 └──────────────────┘   │ 4. kind     despesa? transferência? pgto fatura?│   │  conta, mês      │
                        │ 5. invoice  associa à fatura, projeta parcelas  │   └────────┬─────────┘
- APIs PÚBLICAS (F3)    │ 6. categorize regras → memória → IA → revisão   │            │
+ APIs PÚBLICAS (F3)    │ 6. categorize regras → memória → fonte → revisão   │            │
  brapi · Tesouro ·     │ 7. persist  upsert idempotente                  │            ▼
  BCB · CoinGecko ─────►└────────────────────────────────────────────────┘   ┌──────────────────┐
                                          │                                   │ UI (Next.js)     │
@@ -187,7 +187,7 @@ Regras operacionais completas em [`../AGENTS.md`](../AGENTS.md).
 |---|---|---|
 | **H-01** | Criar conta no **Meu Pluggy** e conectar Nubank, Itaú e Mercado Pago | F0-07 (teste do Pluggy) |
 | **H-02** | Criar aplicação no **dashboard da Pluggy** e fornecer `PLUGGY_CLIENT_ID` e `PLUGGY_CLIENT_SECRET` (no `.env.local`, nunca no chat ou no Git) | F0-07 |
-| **H-03** | Criar chave da **Claude API** (`ANTHROPIC_API_KEY`) | A1-07 (categorização por IA) |
+| **H-03** | ~~Criar chave da **Claude API** (`ANTHROPIC_API_KEY`)~~ — adiada: IA fora do escopo por enquanto | — |
 | **H-04** | Exportar 1 fatura e 1 extrato de cada banco (PDF/CSV/OFX) para servirem de amostra | Fase 2 |
 | **H-05** | Ao abrir conta no Inter/PagBank, conectar no Meu Pluggy | Quando acontecer |
 | **H-06** | Criar contas no GitHub, Vercel e Neon | Fase 5 |

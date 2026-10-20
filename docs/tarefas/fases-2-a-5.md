@@ -16,10 +16,11 @@ Revisar o `docs/spikes/pluggy.md`, os problemas encontrados em I1-01 e as amostr
 - **Decisões:** um parser por formato em `src/server/ingestion/file/`; OFX (padrão, Itaú exporta) e CSV com perfis por banco (Nubank exporta CSV de fatura e de conta). Cada parser produz `NormalizedTransaction` com `source: 'file'` e `externalId` = hash estável de `(conta, data, valor, descrição, ordem no dia)`. Fluxo em duas etapas: **pré-visualizar** (cria `import_batches` com `status: 'preview'`) → **confirmar** (persiste usando o mesmo `persist.ts` + pipeline).
 - **Aceite:** reimportar o mesmo arquivo não duplica nada; amostras de H-04 importam sem erro; testes com arquivos anonimizados.
 
-### A2-02 — Importação de fatura em PDF via IA
-- **Objetivo:** ler o PDF da fatura de qualquer banco.
-- **Decisões:** PDFs com senha → pedir a senha na UI (nunca armazenar). Enviar o PDF para o Claude (Sonnet) com ferramenta de saída estruturada `{ closingDate, dueDate, totalCents, items: [{ date, description, amountCents, installment }] }`. **Validação obrigatória:** soma dos itens = total da fatura (tolerância de R$ 0,05); se não bater, a importação fica em pré-visualização com aviso.
-- **Aceite:** faturas de exemplo do Nubank, Itaú e Mercado Pago extraídas com total conferido; custo por fatura registrado no `stats`.
+### A2-02 — Importação de fatura em PDF por parser de cada banco (sem IA)
+- **Mudança (2026-10-20):** a versão com o Claude saiu do escopo por decisão do usuário. A spec detalhada em `fase-2-dados.md` está obsoleta e será refeita na **P2-01**, a partir das amostras de H-04.
+- **Objetivo:** ler o PDF da fatura do Nubank, do Itaú e do Mercado Pago **só com código**: extração do texto do PDF e um parser por layout de banco.
+- **Decisões:** PDFs com senha → pedir a senha na UI (nunca armazenar). Saída `{ closingDate, dueDate, totalCents, items: [{ date, description, amountCents, installment }] }`. **Validação obrigatória:** soma dos itens = total da fatura (tolerância de R$ 0,05); se não bater, a importação fica em pré-visualização com aviso. Layout desconhecido → mensagem amigável sugerindo OFX/CSV.
+- **Aceite:** as amostras de H-04 de cada banco são lidas com o total conferido.
 
 ### A2-03 — Deduplicação entre fontes
 - **Objetivo:** a mesma compra vinda do Pluggy e de um arquivo vira **uma** transação, com duas linhas em `transaction_sources`.
@@ -27,8 +28,8 @@ Revisar o `docs/spikes/pluggy.md`, os problemas encontrados em I1-01 e as amostr
 - **Aceite:** importar a fatura em PDF de um mês já sincronizado não altera o total de gastos.
 
 ### A2-04 — Conferência de faturas
-- **Objetivo:** alertar quando o total da fatura (fonte oficial: PDF/bill) ≠ soma dos lançamentos sincronizados.
-- **Aceite:** divergência acima de R$ 1 aparece na tela de faturas com a lista do que falta/sobra.
+- **Objetivo:** alertar quando o total oficial da fatura ≠ soma dos lançamentos. Fonte oficial: o total da fatura que vem do Pluggy (`bills`); os itens do PDF entram quando o parser da A2-02 existir.
+- **Aceite:** divergência acima de R$ 1 aparece na tela de faturas (com a lista do que falta/sobra quando houver itens do PDF).
 
 ### A2-05 — Ciclo de vida das conexões
 - **Objetivo:** tratar consentimento expirado, erros de login e reconexão.
@@ -106,10 +107,10 @@ Agrupar por estabelecimento; recorrente = 3+ ocorrências com intervalo regular 
 Saldo projetado para os próximos 6 meses: saldo atual + receitas recorrentes + despesas recorrentes + parcelas futuras + média de gastos variáveis por categoria.
 
 ### A4-04 — Perguntas em linguagem natural
-O Claude responde perguntas ("quanto gastei com Uber em 2026?") usando **ferramentas somente de leitura** que chamam as consultas da Trilha B (`getBreakdown`, `getMonthlySeries`, `listTransactions`). Nenhum SQL gerado pela IA. Dados pessoais mascarados como em A1-07.
+⏸️ **Fora do escopo por enquanto** (decisão do usuário, 2026-10-20: o sistema não usa a Claude API). A spec detalhada continua em `fase-4-dados.md` para quando a IA voltar; ver `MELHORIAS.md`.
 
 ### B4-01 a B4-05 — Telas
-Limites e orçamentos (B4-01: criar, editar e pausar limites por categoria e/ou forma de pagamento; barra de progresso por limite com a cor mudando nos limiares; previsão de ritmo; aceitar o orçamento sugerido; indicador nos cartões do dashboard), Assinaturas (lista com custo mensal e anual total), Projeção (gráfico de linha com faixa de incerteza), Perguntas (chat com respostas que linkam para as telas filtradas), Central de notificações (B4-05: sino no topo com contador de não lidas, lista com link para a tela filtrada, marcar como lida, e preferências: quais tipos de alerta receber).
+Limites e orçamentos (B4-01: criar, editar e pausar limites por categoria e/ou forma de pagamento; barra de progresso por limite com a cor mudando nos limiares; previsão de ritmo; aceitar o orçamento sugerido; indicador nos cartões do dashboard), Assinaturas (lista com custo mensal e anual total), Projeção (gráfico de linha com faixa de incerteza), ~~Perguntas~~ (B4-04 fora do escopo por enquanto, junto com a A4-04), Central de notificações (B4-05: sino no topo com contador de não lidas, lista com link para a tela filtrada, marcar como lida, e preferências: quais tipos de alerta receber).
 
 ---
 
