@@ -10,3 +10,4 @@ export * from './installments';
 export * from './catalog';
 export * from './connections';
 export * from './url-filters';
+export * from './rule-preview';
