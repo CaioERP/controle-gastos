@@ -124,7 +124,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A3-04 | Posições manuais e proventos (backend + fixtures) | A | P3-00, A3-01 | 🟡 Agente A — PR #50 em revisão |
 | B3-01 | Tela de investimentos (`/investimentos`) | B | P3-00, A3-01 (curva TWR completa: A3-03) | 🟡 Agente B — PR #53 em revisão |
 | B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | ⬜ |
-| B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | 🟡 Agente B |
+| B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | 🟡 Agente B — PR #54 em revisão |
 | P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ⬜ |
 | A4-01 | Detecção de recorrências e assinaturas | A | P4-00 | ⬜ |
 | A4-02 | Limites de gasto (categoria e/ou forma de pagamento), orçamentos sugeridos e motor de alertas | A | P4-00 (antecipável) | ⬜ |
