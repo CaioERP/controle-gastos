@@ -272,12 +272,25 @@ describe('categorizeTransactions', () => {
     expect(b.categorySource).toBe('rule');
   });
 
-  it('empate total entre regras: vence sempre a de menor id, qualquer que seja a ordem de criação', async () => {
+  it('empate de critério: vence a regra alterada mais recentemente', async () => {
     const { db, catId, insertTx, insertRule, getTx } = await setup();
     const padaria = await catId('alimentacao-padaria-cafe');
     const restaurante = await catId('alimentacao-restaurante');
-    const r1 = await insertRule('padaria', padaria);
-    const r2 = await insertRule('padaria', restaurante);
+    await insertRule('padaria', padaria, { updatedAt: new Date('2026-10-02T10:00:00Z') });
+    await insertRule('padaria', restaurante, { updatedAt: new Date('2026-10-01T10:00:00Z') });
+    const t = await insertTx();
+
+    await categorizeTransactions(db, [t.id]);
+    expect((await getTx(t.id)).categoryId).toBe(padaria);
+  });
+
+  it('empate total entre regras (inclusive updatedAt): vence sempre a de menor id', async () => {
+    const { db, catId, insertTx, insertRule, getTx } = await setup();
+    const padaria = await catId('alimentacao-padaria-cafe');
+    const restaurante = await catId('alimentacao-restaurante');
+    const same = new Date('2026-10-01T10:00:00Z');
+    const r1 = await insertRule('padaria', padaria, { updatedAt: same });
+    const r2 = await insertRule('padaria', restaurante, { updatedAt: same });
     const winner = r1.id < r2.id ? r1 : r2;
     const t = await insertTx();
 

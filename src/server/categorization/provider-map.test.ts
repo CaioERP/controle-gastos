@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createTestDb } from '../../../tests/helpers/db';
 import { seedBase } from '@/server/db/seed';
-import { providerCategoryMap } from '@/server/db/schema';
+import { eq } from 'drizzle-orm';
+import { archiveCategory } from '@/server/commands/categories';
+import { categories, providerCategoryMap } from '@/server/db/schema';
 import { suggestCategorySlug, type ProviderCategorySeed } from './pluggy-category-seed';
 import { loadProviderMap, providerMapKey, seedProviderCategoryMap } from './provider-map';
 
@@ -86,5 +88,27 @@ describe('seedProviderCategoryMap', () => {
     await expect(
       seedProviderCategoryMap(db, [{ providerCategoryId: 'x', providerCategoryName: 'X', categorySlug: 'nao-existe' }]),
     ).rejects.toThrow('categoria inexistente');
+  });
+
+  it('rodar o seed de novo não desfaz o redirecionamento feito ao arquivar a categoria', async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+    const seed: ProviderCategorySeed[] = [
+      { providerCategoryId: 'p1', providerCategoryName: 'Pharmacy', categorySlug: 'saude-farmacia' },
+    ];
+    await seedProviderCategoryMap(db, seed);
+    const [farmacia] = await db.select().from(categories).where(eq(categories.slug, 'saude-farmacia'));
+    const [consultas] = await db.select().from(categories).where(eq(categories.slug, 'saude-consultas'));
+
+    await archiveCategory(db, { categoryId: farmacia!.id, moveTransactionsTo: consultas!.id });
+    await seedProviderCategoryMap(db, seed);
+    const [row] = await db.select().from(providerCategoryMap);
+    expect(row!.categoryId).toBe(consultas!.id);
+
+    // Entrada sem categoria (ou com categoria arquivada) volta a ser preenchida pelo seed
+    await db.update(providerCategoryMap).set({ categoryId: null });
+    await seedProviderCategoryMap(db, [{ ...seed[0]!, categorySlug: 'saude-consultas' }]);
+    const [refilled] = await db.select().from(providerCategoryMap);
+    expect(refilled!.categoryId).toBe(consultas!.id);
   });
 });

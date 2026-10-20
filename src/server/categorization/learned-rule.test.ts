@@ -47,6 +47,29 @@ describe('learnedMatchFor', () => {
     });
   });
 
+  it.each(['Compra parcelada PARC 02/05', 'Mercado Livre PARC 1/3', 'Pagamento Pix PARC 2/4'])(
+    'parcela com base só de palavras genéricas ("%s") → equals da descrição inteira',
+    (description) => {
+      expect(learnedMatchFor({ description, installmentTotal: null, merchantName: null })).toEqual({
+        matchField: 'description',
+        matchType: 'equals',
+        pattern: description,
+      });
+    },
+  );
+
+  it.each([
+    ['Notebook Dell PARC 03/10', 'Notebook Dell'],
+    ['Mercado Livre Fone JBL PARC 1/3', 'Mercado Livre Fone JBL'],
+    ['Compra parcelada Geladeira PARC 2/10', 'Compra parcelada Geladeira'],
+  ])('parcela com termo distintivo ("%s") continua starts_with', (description, base) => {
+    expect(learnedMatchFor({ description, installmentTotal: null, merchantName: null })).toEqual({
+      matchField: 'description',
+      matchType: 'starts_with',
+      pattern: base,
+    });
+  });
+
   it('descrição com data no fim → equals da descrição inteira', () => {
     expect(learnedMatchFor({ description: 'Pix enviado 10/10', installmentTotal: null, merchantName: null })).toEqual({
       matchField: 'description',

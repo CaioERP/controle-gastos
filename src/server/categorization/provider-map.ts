@@ -1,4 +1,4 @@
-import { isNotNull } from 'drizzle-orm';
+import { isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { categories, providerCategoryMap } from '@/server/db/schema';
 import type { Source } from '@/server/domain/enums';
@@ -46,7 +46,15 @@ export async function seedProviderCategoryMap(
       })
       .onConflictDoUpdate({
         target: [providerCategoryMap.provider, providerCategoryMap.providerCategoryId],
-        set: { providerCategoryName: entry.providerCategoryName, categoryId },
+        // Não desfaz um mapeamento já apontando para categoria ativa (ex.: redirecionado por archiveCategory ou
+        // ajustado pelo usuário): o seed só preenche entradas sem categoria ou com categoria arquivada.
+        set: {
+          providerCategoryName: entry.providerCategoryName,
+          categoryId: sql`CASE WHEN EXISTS (
+            SELECT 1 FROM ${categories} c
+            WHERE c.id = "provider_category_map"."category_id" AND c.archived = false
+          ) THEN "provider_category_map"."category_id" ELSE excluded.category_id END`,
+        },
       });
   }
   return seed.length;

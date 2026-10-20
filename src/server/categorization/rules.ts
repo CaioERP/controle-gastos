@@ -12,7 +12,10 @@ export type RuleTx = {
 export type MatchableRule = Pick<
   CategorizationRule,
   'id' | 'priority' | 'matchField' | 'matchType' | 'pattern' | 'accountId' | 'amountMinCents' | 'amountMaxCents' | 'enabled'
->;
+> & {
+  /** Opcional (desempate): sem ele, regras empatadas caem direto no `id`. */
+  updatedAt?: Date | null;
+};
 
 const regexCache = new Map<string, RegExp | null>();
 
@@ -67,8 +70,10 @@ export function ruleMatches(rule: MatchableRule, tx: RuleTx): boolean {
 }
 
 /**
- * Ordem de desempate: prioridade maior → regra restrita a uma conta → padrão mais longo → `id`.
- * O `id` é o último critério, estável, para o resultado não depender da ordem em que o banco devolve as regras.
+ * Ordem de desempate: prioridade maior → regra restrita a uma conta → padrão mais longo → alterada mais
+ * recentemente (`updatedAt`, quando as duas regras o têm) → `id`.
+ * O `updatedAt` faz a última decisão do usuário valer (ex.: uma regra aprendida com o mesmo critério de uma regra
+ * antiga). O `id` é o último critério, estável, para o resultado não depender da ordem em que o banco devolve as regras.
  */
 function compareRules(a: MatchableRule, b: MatchableRule): number {
   if (a.priority !== b.priority) return b.priority - a.priority;
@@ -76,6 +81,9 @@ function compareRules(a: MatchableRule, b: MatchableRule): number {
   const bAccount = b.accountId ? 1 : 0;
   if (aAccount !== bAccount) return bAccount - aAccount;
   if (a.pattern.length !== b.pattern.length) return b.pattern.length - a.pattern.length;
+  const aTime = a.updatedAt?.getTime();
+  const bTime = b.updatedAt?.getTime();
+  if (aTime !== undefined && bTime !== undefined && aTime !== bTime) return bTime - aTime;
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
