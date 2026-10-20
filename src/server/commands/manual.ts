@@ -206,6 +206,7 @@ export async function updateManualTransaction(
           accountId: transactions.accountId,
           amountCents: transactions.amountCents,
           kind: transactions.kind,
+          parentTransactionId: transactions.parentTransactionId,
           deletedAt: transactions.deletedAt,
         })
         .from(transactions)
@@ -213,6 +214,13 @@ export async function updateManualTransaction(
 
       if (!t || t.deletedAt !== null) {
         throw new CommandError('NOT_FOUND', 'Transação não encontrada');
+      }
+
+      if (t.parentTransactionId !== null) {
+        throw new CommandError(
+          'VALIDATION',
+          'Use "Desfazer divisão" para alterar partes de uma transação dividida',
+        );
       }
 
       const [source] = await tx
@@ -271,6 +279,7 @@ export async function deleteManualTransaction(
           id: transactions.id,
           accountId: transactions.accountId,
           amountCents: transactions.amountCents,
+          parentTransactionId: transactions.parentTransactionId,
           deletedAt: transactions.deletedAt,
         })
         .from(transactions)
@@ -278,6 +287,13 @@ export async function deleteManualTransaction(
 
       if (!t || t.deletedAt !== null) {
         throw new CommandError('NOT_FOUND', 'Transação não encontrada');
+      }
+
+      if (t.parentTransactionId !== null) {
+        throw new CommandError(
+          'VALIDATION',
+          'Use "Desfazer divisão" para remover partes de uma transação dividida',
+        );
       }
 
       const [source] = await tx

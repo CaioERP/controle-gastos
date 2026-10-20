@@ -160,6 +160,7 @@ export function TransactionList({ initialItems, initialCursor, filters, categori
 
       <TransactionSheet
         tx={selected ? (items.find((t) => t.id === selected.id) ?? selected) : null}
+        categories={categories}
         tags={tags}
         onClose={() => setSelected(null)}
         onSaved={(id, changes) => commit({ id, changes })}

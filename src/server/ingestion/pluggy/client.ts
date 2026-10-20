@@ -100,7 +100,7 @@ export class RealPluggyApi implements PluggyApi {
     return withRetry(async () => {
       const txs = await this.getClient().fetchAllTransactions(accountId, { dateFrom: from });
       return txs.map((t) => {
-        const dateStr = t.date instanceof Date ? t.date.toISOString().slice(0, 10) : String(t.date).slice(0, 10);
+        const dateStr = t.date instanceof Date ? t.date.toISOString() : String(t.date);
         return {
           id: t.id,
           accountId: t.accountId,
