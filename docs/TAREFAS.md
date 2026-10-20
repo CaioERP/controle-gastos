@@ -62,8 +62,8 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 |---|---|---|---|---|
 | A1-01 | Cliente Pluggy, rota de connect token e comando `registerConnection` | A | F0-03, F0-07 | 🟡 Agente A — PR #33 em revisão |
 | A1-02 | Normalizador de transações Pluggy | A | F0-03, F0-07 | 🟡 Agente A — PR #34 em revisão |
-| A1-03 | Motor de sincronização | A | A1-01, A1-02 | 🟡 Agente A |
-| A1-04 | Faturas e parcelas futuras | A | A1-03 | ⬜ |
+| A1-03 | Motor de sincronização | A | A1-01, A1-02 | 🟡 Agente A — PR #35 em revisão |
+| A1-04 | Faturas e parcelas futuras | A | A1-03 | 🟡 Agente A |
 | A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ⬜ |
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
 | A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ✅ (teste com a API real pendente: H-03) |
@@ -145,7 +145,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 > Formato: `- [ID] pergunta ou pedido objetivo — Agente X, AAAA-MM-DD`. Quem resolver, risca (`~~...~~`) e anota a decisão.
 
 - [A1-06] PLUGGY_CATEGORY_SEED vazio até a F0-07 rodar (precisa de H-01/H-02) — Agente A, 2026-10-18. Ao preencher: rodar o seed de novo NÃO troca uma categoria ativa por outra ativa no provider_category_map; corrigir entrada já gravada exige migração de dados (ver provider-map.ts)
-- [A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18
+- ~~[A1-06 → A1-03] registrar categorizeTransactions no pipeline.ts quando a A1-03 criar o arquivo — Agente A, 2026-10-18~~ — feito no PR #35 (com `{ llm: categorizeWithLlm }`), 2026-10-20
 - ~~[B1-03] FilterBar descartava parâmetros da página (dim, cartao, fatura, aba); datas da URL dependiam do fuso~~ — resolvido no PR #19, 2026-10-19
 - ~~[B1-09] Prévia de regra ("casaria com N transações dos últimos 90 dias"): viável agora que a A1-06 está na main — Coordenador, 2026-10-19~~ — feito no PR #22, 2026-10-19
 - [B1-04/B1-08] Regra no-restricted-imports no ESLint para garantir que queries/stats.ts e queries/analysis.ts (usados no cliente) nunca importem o banco — Coordenador, 2026-10-19 · 🔴 bloqueada: o hook local config-protection impede agentes de editar eslint.config.mjs. A regra está pronta e validada; o usuário precisa aplicá-la à mão ou liberar o hook
