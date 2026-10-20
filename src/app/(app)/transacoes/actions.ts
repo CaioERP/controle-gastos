@@ -3,9 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getDb } from '@/server/db/client';
-import { recategorize, updateTransaction, upsertTag } from '@/server/commands';
+import { recategorize, splitTransaction, unsplitTransaction, updateTransaction, upsertTag } from '@/server/commands';
 import { txFiltersSchema, type TxFilters } from '@/server/domain/filters';
-import { getInstallmentGroup, getTransaction, listTransactions } from '@/server/queries/transactions';
+import {
+  getInstallmentGroup,
+  getParentTransaction,
+  getSplitParts,
+  getTransaction,
+  listTransactions,
+} from '@/server/queries/transactions';
 import { getTransactionInvoice } from '@/server/queries/transaction-detail';
 import { CommandError } from '@/server/domain/errors';
 import { runAction } from '@/lib/action';
@@ -28,6 +34,18 @@ export async function upsertTagAction(input: Parameters<typeof upsertTag>[1]) {
   return result;
 }
 
+export async function splitTransactionAction(input: Parameters<typeof splitTransaction>[1]) {
+  const result = await runAction(() => splitTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function unsplitTransactionAction(input: Parameters<typeof unsplitTransaction>[1]) {
+  const result = await runAction(() => unsplitTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
 const PAGE_SIZE = 100;
 
 /** Leitura: próxima página da lista. Não revalida nada (não há escrita). */
@@ -46,9 +64,11 @@ export async function loadTransactionDetailAction(transactionId: string) {
     const db = getDb();
     const [detail, invoice] = await Promise.all([getTransaction(db, id), getTransactionInvoice(db, id)]);
     if (!detail) throw new CommandError('NOT_FOUND', 'Transação não encontrada');
-    const installments = detail.installment?.groupId
-      ? await getInstallmentGroup(db, detail.installment.groupId)
-      : [];
-    return { detail, invoice, installments };
+    const [installments, splitParts, parentTransaction] = await Promise.all([
+      detail.installment?.groupId ? getInstallmentGroup(db, detail.installment.groupId) : [],
+      getSplitParts(db, id),
+      detail.parentTransactionId ? getParentTransaction(db, detail.parentTransactionId) : null,
+    ]);
+    return { detail, invoice, installments, splitParts, parentTransaction };
   });
 }
