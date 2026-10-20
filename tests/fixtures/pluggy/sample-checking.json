@@ -1,0 +1,58 @@
+{
+  "account": {
+    "id": "acc-checking-1",
+    "itemId": "item-1",
+    "type": "BANK",
+    "subtype": "CHECKING_ACCOUNT",
+    "name": "Conta Corrente",
+    "balance": 1540.5,
+    "currencyCode": "BRL"
+  },
+  "transactions": [
+    {
+      "id": "tx-chk-1",
+      "accountId": "acc-checking-1",
+      "date": "2026-10-05T12:00:00.000Z",
+      "description": "PIX TRANSF JOAO SILVA",
+      "amount": 150,
+      "type": "DEBIT",
+      "status": "POSTED",
+      "paymentData": {
+        "paymentMethod": "PIX"
+      }
+    },
+    {
+      "id": "tx-chk-2",
+      "accountId": "acc-checking-1",
+      "date": "2026-10-06T14:30:00.000Z",
+      "description": "COMPRA NO DEBITO PADARIA REAL",
+      "amount": 25.4,
+      "type": "DEBIT",
+      "status": "POSTED",
+      "merchant": {
+        "name": "Padaria Real"
+      }
+    },
+    {
+      "id": "tx-chk-3",
+      "accountId": "acc-checking-1",
+      "date": "2026-10-07T08:00:00.000Z",
+      "description": "TARIFA MENSALIDADE DO PACOTE DE SERVICOS",
+      "amount": 39.9,
+      "type": "DEBIT",
+      "status": "POSTED"
+    },
+    {
+      "id": "tx-chk-4",
+      "accountId": "acc-checking-1",
+      "date": "2026-10-08T10:00:00.000Z",
+      "description": "TED RECEBIDA PROVENTOS",
+      "amount": 5000,
+      "type": "CREDIT",
+      "status": "POSTED",
+      "paymentData": {
+        "paymentMethod": "TED"
+      }
+    }
+  ]
+}

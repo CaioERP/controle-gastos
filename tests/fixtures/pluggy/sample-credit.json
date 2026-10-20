@@ -1,0 +1,76 @@
+{
+  "account": {
+    "id": "acc-credit-1",
+    "itemId": "item-1",
+    "type": "CREDIT",
+    "name": "Cartão de Crédito",
+    "balance": 850.75,
+    "currencyCode": "BRL",
+    "creditData": {
+      "creditLimit": 10000,
+      "availableCreditLimit": 9149.25,
+      "balanceCloseDate": "2026-10-20T00:00:00.000Z",
+      "balanceDueDate": "2026-10-27T00:00:00.000Z"
+    }
+  },
+  "transactions": [
+    {
+      "id": "tx-crd-1",
+      "accountId": "acc-credit-1",
+      "date": "2026-10-10T18:45:00.000Z",
+      "description": "UBER *TRIP",
+      "amount": 32.5,
+      "type": "DEBIT",
+      "status": "POSTED",
+      "creditCardMetadata": {
+        "cardNumber": "123456******7890",
+        "billId": "bill-1"
+      }
+    },
+    {
+      "id": "tx-crd-2",
+      "accountId": "acc-credit-1",
+      "date": "2026-10-11T13:20:00.000Z",
+      "description": "MAGAZINE LUIZA PARC 02/10",
+      "amount": 120,
+      "type": "DEBIT",
+      "status": "POSTED",
+      "creditCardMetadata": {
+        "installmentNumber": 2,
+        "totalInstallments": 10,
+        "totalAmount": 1200,
+        "cardNumber": "123456******7890",
+        "billId": "bill-1"
+      },
+      "merchant": {
+        "name": "Magazine Luiza"
+      }
+    },
+    {
+      "id": "tx-crd-3",
+      "accountId": "acc-credit-1",
+      "date": "2026-10-12T20:10:00.000Z",
+      "description": "IFD*IFOOD RESTAURANTE",
+      "amount": 65,
+      "type": "DEBIT",
+      "status": "POSTED",
+      "creditCardMetadata": {
+        "cardNumber": "123456******7890",
+        "billId": "bill-1"
+      }
+    },
+    {
+      "id": "tx-crd-4",
+      "accountId": "acc-credit-1",
+      "date": "2026-10-13T10:00:00.000Z",
+      "description": "ESTORNO COMPRA CANCELADA",
+      "amount": 65,
+      "type": "CREDIT",
+      "status": "POSTED",
+      "creditCardMetadata": {
+        "cardNumber": "123456******7890",
+        "billId": "bill-1"
+      }
+    }
+  ]
+}
