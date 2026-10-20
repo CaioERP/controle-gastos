@@ -160,6 +160,8 @@ export function CommandPalette() {
 
   const trimmed = query.trim();
   const effectiveResults = trimmed.length < 2 ? EMPTY_RESULTS : results;
+  // Apagar o texto para menos de 2 caracteres com uma busca em andamento não pode deixar "Buscando…" preso.
+  const showLoading = loading && trimmed.length >= 2;
 
   // Grupo Telas: filtrado localmente pelo texto; com campo vazio mostra todas
   const trimmedLower = trimmed.toLowerCase();
@@ -215,10 +217,10 @@ export function CommandPalette() {
           onValueChange={setQuery}
         />
         <CommandList>
-          {loading && (
+          {showLoading && (
             <div className="py-4 text-center text-xs text-muted-foreground">Buscando…</div>
           )}
-          {!loading && !hasAnyResult && (
+          {!showLoading && !hasAnyResult && (
             <CommandEmpty>Nada encontrado.</CommandEmpty>
           )}
 
