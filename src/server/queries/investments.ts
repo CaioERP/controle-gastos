@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -491,3 +491,95 @@ export async function getHoldingDetail(db: Db, holdingId: string): Promise<Holdi
     })),
   };
 }
+
+export type DividendItemRow = {
+  id: string;
+  date: string;
+  holdingId: string;
+  assetName: string;
+  ticker: string | null;
+  assetClass: AssetClass;
+  institutionName: string;
+  institutionColor: string;
+  amountCents: number;
+  taxCents: number;
+  netAmountCents: number;
+  description: string | null;
+  source: Source;
+};
+
+export type DividendsOverview = {
+  total12mCents: number;
+  averageMonthlyCents: number;
+  monthlyTotals: Array<{ month: string; totalCents: number }>; // últimos 12 meses
+  items: DividendItemRow[];
+};
+
+export async function getDividendsOverview(
+  db: Db,
+  opts?: { institutionId?: string; today?: string },
+): Promise<DividendsOverview> {
+  const todayStr = opts?.today ?? getToday();
+
+  const rows = await db
+    .select({
+      tx: investmentTransactions,
+      holding: holdings,
+      asset: assets,
+      account: accounts,
+      institution: institutions,
+    })
+    .from(investmentTransactions)
+    .innerJoin(holdings, eq(investmentTransactions.holdingId, holdings.id))
+    .innerJoin(assets, eq(holdings.assetId, assets.id))
+    .innerJoin(accounts, eq(investmentTransactions.accountId, accounts.id))
+    .innerJoin(institutions, eq(accounts.institutionId, institutions.id))
+    .where(
+      and(
+        eq(investmentTransactions.type, 'income'),
+        eq(accounts.isHidden, false),
+        opts?.institutionId ? eq(institutions.id, opts.institutionId) : undefined,
+      ),
+    )
+    .orderBy(desc(investmentTransactions.date));
+
+  const items: DividendItemRow[] = rows.map(({ tx, asset, institution }) => ({
+    id: tx.id,
+    date: tx.date,
+    holdingId: tx.holdingId,
+    assetName: asset.name,
+    ticker: asset.ticker,
+    assetClass: asset.assetClass,
+    institutionName: institution.name,
+    institutionColor: institution.color,
+    amountCents: tx.amountCents,
+    taxCents: tx.taxCents,
+    netAmountCents: tx.amountCents - tx.taxCents,
+    description: tx.description,
+    source: tx.source,
+  }));
+
+  const months: string[] = [];
+  for (let m = 11; m >= 0; m--) {
+    months.push(monthStart(addMonthsISO(todayStr, -m)));
+  }
+
+  const monthlyTotals = months.map((m) => {
+    const nextM = monthStart(addMonthsISO(m, 1));
+    const total = items
+      .filter((item) => item.date >= m && item.date < nextM)
+      .reduce((sum, item) => sum + item.netAmountCents, 0);
+    return { month: m, totalCents: total };
+  });
+
+  const total12mCents = monthlyTotals.reduce((sum, m) => sum + m.totalCents, 0);
+  const averageMonthlyCents = Math.round(total12mCents / 12);
+
+  return {
+    total12mCents,
+    averageMonthlyCents,
+    monthlyTotals,
+    items,
+  };
+}
+
