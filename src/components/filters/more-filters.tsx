@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { FilterIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -236,13 +237,20 @@ export function MoreFilters({
               {TX_KINDS.map((kind) => {
                 const currentKinds = kinds ?? [...defaultKinds];
                 const checked = currentKinds.includes(kind);
+                const isOnlyOne = checked && currentKinds.length === 1;
                 return (
                   <label
                     key={kind}
-                    className="flex items-center gap-2 text-xs py-0.5 cursor-pointer text-muted-foreground hover:text-foreground"
+                    title={isOnlyOne ? 'Pelo menos uma natureza' : undefined}
+                    className={cn(
+                      'flex items-center gap-2 text-xs py-0.5 text-muted-foreground',
+                      isOnlyOne ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:text-foreground'
+                    )}
                   >
                     <Checkbox
                       checked={checked}
+                      disabled={isOnlyOne}
+                      title={isOnlyOne ? 'Pelo menos uma natureza' : undefined}
                       onCheckedChange={() => handleToggleKind(kind)}
                     />
                     <span>{KIND_LABELS[kind]}</span>
