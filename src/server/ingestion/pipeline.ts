@@ -1,6 +1,7 @@
 import { categorizeTransactions } from '@/server/categorization/engine';
 import { categorizeWithLlm } from '@/server/categorization/llm';
 import type { Db } from '@/server/db/client';
+import { runClassifyKindPipelineStep } from './classify-kind';
 import { runInstallmentsPipelineStep } from './installments';
 import { runInvoicesPipelineStep } from './invoices';
 import type { RawInvoice } from './types';
@@ -29,6 +30,10 @@ export const PIPELINE_STEPS: PipelineStep[] = [
   {
     name: 'installments',
     run: runInstallmentsPipelineStep,
+  },
+  {
+    name: 'kind',
+    run: runClassifyKindPipelineStep,
   },
   {
     name: 'categorize',
