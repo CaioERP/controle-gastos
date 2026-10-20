@@ -111,7 +111,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00 | ⬜ |
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00 | ⬜ |
 | B2-03 | Lançamento manual e divisão de transação | B | P2-00 | ⬜ |
-| B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — parte 1 PR #26 em revisão |
+| B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — parte 1 PR #26 em revisão; parte 2 em andamento |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
 | A3-01 | Schema de investimentos e sincronização Pluggy | A | P3-00 | ⬜ |
 | A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) | A | P3-00 | ⬜ |
