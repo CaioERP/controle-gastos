@@ -47,7 +47,16 @@ describe('learnedMatchFor', () => {
     });
   });
 
-  it.each(['Compra parcelada PARC 02/05', 'Mercado Livre PARC 1/3', 'Pagamento Pix PARC 2/4'])(
+  it.each([
+    'Compra parcelada PARC 02/05',
+    'Mercado Livre PARC 1/3',
+    'Pagamento Pix PARC 2/4',
+    'SHOPEE BRASIL PARC 1/3',
+    'AMAZON MARKETPLACE PARC 2/6',
+    'Pagto Boleto Banco PARC 1/2',
+    'Loja 123 PARC 3/5',
+    'Compra 2026 PARC 1/4',
+  ])(
     'parcela com base só de palavras genéricas ("%s") → equals da descrição inteira',
     (description) => {
       expect(learnedMatchFor({ description, installmentTotal: null, merchantName: null })).toEqual({

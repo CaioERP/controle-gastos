@@ -1,6 +1,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { categories, categorizationRules, merchants, providerCategoryMap, transactions } from '../db/schema';
+import { categorizeTransactions } from '../categorization/engine';
 import { CommandError } from '../domain/errors';
 import { archiveCategory } from './categories';
 import { setupCommandsDb } from './test-setup';
@@ -69,6 +70,58 @@ describe('archiveCategory (A1-08)', () => {
     expect(pm!.categoryId).toBe(outros.id);
     const [row] = await db.select().from(categories).where(eq(categories.id, c.id));
     expect(row!.archived).toBe(true);
+  });
+
+  it('redirecionar regras não renova o updatedAt: a decisão mais nova do usuário continua vencendo o empate', async () => {
+    const { db, cat, insertTx, newCategory, getTx } = await setupCommandsDb();
+    const corridas = await newCategory('Corridas', 'expense');
+    const delivery = cat('alimentacao-delivery');
+    const app = cat('transporte-app');
+    const [antiga] = await db
+      .insert(categorizationRules)
+      .values({
+        matchField: 'description',
+        matchType: 'contains',
+        pattern: 'uber',
+        setCategoryId: corridas.id,
+        updatedAt: new Date('2026-10-01T10:00:00Z'),
+      })
+      .returning();
+    await db.insert(categorizationRules).values({
+      matchField: 'description',
+      matchType: 'contains',
+      pattern: 'eats',
+      setCategoryId: delivery.id,
+      updatedAt: new Date('2026-10-02T10:00:00Z'),
+    });
+
+    await archiveCategory(db, { categoryId: corridas.id, moveTransactionsTo: app.id });
+    const [redirecionada] = await db.select().from(categorizationRules).where(eq(categorizationRules.id, antiga!.id));
+    expect(redirecionada!.setCategoryId).toBe(app.id);
+    expect(redirecionada!.updatedAt.toISOString()).toBe('2026-10-01T10:00:00.000Z');
+
+    const eats = await insertTx({ description: 'Uber Eats' });
+    await categorizeTransactions(db, [eats.id]);
+    expect((await getTx(eats.id)).categoryId).toBe(delivery.id);
+  });
+
+  it('desabilitar regras ao arquivar sem destino também preserva o updatedAt', async () => {
+    const { db, newCategory } = await setupCommandsDb();
+    const c = await newCategory('Hobby V', 'expense');
+    const [rule] = await db
+      .insert(categorizationRules)
+      .values({
+        matchField: 'description',
+        matchType: 'contains',
+        pattern: 'hobby',
+        setCategoryId: c.id,
+        updatedAt: new Date('2026-10-01T10:00:00Z'),
+      })
+      .returning();
+    await archiveCategory(db, { categoryId: c.id, moveTransactionsTo: null });
+    const [r] = await db.select().from(categorizationRules).where(eq(categorizationRules.id, rule!.id));
+    expect(r!.enabled).toBe(false);
+    expect(r!.updatedAt.toISOString()).toBe('2026-10-01T10:00:00.000Z');
   });
 
   it('destino de outra natureza → VALIDATION', async () => {

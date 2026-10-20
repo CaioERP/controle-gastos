@@ -72,8 +72,11 @@ export function ruleMatches(rule: MatchableRule, tx: RuleTx): boolean {
 /**
  * Ordem de desempate: prioridade maior → regra restrita a uma conta → padrão mais longo → alterada mais
  * recentemente (`updatedAt`, quando as duas regras o têm) → `id`.
- * O `updatedAt` faz a última decisão do usuário valer (ex.: uma regra aprendida com o mesmo critério de uma regra
- * antiga). O `id` é o último critério, estável, para o resultado não depender da ordem em que o banco devolve as regras.
+ * O `updatedAt` significa "última decisão do usuário ou aprendizado" (criar/editar a regra em `upsertRule`, ou
+ * `saveLearnedRule`) e faz essa decisão valer (ex.: uma regra aprendida com o mesmo critério de uma regra antiga).
+ * Por isso UPDATEs automáticos de `categorization_rules` (incremento de `hitCount` no motor, redirecionamento no
+ * `archiveCategory`) preservam a coluna em vez de deixar o `$onUpdate` renová-la; senão o desempate alternaria a
+ * cada sincronização. O `id` é o último critério, estável, para o resultado não depender da ordem do banco.
  */
 function compareRules(a: MatchableRule, b: MatchableRule): number {
   if (a.priority !== b.priority) return b.priority - a.priority;

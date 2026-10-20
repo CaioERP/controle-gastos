@@ -45,17 +45,24 @@ const GENERIC_WORDS = new Set([
   'transferencia', 'debito', 'credito', 'cartao', 'boleto', 'online', 'internet', 'loja', 'enviado', 'recebido',
   // marketplaces e intermediadores
   'mercado', 'livre', 'mercadolivre', 'pago', 'mercadopago', 'amazon', 'shopee', 'aliexpress', 'magalu',
-  'americanas', 'picpay', 'paypal', 'pagseguro',
+  'americanas', 'picpay', 'paypal', 'pagseguro', 'marketplace', 'mktplace', 'mkt', 'shop', 'store', 'www',
+  // país, banco e sufixos societários
+  'brasil', 'br', 'banco', 'ltda', 'sa', 'me',
   // conectivos
   'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'no', 'na', 'com', 'a', 'o',
 ]);
 
-/** A descrição-base tem algo que identifique a compra (pelo menos 3 letras fora das palavras genéricas)? */
+/**
+ * A descrição-base tem algo que identifique a compra? Conta só as letras dos tokens fora de `GENERIC_WORDS`
+ * (pelo menos 3); números não contam ("Loja 123", "Compra 2026" continuam genéricas).
+ */
 function isDistinctive(base: string): boolean {
-  const distinctive = normalizeForMatch(base)
+  const letters = normalizeForMatch(base)
     .split(/[^a-z0-9]+/)
-    .filter((w) => w && !GENERIC_WORDS.has(w));
-  return distinctive.join('').length >= 3;
+    .filter((w) => w && !GENERIC_WORDS.has(w))
+    .join('')
+    .replace(/[^a-z]/g, '');
+  return letters.length >= 3;
 }
 
 export type LearnedMatch = Pick<CategorizationRule, 'matchField' | 'matchType' | 'pattern'>;

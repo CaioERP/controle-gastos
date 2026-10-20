@@ -193,7 +193,8 @@ export async function categorizeTransactions(
     for (const [ruleId, hits] of ruleHits) {
       await tx
         .update(categorizationRules)
-        .set({ hitCount: sql`${categorizationRules.hitCount} + ${hits}` })
+        // Preserva updated_at: contar acertos não é decisão do usuário (ver desempate em sortRules)
+        .set({ hitCount: sql`${categorizationRules.hitCount} + ${hits}`, updatedAt: sql`${categorizationRules.updatedAt}` })
         .where(eq(categorizationRules.id, ruleId));
     }
   });
