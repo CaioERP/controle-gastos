@@ -99,7 +99,9 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 ## Fase 3 — Patrimônio · specs: [`tarefas/fase-3-dados.md`](./tarefas/fase-3-dados.md) e [`tarefas/fase-3-interface.md`](./tarefas/fase-3-interface.md)
 
-## Fases 4 e 5 · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
+## Fase 4 — Inteligência · specs: [`tarefas/fase-4-dados.md`](./tarefas/fase-4-dados.md) e [`tarefas/fase-4-interface.md`](./tarefas/fase-4-interface.md)
+
+## Fase 5 — Deploy · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
 
 > Antes de iniciar cada fase, a tarefa `Px-00` detalha as tarefas no mesmo formato das Fases 0 e 1.
 > **`Px-00` deve ser feita por um modelo forte** (ex.: Claude Opus), com base no que foi aprendido nas fases anteriores.
@@ -125,16 +127,16 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B3-01 | Tela de investimentos (`/investimentos`) | B | P3-00, A3-01 (curva TWR completa: A3-03) | 🟡 Agente B — PR #53 em revisão |
 | B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | 🟡 Agente B — PR #55 em revisão |
 | B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | 🟡 Agente B — PR #54 em revisão |
-| P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ⬜ |
-| A4-01 | Detecção de recorrências e assinaturas | A | P4-00 | ⬜ |
-| A4-02 | Limites de gasto (categoria e/ou forma de pagamento), orçamentos sugeridos e motor de alertas | A | P4-00 (antecipável) | ⬜ |
-| A4-03 | Projeção de fluxo de caixa | A | A4-01 | ⬜ |
-| A4-04 | Perguntas em linguagem natural (IA sobre as consultas) | A | P4-00 | ⬜ |
-| B4-01 | Tela de limites e orçamentos | B | A4-02 | ⬜ |
-| B4-02 | Tela de assinaturas | B | A4-01 | ⬜ |
-| B4-03 | Tela de projeção | B | A4-03 | ⬜ |
-| B4-04 | Tela de perguntas (chat) | B | A4-04 | ⬜ |
-| B4-05 | Central de notificações e preferências de alerta | B | A4-02 | ⬜ |
+| P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ✅ |
+| A4-02 | Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas | A | P4-00 (iniciar primeiro; gera migration 0004) | ⬜ |
+| A4-01 | Detecção de recorrências e assinaturas | A | P4-00, A4-02 | ⬜ |
+| A4-03 | Projeção de fluxo de caixa | A | P4-00, A4-01 | ⬜ |
+| A4-04 | Perguntas em linguagem natural (Claude Tool-Use somente leitura) | A | P4-00, H-03 (chave Claude) | ⬜ |
+| B4-01 | Tela de limites e orçamentos (`/limites`) | B | P4-00, A4-02 | ⬜ |
+| B4-05 | Central de notificações e preferências de alerta | B | P4-00, A4-02 | ⬜ |
+| B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | ⬜ |
+| B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | ⬜ |
+| B4-04 | Tela de perguntas / chat (`/perguntas`) | B | P4-00, A4-04 | ⬜ |
 | P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
 | A5-01 | Banco Neon, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
 | A5-02 | Vercel Cron, webhook Pluggy, segredos | A | A5-01 | ⬜ |

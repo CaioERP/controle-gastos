@@ -372,31 +372,34 @@ os desvios e as pendências.
 
 ---
 
-## 10 e 13 — Agente A: implementar as Fases 4 e 5 (dados)
-
-Use o mesmo prompt, trocando `<N>`, a lista de tarefas e o pré-requisito:
-- Fase 4: tarefas A4-01 a A4-04; pré-requisito P4-00 ✅.
-- Fase 5: tarefas A5-01 e A5-02; pré-requisito P5-00 ✅ e H-06 ✅.
+## 10 — Agente A: Fase 4 (dados — limites, recorrências, projeção e perguntas IA)
 
 ```text
 Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
 C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
 
 Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
-docs/tarefas/fase-<N>-dados.md.
+docs/tarefas/fase-4-dados.md.
 
-Pré-requisito: <pré-requisito> no quadro. Se não estiver, pare e avise.
+Pré-requisito: P4-00 com ✅ no quadro. Se não estiver, pare e avise.
 
-Tarefas: <lista>, na ordem da spec, um PR cada. A primeira tarefa da fase faz o commit de contrato
-com a migration, conforme a spec e o CONTRATOS.md §6.
+Tarefas, nesta ordem, um PR cada:
+1. A4-02 — Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas.
+   Faz o commit de contrato com a migration 0004 das 5 tabelas novas (spending_limits, spending_limit_dispatches,
+   recurrences, notifications e notification_preferences), novos enums e stubs de comandos. Esta tarefa
+   vem primeiro para desbloquear imediatamente B4-01 e B4-05 do Agente B.
+2. A4-01 — Detecção de recorrências e assinaturas. Depende de A4-02 (migration 0004).
+3. A4-03 — Projeção de fluxo de caixa (6 meses com faixa de incerteza). Depende de A4-01.
+4. A4-04 — Perguntas em linguagem natural (Claude Tool-Use somente leitura). Depende de H-03 (chave da Claude no .env.local).
+
+Se abrir um PR antes do anterior ser aceito, empilhe a branch na anterior (--base <branch-anterior>),
+conforme "Dependência em revisão" do AGENTS.md §3.
 
 Regras:
-- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅.
-  Se faltar algo, se a spec não existir ou se ela contradisser o código, pare e registre em
-  "Pendências de coordenação".
-- Serviços externos só pela interface injetável da spec, com fake nos testes (testes nunca acessam
-  a rede).
-- Segredos só no .env.local.
+- Pegue só as tarefas listadas. Antes de cada uma, reserve no quadro: ⬜ → 🟡 Agente A.
+- Ferramentas de IA em A4-04 são estritamente de leitura (chamam consultas existentes); nenhum SQL gerado por IA.
+- Mascaramento de dados pessoais em A4-04 com maskForLlm de src/server/categorization/mask.ts.
+- Segredos (ANTHROPIC_API_KEY) só no .env.local.
 - Escreva só os testes que a spec pede.
 - Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
 - Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
@@ -407,29 +410,81 @@ os desvios e as pendências.
 
 ---
 
-## 11 e 14 — Agente B: implementar as Fases 4 e 5 (interface)
+## 11 — Agente B: Fase 4 (interface — limites, notificações, assinaturas, projeção e chat IA)
 
-Use o mesmo prompt, trocando `<N>`, a lista de tarefas e o pré-requisito:
-- Fase 4: tarefas B4-01 a B4-05; pré-requisito P4-00 ✅.
-- Fase 5: tarefas B5-01 e B5-02; pré-requisito P5-00 ✅ e, para a B5-02, H-06 ✅.
+```text
+Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md,
+docs/tarefas/fase-4-interface.md e docs/tarefas/fase-4-dados.md (para referência do schema e dos comandos).
+
+Pré-requisito: P4-00 com ✅ no quadro, e a A4-02 aberta em PR (ou na main) para usar o schema e comandos
+de limites e notificações. Se a A4-02 ainda não tiver PR, espere e avise.
+
+Tarefas, um PR cada:
+1. B4-01 — Tela de limites e orçamentos (/limites e widget no dashboard). Vem primeiro junto com A4-02.
+   Se A4-02 estiver em PR, crie a branch a partir da branch da A4-02 e abra o PR com --base nela.
+2. B4-05 — Central de notificações e preferências de alerta (sino no cabeçalho com badge, popover e página /notificacoes).
+   Pode ser feita logo após B4-01, usando as notificações geradas por limites e faturas.
+3. B4-02 — Tela de assinaturas e recorrências (/assinaturas). Depende de A4-01.
+4. B4-03 — Tela de projeção de fluxo de caixa (/projecao). Depende de A4-03.
+5. B4-04 — Tela de perguntas / chat (/perguntas). Depende de A4-04 e H-03.
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, reserve no quadro: ⬜ → 🟡 Agente B.
+- Textos em pt-BR, dinheiro com <Money />, datas com <DateBR />, e tudo funcionando em 390 px.
+- Escreva só os testes que a spec pede.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3001. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
+os desvios e as pendências.
+```
+
+---
+
+## 13 — Agente A: implementar a Fase 5 (deploy)
+
+```text
+Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
+docs/tarefas/fase-5-dados.md.
+
+Pré-requisito: P5-00 ✅ e H-06 ✅ no quadro. Se não estiver, pare e avise.
+
+Tarefas: A5-01 e A5-02, na ordem da spec, um PR cada.
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅.
+- Segredos só no painel da Vercel / .env.local.
+- Escreva só os testes que a spec pede.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
+os desvios e as pendências.
+```
+
+---
+
+## 14 — Agente B: implementar a Fase 5 (PWA e CI)
 
 ```text
 Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
 C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
 
 Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
-docs/tarefas/fase-<N>-interface.md.
+docs/tarefas/fase-5-interface.md.
 
-Pré-requisito: <pré-requisito> no quadro. Se não estiver, pare e avise.
+Pré-requisito: P5-00 ✅ e, para a B5-02, H-06 ✅ no quadro. Se não estiver, pare e avise.
 
-Tarefas: <lista>, na ordem da spec, um PR cada. Se uma tarefa depende de dados da Trilha A ainda em PR,
-siga o "Dependência em revisão" do AGENTS.md §3. Se a dependência nem tiver PR, pule para a próxima
-tarefa e avise.
+Tarefas: B5-01 e B5-02, na ordem da spec, um PR cada.
 
 Regras:
-- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅ (ou
-  em PR, no caso de dependência em revisão). Se faltar algo, se a spec não existir ou se ela contradisser
-  o código, pare e registre em "Pendências de coordenação".
+- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅.
 - Textos em pt-BR, dinheiro com <Money />, datas com <DateBR />, e tudo funcionando em 390 px.
 - Escreva só os testes que a spec pede.
 - Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
