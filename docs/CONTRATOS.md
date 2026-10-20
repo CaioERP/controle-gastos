@@ -105,6 +105,8 @@ export const CATEGORY_SOURCES = ['user', 'rule', 'merchant', 'provider', 'llm', 
 export const INVOICE_STATUSES = ['open', 'closed', 'paid', 'overdue'] as const;
 export const CONNECTION_STATUSES = ['pending', 'active', 'syncing', 'error', 'expired', 'revoked'] as const;
 export const CATEGORY_KINDS = ['expense', 'income'] as const;
+export const IMPORT_BATCH_STATUSES = ['preview', 'confirmed', 'discarded'] as const;
+export const IMPORT_FORMATS = ['ofx', 'csv_nubank_checking', 'csv_nubank_card', 'pdf_invoice'] as const;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 export type TxKind = (typeof TX_KINDS)[number];
@@ -115,6 +117,8 @@ export type CategorySource = (typeof CATEGORY_SOURCES)[number];
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
 export type CategoryKind = (typeof CATEGORY_KINDS)[number];
+export type ImportBatchStatus = (typeof IMPORT_BATCH_STATUSES)[number];
+export type ImportFormat = (typeof IMPORT_FORMATS)[number];
 
 /** Natureza que entra nos relatórios de gasto/receita (regra R2). */
 export const REPORTABLE_KINDS: readonly TxKind[] = ['expense', 'income', 'refund'];
@@ -247,6 +251,7 @@ Seed completo na tarefa F0-03.
 | transaction_id | fk not null (cascade) | |
 | source | enum `SOURCES` | |
 | external_id | text not null | unique (source, external_id) |
+| import_batch_id | fk null (set null) | lote de arquivo que originou ou vinculou a fonte (F2) |
 | raw | jsonb | payload original |
 | fetched_at | timestamptz | default now() |
 
@@ -288,9 +293,23 @@ Seed completo na tarefa F0-03.
 | stats | jsonb | ex.: `{ "accounts": 3, "created": 41, "updated": 2 }` |
 | error | text null | |
 
+### `import_batches` — lotes de importação de arquivos (Fase 2, gerado na A2-01)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| account_id | fk not null (cascade) | conta de destino da importação |
+| invoice_id | fk null (set null) | preenchido quando o arquivo é uma fatura de cartão (`pdf_invoice`) |
+| filename | text not null | nome original do arquivo enviado |
+| format | text not null | `'ofx'`, `'csv_nubank_checking'`, `'csv_nubank_card'`, `'pdf_invoice'` |
+| file_hash | text not null | SHA-256 hex do conteúdo bruto do arquivo |
+| status | enum `IMPORT_BATCH_STATUSES` | `'preview'`, `'confirmed'`, `'discarded'`; default `'preview'` |
+| preview_data | jsonb not null | `{ items: PreviewTransactionItem[], invoiceMeta?: ... }` |
+| stats | jsonb not null | contagens (`totalItems`, `created`, `linked`, `skippedDuplicates`, `divergenceCents`, `usage`) |
+
+Índice: `(account_id, status)`. Relação com quem importou: sistema de usuário único (sem `user_id`); a rastreabilidade de quais transações vieram ou foram vinculadas pelo lote é feita por `transaction_sources.import_batch_id`.
+
 ### Tabelas de fases futuras
 Definidas no início da fase, como mudança de contrato aditiva:
-- **F2:** `import_batches`; coluna `parent_transaction_id` em `transactions` (divisão de transação).
+- **F2:** `import_batches` e `transaction_sources.import_batch_id` (especificados acima, migration gerada na A2-01); coluna `parent_transaction_id` em `transactions` (divisão de transação, B2-03b).
 - **F3:** `assets`, `holdings`, `investment_transactions`, `asset_prices`, `benchmark_series`, `net_worth_snapshots`.
 - **F4:** `budgets`, `recurrences`, `notifications`.
 
@@ -420,9 +439,10 @@ upsertTag(input: { id?: string; name: string; color: string }): Promise<{ id: st
 updateMerchant(input: { merchantId: string; patch: Partial<{ name: string; defaultCategoryId: string | null }> }): Promise<void>;
 triggerSync(input: { connectionId: string | null }): Promise<{ syncRunId: string }>;
 registerConnection(input: { provider: 'pluggy'; externalId: string }): Promise<{ connectionId: string }>;
+reconnectConnection(input: { connectionId: string }): Promise<{ connectionId: string; syncRunId: string | null }>; // A2-05
 
-// Lançamento manual (B2-03a) — src/server/commands/manual.ts. Só para contas com connection_id NULL.
-createManualAccount(input: { name: string; type: 'wallet' | 'checking' | 'savings' | 'benefit' | 'investment'; institutionId?: string | null; initialBalanceCents?: number }): Promise<{ accountId: string }>; // institutionId padrão: instituição 'carteira'
+// Lançamento manual (B2-03a; credit_card adicionado na A2-01) — src/server/commands/manual.ts. Só para contas com connection_id NULL.
+createManualAccount(input: { name: string; type: 'wallet' | 'checking' | 'savings' | 'credit_card' | 'benefit' | 'investment'; institutionId?: string | null; initialBalanceCents?: number; closingDay?: number | null; dueDay?: number | null; creditLimitCents?: number | null }): Promise<{ accountId: string }>; // institutionId padrão: instituição 'carteira'
 createManualTransaction(input: { accountId: string; date: string; amountCents: number; description: string; kind: TxKind; paymentMethod: PaymentMethod; categoryId: string | null; notes?: string | null; tagIds?: string[] }): Promise<{ transactionId: string }>; // amountCents com sinal (R1); atualiza accounts.balance_cents; grava transaction_sources com source manual
 updateManualTransaction(input: { transactionId: string; patch: Partial<{ date: string; amountCents: number }> }): Promise<void>; // só transações manuais; ajusta o saldo pela diferença
 deleteManualTransaction(input: { transactionId: string }): Promise<void>; // soft delete; só transações manuais; devolve o saldo
@@ -430,6 +450,12 @@ deleteManualTransaction(input: { transactionId: string }): Promise<void>; // sof
 // Divisão de transação (B2-03b) — src/server/commands/split.ts
 splitTransaction(input: { transactionId: string; parts: Array<{ amountCents: number; categoryId: string | null; description?: string; notes?: string | null }> }): Promise<{ splitIds: string[] }>; // soma das partes == total da mãe; mãe sai dos totais
 unsplitTransaction(input: { transactionId: string }): Promise<void>; // soft delete nas filhas; mãe volta aos totais
+
+// Importação de arquivos (A2-01, A2-02, A2-03) — src/server/commands/imports.ts
+previewFileImport(input: { accountId: string; filename: string; content: string }): Promise<ImportBatchPreview>;
+previewPdfInvoiceImport(input: { accountId: string; filename: string; pdfBase64: string; password?: string | null }): Promise<ImportBatchPreview>;
+confirmFileImport(input: { batchId: string; decisions?: Record<string, 'import_as_new' | 'skip' | { linkTransactionId: string }> }): Promise<{ batchId: string; created: number; linked: number; skippedDuplicates: number }>;
+discardFileImport(input: { batchId: string }): Promise<void>;
 
 type RuleInput = {
   id?: string;
@@ -451,7 +477,7 @@ type RuleInput = {
 
 | Rota | Método | Retorno | Uso |
 |---|---|---|---|
-| `/api/pluggy/connect-token` | POST | `{ accessToken: string }` | A tela de conexões (Agente B) abre o widget Pluggy Connect com esse token e, no sucesso, chama `registerConnection` com o `item.id` |
+| `/api/pluggy/connect-token` | POST | `{ accessToken: string }` | Aceita corpo opcional `{ itemId?: string }` (A2-05). A tela de conexões (Agente B) abre o widget Pluggy Connect com esse token e, no sucesso, chama `registerConnection` (nova) ou `reconnectConnection` (reconexão com `updateItem`) |
 
 ### 5.5 Utilitários de domínio (Contrato) — `src/server/domain/`
 
@@ -490,3 +516,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-18 | Agente A | F0-03 | Adicionado helper toCommandError em domain/errors |
 | 2026-10-19 | Coordenador | B2-03a | Comandos de lançamento manual: createManualAccount, createManualTransaction, updateManualTransaction, deleteManualTransaction (aditivo, sem mudança de schema) |
 | 2026-10-19 | Agente B | B2-03b | Coluna parent_transaction_id em transactions, índice e comandos splitTransaction e unsplitTransaction (aditivo) |
+| 2026-10-20 | Planejador | P2-00 | Especificação da tabela `import_batches`, coluna `transaction_sources.import_batch_id`, enums `IMPORT_BATCH_STATUSES`/`IMPORT_FORMATS`, extensão de `createManualAccount` (`credit_card`) e comandos `previewFileImport`, `previewPdfInvoiceImport`, `confirmFileImport`, `discardFileImport` e `reconnectConnection` (aditivo; migration gerada na A2-01) |
