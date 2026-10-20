@@ -327,6 +327,35 @@ describe('syncConnection — regressões da revisão pós-merge', () => {
     expect(inv!.paidAt).toBe('2026-10-11');
   });
 
+  it('pendente apagado não desfaz a quitação de fatura feita por outro pagamento ativo (outra conexão)', async () => {
+    const { db, connectionId } = await setupSyncDb();
+    const [conn2] = await db
+      .insert(connections)
+      .values({ provider: 'pluggy', externalId: 'item-2', status: 'active' })
+      .returning();
+    const chk2: PluggyAccount = { ...checkingAccount, id: 'acc-chk-2', itemId: 'item-2' };
+    const cc2: PluggyAccount = { ...cardAccount, id: 'acc-cc-2', itemId: 'item-2' };
+    const payment2: PluggyTransaction = { ...boleto, id: 'tx-pay-2', accountId: chk2.id, status: 'POSTED' };
+    const api2 = createFakePluggyApi({
+      items: [{ ...baseItem, id: 'item-2' }],
+      accounts: [chk2, cc2],
+      transactions: [payment2],
+      bills,
+    });
+    await syncConnection(db, conn2!.id, { adapter: createPluggyAdapter(api2), today: '2026-10-12' });
+    const [paid] = await db.select().from(invoices).where(eq(invoices.externalId, 'bill-rev'));
+    expect(paid!.paidAt).toBe('2026-10-10');
+
+    // Na conexão 1, um pendente de mesmo valor e data, que vira invoice_payment pela descrição, some
+    const pend: PluggyTransaction = { ...boleto, id: 'tx-pend-1', description: 'PAGAMENTO FATURA CARTAO' };
+    await sync(db, connectionId, { accounts: [checkingAccount], transactions: [pend] }, '2026-10-12');
+    expect((await byExternalId(db, 'tx-pend-1')).kind).toBe('invoice_payment');
+    await sync(db, connectionId, { accounts: [checkingAccount], transactions: [] }, '2026-10-13');
+
+    const [after] = await db.select().from(invoices).where(eq(invoices.externalId, 'bill-rev'));
+    expect(after!.paidAt).toBe('2026-10-10');
+  });
+
   it('conta que aparece depois da primeira sincronização busca o histórico completo', async () => {
     const { db, connectionId } = await setupSyncDb();
     await sync(db, connectionId, { accounts: [], transactions: [] }, '2026-10-20');

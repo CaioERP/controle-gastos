@@ -1,6 +1,6 @@
 import { TZDate } from '@date-fns/tz';
 import { format } from 'date-fns';
-import { and, eq, gte, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -46,12 +46,33 @@ async function accountHasTransactions(
   return row !== undefined;
 }
 
-/** Desfaz a quitação registrada por um pagamento (classify-kind grava paidAt = data e paidAmountCents = valor). */
+/**
+ * Desfaz a quitação registrada por um pagamento apagado (classify-kind grava paidAt = data e
+ * paidAmountCents = valor). Só mexe se nenhum outro pagamento ativo com a mesma data e valor explica
+ * a quitação. Não dá para restringir à conexão: pagar o cartão de um banco com a conta de outro é comum.
+ */
 async function unpayInvoicePaidBy(db: Db, date: string, amountCents: number, todayStr: string) {
+  const [otherPayer] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+    .where(
+      and(
+        eq(transactions.kind, 'invoice_payment'),
+        eq(transactions.date, date),
+        eq(transactions.amountCents, -amountCents),
+        isNull(transactions.deletedAt),
+        ne(accounts.type, 'credit_card'),
+      ),
+    )
+    .limit(1);
+  if (otherPayer) return;
+
   const [inv] = await db
     .select()
     .from(invoices)
     .where(and(eq(invoices.paidAt, date), eq(invoices.paidAmountCents, amountCents)))
+    .orderBy(asc(invoices.id))
     .limit(1);
   if (!inv) return;
   await db
