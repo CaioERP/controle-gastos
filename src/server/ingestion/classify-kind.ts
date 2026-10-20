@@ -270,11 +270,17 @@ export async function classifyKinds(
         ? matchUnpaidInvoiceForPayment(tx, unpaidInvoices)
         : null;
 
+    // Já classificada como pagamento de fatura numa sincronização anterior: a fatura que ela quitou
+    // está paga e não casa mais, então sem isto a reclassificação (ex.: pendente → lançado) a
+    // devolveria para `expense` e o valor contaria em dobro com as compras do cartão (R2).
+    const keptInvoicePayment =
+      accountType !== 'credit_card' && tx.amountCents < 0 && tx.kind === 'invoice_payment';
+
     const nextKind = classifySingleKind({
       accountType,
       amountCents: tx.amountCents,
       description: tx.descriptionRaw || tx.description,
-      matchedInvoice: matchedInv !== null,
+      matchedInvoice: matchedInv !== null || keptInvoicePayment,
     });
 
     if (

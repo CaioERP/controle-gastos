@@ -4,7 +4,7 @@ import sampleChecking from '../../../tests/fixtures/pluggy/sample-checking.json'
 import sampleCredit from '../../../tests/fixtures/pluggy/sample-credit.json';
 import { createTestDb } from '../../../tests/helpers/db';
 import { updateTransaction } from '../commands';
-import { accounts, cards, connections, syncRuns, transactions, transactionSources } from '../db/schema';
+import { accounts, cards, connections, invoices, syncRuns, transactions, transactionSources } from '../db/schema';
 import { seedBase } from '../db/seed';
 import { runPipeline } from './pipeline';
 import { createPluggyAdapter } from './pluggy/adapter';
@@ -260,5 +260,92 @@ describe('syncConnection (A1-03)', () => {
 
     expect(ctx.stats['error:failing-step']).toBe(1);
     expect(nextStepRan).toBe(true);
+  });
+});
+
+describe('syncConnection — regressões da revisão pós-merge', () => {
+  const cardAccount: PluggyAccount = {
+    id: 'acc-cc-rev',
+    itemId: 'item-1',
+    type: 'CREDIT',
+    subtype: 'CREDIT_CARD',
+    name: 'Cartão',
+    balance: 1500,
+    creditData: { balanceCloseDate: '2026-10-03', balanceDueDate: '2026-10-10' },
+  };
+  const bills = [{ id: 'bill-rev', dueDate: '2026-10-10', totalAmount: 1500 }];
+  // Sem "fatura" na descrição: só vira invoice_payment por casar valor e vencimento da fatura
+  const boleto: PluggyTransaction = {
+    id: 'tx-boleto',
+    accountId: checkingAccount.id,
+    date: '2026-10-10T12:00:00.000Z',
+    description: 'BOLETO PAGO NU PAGAMENTOS',
+    amount: -1500,
+    type: 'DEBIT',
+    status: 'PENDING',
+    paymentData: { paymentMethod: 'BOLETO' },
+  };
+
+  async function sync(
+    db: Awaited<ReturnType<typeof setupSyncDb>>['db'],
+    connectionId: string,
+    data: { accounts: PluggyAccount[]; transactions: PluggyTransaction[] },
+    today: string,
+  ) {
+    const api = createFakePluggyApi({ items: [baseItem], bills, ...data });
+    return syncConnection(db, connectionId, { adapter: createPluggyAdapter(api), today });
+  }
+
+  async function byExternalId(db: Awaited<ReturnType<typeof setupSyncDb>>['db'], externalId: string) {
+    const [row] = await db
+      .select({ tx: transactions })
+      .from(transactions)
+      .innerJoin(transactionSources, eq(transactionSources.transactionId, transactions.id))
+      .where(eq(transactionSources.externalId, externalId));
+    return row!.tx;
+  }
+
+  it('R2: pagamento de fatura continua invoice_payment quando o pendente vira lançado (mesmo id)', async () => {
+    const { db, connectionId } = await setupSyncDb();
+    const accs = [checkingAccount, cardAccount];
+    await sync(db, connectionId, { accounts: accs, transactions: [boleto] }, '2026-10-12');
+    expect((await byExternalId(db, 'tx-boleto')).kind).toBe('invoice_payment');
+
+    await sync(db, connectionId, { accounts: accs, transactions: [{ ...boleto, status: 'POSTED' }] }, '2026-10-13');
+    expect((await byExternalId(db, 'tx-boleto')).kind).toBe('invoice_payment');
+  });
+
+  it('R2: pagamento de fatura pendente que volta lançado com outro id quita a fatura de novo', async () => {
+    const { db, connectionId } = await setupSyncDb();
+    const accs = [checkingAccount, cardAccount];
+    await sync(db, connectionId, { accounts: accs, transactions: [boleto] }, '2026-10-12');
+    const posted = { ...boleto, id: 'tx-boleto-2', status: 'POSTED' as const, date: '2026-10-11T12:00:00.000Z' };
+    await sync(db, connectionId, { accounts: accs, transactions: [posted] }, '2026-10-13');
+
+    expect((await byExternalId(db, 'tx-boleto-2')).kind).toBe('invoice_payment');
+    const [inv] = await db.select().from(invoices).where(eq(invoices.externalId, 'bill-rev'));
+    expect(inv!.paidAt).toBe('2026-10-11');
+  });
+
+  it('conta que aparece depois da primeira sincronização busca o histórico completo', async () => {
+    const { db, connectionId } = await setupSyncDb();
+    await sync(db, connectionId, { accounts: [], transactions: [] }, '2026-10-20');
+    const old: PluggyTransaction = { ...checkingTxs[1]!, id: 'tx-antiga', date: '2026-08-01T12:00:00.000Z' };
+    const res = await sync(db, connectionId, { accounts: [checkingAccount], transactions: [old] }, '2026-10-20');
+    expect(res.stats.created).toBe(1);
+  });
+
+  it('R10: pendente apagado por sumir numa busca parcial é restaurado quando volta com o mesmo id', async () => {
+    const { db, connectionId } = await setupSyncDb();
+    const pend: PluggyTransaction = { ...checkingTxs[1]!, id: 'tx-volta', date: '2026-10-18T12:00:00.000Z', status: 'PENDING' };
+    await sync(db, connectionId, { accounts: [checkingAccount], transactions: [checkingTxs[0]!, pend] }, '2026-10-20');
+    await sync(db, connectionId, { accounts: [checkingAccount], transactions: [checkingTxs[0]!] }, '2026-10-20');
+    expect((await byExternalId(db, 'tx-volta')).deletedAt).not.toBeNull();
+
+    const back = { ...pend, status: 'POSTED' as const };
+    await sync(db, connectionId, { accounts: [checkingAccount], transactions: [checkingTxs[0]!, back] }, '2026-10-20');
+    const row = await byExternalId(db, 'tx-volta');
+    expect(row.deletedAt).toBeNull();
+    expect(row.status).toBe('posted');
   });
 });
