@@ -2,8 +2,10 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { Pencil, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -17,16 +19,32 @@ import { DateBR } from '@/components/format/date-br';
 import { formatQtyBR } from '@/server/investments/math';
 import { type AssetClass } from '@/server/domain/enums';
 import { ASSET_CLASS_LABELS, INVESTMENT_INDEXER_LABELS } from '@/server/domain/labels';
+import { ManualHoldingDialog } from './manual-holding-dialog';
+import { InvestmentTxDialog } from './investment-tx-dialog';
 import type { HoldingRow } from '@/server/queries/investments';
 
 type HoldingsTableProps = {
   holdings: HoldingRow[];
   institutions: Array<{ id: string; name: string; color: string }>;
+  investmentAccounts?: Array<{ id: string; name: string; institutionName: string }>;
 };
 
-export function HoldingsTable({ holdings, institutions }: HoldingsTableProps) {
+export function HoldingsTable({
+  holdings,
+  institutions,
+  investmentAccounts = [],
+}: HoldingsTableProps) {
   const [selectedInstId, setSelectedInstId] = React.useState<string>('all');
   const [selectedClass, setSelectedClass] = React.useState<string>('all');
+
+  const holdingsForTx = React.useMemo(() => {
+    return holdings.map((h) => ({
+      id: h.id,
+      assetName: h.assetName,
+      ticker: h.ticker,
+      institutionName: h.institutionName,
+    }));
+  }, [holdings]);
 
   // Filtra dinamicamente no cliente para resposta instantânea
   const filtered = React.useMemo(() => {
@@ -58,7 +76,7 @@ export function HoldingsTable({ holdings, institutions }: HoldingsTableProps) {
           <span className="text-xs text-muted-foreground">({filtered.length})</span>
         </div>
 
-        {/* Filtros rápidos */}
+        {/* Filtros rápidos e botões de ação */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Seletor de Instituição */}
           <select
@@ -89,6 +107,22 @@ export function HoldingsTable({ holdings, institutions }: HoldingsTableProps) {
               </option>
             ))}
           </select>
+
+          {/* Botão Nova posição manual */}
+          <ManualHoldingDialog accounts={investmentAccounts} />
+
+          {/* Botão Lançar movimentação */}
+          {holdingsForTx.length > 0 ? (
+            <InvestmentTxDialog
+              holdings={holdingsForTx}
+              trigger={
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Plus className="size-4" />
+                  <span>Movimentação / Provento</span>
+                </Button>
+              }
+            />
+          ) : null}
         </div>
       </CardHeader>
 
@@ -99,15 +133,16 @@ export function HoldingsTable({ holdings, institutions }: HoldingsTableProps) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table className="min-w-[720px]">
+            <Table className="min-w-[780px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[38%]">Ativo</TableHead>
-                  <TableHead className="w-[14%]">Classe</TableHead>
-                  <TableHead className="w-[12%] text-right">Quantidade</TableHead>
-                  <TableHead className="w-[12%] text-right">Aplicado</TableHead>
-                  <TableHead className="w-[12%] text-right">Posição atual</TableHead>
-                  <TableHead className="w-[12%] text-right">Resultado</TableHead>
+                  <TableHead className="w-[34%]">Ativo</TableHead>
+                  <TableHead className="w-[12%]">Classe</TableHead>
+                  <TableHead className="w-[11%] text-right">Quantidade</TableHead>
+                  <TableHead className="w-[11%] text-right">Aplicado</TableHead>
+                  <TableHead className="w-[11%] text-right">Posição atual</TableHead>
+                  <TableHead className="w-[11%] text-right">Resultado</TableHead>
+                  <TableHead className="w-[10%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -209,6 +244,43 @@ export function HoldingsTable({ holdings, institutions }: HoldingsTableProps) {
                           >
                             {profitPercent}
                           </Badge>
+                        </div>
+                      </TableCell>
+
+                      {/* Ações */}
+                      <TableCell className="align-top text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {row.source === 'manual' ? (
+                            <ManualHoldingDialog
+                              holding={row}
+                              accounts={investmentAccounts}
+                              trigger={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  className="text-muted-foreground hover:text-foreground"
+                                  title="Editar posição manual"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                              }
+                            />
+                          ) : null}
+
+                          <InvestmentTxDialog
+                            holdings={holdingsForTx}
+                            defaultHoldingId={row.id}
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                className="text-muted-foreground hover:text-foreground"
+                                title="Lançar movimentação ou provento"
+                              >
+                                <Plus className="size-3.5" />
+                              </Button>
+                            }
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
