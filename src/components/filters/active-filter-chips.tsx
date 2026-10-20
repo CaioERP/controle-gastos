@@ -4,7 +4,7 @@ import * as React from 'react';
 import { XIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
+import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
 import type { TxFilters } from '@/server/domain/filters';
 import type { InstitutionWithAccounts } from '@/server/queries/accounts';
 import type { CategoryTree } from '@/server/queries/catalog';
@@ -79,6 +79,15 @@ export function ActiveFilterChips({
         },
       });
     }
+  }
+
+  // 3b. Natureza explícita (remover volta ao padrão da página)
+  if (filters.kinds?.length) {
+    chips.push({
+      key: 'kinds',
+      label: `Natureza: ${filters.kinds.map((k) => KIND_LABELS[k] ?? k).join(', ')}`,
+      onRemove: () => onRemove({ kinds: undefined }),
+    });
   }
 
   // 4. Categorias

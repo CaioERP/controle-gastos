@@ -9,6 +9,7 @@ import { MoreFilters } from './more-filters';
 import { ActiveFilterChips } from './active-filter-chips';
 import { mergeFilterParams, parseFilters } from '@/server/queries/url-filters';
 import type { TxFilters } from '@/server/domain/filters';
+import { REPORTABLE_KINDS, type TxKind } from '@/server/domain/enums';
 import type { InstitutionWithAccounts } from '@/server/queries/accounts';
 import type { CategoryTree } from '@/server/queries/catalog';
 
@@ -16,12 +17,18 @@ type FilterBarProps = {
   accounts: InstitutionWithAccounts[];
   categories: CategoryTree[];
   tags: Array<{ id: string; name: string; color: string }>;
+  /**
+   * Naturezas que a página considera quando a URL não tem `natureza` (só para exibir o seletor).
+   * Agregações: reportáveis (R2, padrão). Lista de transações: todas.
+   */
+  defaultKinds?: readonly TxKind[];
 };
 
 export function FilterBar({
   accounts,
   categories,
   tags,
+  defaultKinds = REPORTABLE_KINDS,
 }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -84,6 +91,7 @@ export function FilterBar({
           categoryIds={filters.categoryIds}
           tagIds={filters.tagIds}
           kinds={filters.kinds}
+          defaultKinds={defaultKinds}
           includeProjected={filters.includeProjected}
           needsReview={filters.needsReview}
           categories={categories}

@@ -87,6 +87,34 @@ test.describe('Fila de revisão', () => {
     await expect(page.locator(`article[data-review-id="${id}"]`)).toHaveCount(0);
   });
 
+  test('lote com falha de rede mostra o erro e destrava o botão e os atalhos', async ({ page }) => {
+    await page.goto('/revisao');
+    await expect(activeCard(page)).toBeFocused();
+    const bulk = page.getByRole('button', { name: /^Confirmar todas as sugestões com confiança ≥ 70%/ });
+    await expect(bulk).toBeVisible();
+
+    // Simula falha de rede/servidor: toda chamada de Server Action (POST com cabeçalho next-action)
+    // responde 500, e a action rejeita no cliente.
+    await page.route('**/revisao', (route) =>
+      route.request().method() === 'POST' && route.request().headers()['next-action']
+        ? route.fulfill({ status: 500, contentType: 'text/plain', body: 'erro simulado' })
+        : route.continue(),
+    );
+    await bulk.click();
+    await expect(page.getByText(/^Falha de conexão: 0 de \d+ sugestões confirmadas/)).toBeVisible();
+    await expect(bulk).toBeEnabled();
+    await expect(bulk).toHaveText(/^Confirmar todas/);
+    await page.unroute('**/revisao');
+
+    // Atalhos voltaram a funcionar (não ficam presos depois da falha)
+    await expect(async () => {
+      await activeCard(page).focus();
+      const before = await activeCard(page).getAttribute('data-review-id');
+      await page.keyboard.press('s');
+      await expect(activeCard(page)).not.toHaveAttribute('data-review-id', before!, { timeout: 1000 });
+    }).toPass({ timeout: 20_000 });
+  });
+
   test('confirmar em lote as sugestões com confiança ≥ 70%', async ({ page }) => {
     await page.goto('/revisao');
     const bulk = page.getByRole('button', { name: /^Confirmar todas as sugestões com confiança ≥ 70% \((\d+)\)$/ });

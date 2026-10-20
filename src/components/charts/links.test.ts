@@ -44,6 +44,23 @@ describe('links de drill-down', () => {
     expect(filters.paymentMethods).toEqual(['credit_card_installment']);
   });
 
+  it('manda explicitamente as naturezas que o gráfico de gasto soma', () => {
+    // Filtro atual sem natureza: padrão das agregações (R2) → despesa e estorno no gasto
+    const noKinds: TxFilters = { from: '2026-08-01', to: '2026-08-31' };
+    const href = paymentMethodTransactionsHref(noKinds, 'pix')!;
+    expect(new URLSearchParams(href.split('?')[1]).get('natureza')).toBe('expense,refund');
+    expect(parse(href).filters.kinds).toEqual(['expense', 'refund']);
+    expect(parse(categoryTransactionsHref(noKinds, CAT)!).filters.kinds).toEqual(['expense', 'refund']);
+    expect(parse(crossTransactionsHref(noKinds, CAT, 'pix')!).filters.kinds).toEqual(['expense', 'refund']);
+
+    // Filtro atual explícito: só o que o gráfico somou dentro dele
+    expect(parse(paymentMethodTransactionsHref({ ...noKinds, kinds: ['expense', 'transfer'] }, 'pix')!).filters.kinds).toEqual([
+      'expense',
+    ]);
+    // Nenhuma natureza de gasto no filtro: o gráfico é zero e não há link
+    expect(paymentMethodTransactionsHref({ ...noKinds, kinds: ['income'] }, 'pix')).toBeNull();
+  });
+
   it('agregados sem id ("Outras", "Sem categoria") não geram link', () => {
     expect(categoryTransactionsHref(current, 'outras')).toBeNull();
     expect(categoryTransactionsHref(current, 'uncategorized')).toBeNull();

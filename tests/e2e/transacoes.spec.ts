@@ -35,7 +35,7 @@ test.describe('Tela de transações', () => {
 
     const count = await rows(page).count();
     expect(count).toBeGreaterThan(0);
-    for (const text of await rows(page).allInnerTexts()) {
+    for (const text of await rows(page).allTextContents()) {
       expect(text.toLowerCase()).toContain('uber');
     }
   });
@@ -75,18 +75,24 @@ test.describe('Tela de transações', () => {
   });
 
   test('sem natureza na URL a lista mostra todas as naturezas; com natureza=expense só despesas', async ({ page }) => {
-    await page.goto('/transacoes?mes=2026-10');
-    await expect(rows(page).filter({ hasText: 'Transferência' }).first()).toBeVisible();
-    await expect(rows(page).filter({ hasText: 'Pagamento de fatura' }).first()).toBeVisible();
+    // Período largo (não depende da data em que os dados fictícios foram gerados)
+    await page.goto(ALL);
+    await expect(rows(page).first()).toBeVisible();
+    await expect(rows(page).filter({ hasText: 'Transferência' })).not.toHaveCount(0);
+    await expect(rows(page).filter({ hasText: 'Pagamento de fatura' })).not.toHaveCount(0);
 
-    await page.goto('/transacoes?mes=2026-10&natureza=expense');
+    await page.goto(`${ALL}&natureza=expense`);
     await expect(rows(page).first()).toBeVisible();
     for (const label of ['Transferência', 'Pagamento de fatura', 'Investimento', 'Ajuste']) {
       await expect(rows(page).filter({ has: page.getByText(label, { exact: true }) })).toHaveCount(0);
     }
-    // Só despesas: nenhum valor positivo (receita/estorno) na lista
-    for (const text of await rows(page).allInnerTexts()) {
-      expect(text).not.toMatch(/(^|\s)R\$\s?\d/);
+    // Só despesas: nenhum valor positivo (receita/estorno). textContent lê também as linhas fora da tela
+    // (os dias usam content-visibility, e innerText volta vazio para o que não foi renderizado).
+    const texts = await rows(page).allTextContents();
+    expect(texts.length).toBeGreaterThan(50);
+    for (const text of texts) {
+      expect(text).toMatch(/-R\$/);
+      expect(text).not.toMatch(/(^|[^-])R\$/);
     }
   });
 

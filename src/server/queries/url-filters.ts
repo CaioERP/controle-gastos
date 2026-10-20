@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PAYMENT_METHODS, REPORTABLE_KINDS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
+import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
 import { defaultFilters, txFiltersSchema, type TxFilters } from '@/server/domain/filters';
 import { monthEnd, today } from '@/server/domain/dates';
 
@@ -179,7 +179,9 @@ export function parseFilters(params: RawFilterParams, ref: string = today()): Tx
     to,
     ...(institutionIds ? { institutionIds } : {}),
     ...(accountIds ? { accountIds } : {}),
-    kinds: kinds ?? base.kinds,
+    // Sem `natureza` na URL, `kinds` fica ausente: cada consulta aplica o seu padrão
+    // (agregações: naturezas reportáveis, R2; lista de transações: todas).
+    ...(kinds ? { kinds } : {}),
     ...(paymentMethods ? { paymentMethods } : {}),
     ...(categoryIds ? { categoryIds } : {}),
     ...(tagIds ? { tagIds } : {}),
@@ -194,7 +196,7 @@ export function parseFilters(params: RawFilterParams, ref: string = today()): Tx
 
 /**
  * Serializa TxFilters para query string (sem o '?' inicial).
- * Omite valores iguais à base (ou padrão de defaultFilters).
+ * Omite período e regime iguais à base (ou padrão de defaultFilters). `kinds` presente vira `natureza`.
  */
 export function serializeFilters(f: Partial<TxFilters>, base?: TxFilters): string {
   const b = base ?? defaultFilters();
@@ -224,14 +226,10 @@ export function serializeFilters(f: Partial<TxFilters>, base?: TxFilters): strin
     sp.set('contas', f.accountIds.join(','));
   }
 
+  // Natureza escolhida explicitamente vai sempre para a URL, mesmo igual ao padrão das agregações:
+  // a lista de transações tem outro padrão (todas) e o link precisa reproduzir o valor do gráfico.
   if (f.kinds && f.kinds.length > 0) {
-    const defaultSet = new Set(REPORTABLE_KINDS);
-    const isDefault =
-      f.kinds.length === defaultSet.size &&
-      f.kinds.every((k) => defaultSet.has(k));
-    if (!isDefault) {
-      sp.set('natureza', f.kinds.join(','));
-    }
+    sp.set('natureza', f.kinds.join(','));
   }
 
   if (f.paymentMethods && f.paymentMethods.length > 0) {

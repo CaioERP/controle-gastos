@@ -55,8 +55,33 @@ describe('url-filters', () => {
     expect(f.basis).toBe('accrual');
   });
 
+  describe('natureza: ausente = padrão de cada tela; explícita = sempre na URL', () => {
+    it('sem natureza na URL, kinds fica ausente', () => {
+      expect(parseFilters({ mes: '2026-10' }, REF_DATE).kinds).toBeUndefined();
+      expect(parseFilters({ natureza: 'inexistente' }, REF_DATE).kinds).toBeUndefined();
+    });
+
+    it('naturezas iguais ao padrão das agregações também vão para a URL', () => {
+      const qs = serializeFilters({ from: '2026-10-01', to: '2026-10-31', kinds: ['expense', 'income', 'refund'] });
+      expect(new URLSearchParams(qs).get('natureza')).toBe('expense,income,refund');
+      expect(parseFilters(qs, REF_DATE).kinds).toEqual(['expense', 'income', 'refund']);
+    });
+
+    it('mudar outro filtro preserva a ausência de natureza (lista com todas)', () => {
+      const sp = new URLSearchParams(mergeFilterParams('mes=2026-09', { paymentMethods: ['pix'] }, undefined, REF_DATE));
+      expect(sp.get('natureza')).toBeNull();
+      expect(sp.get('forma')).toBe('pix');
+    });
+
+    it('remover a natureza (kinds undefined) volta ao padrão', () => {
+      const sp = new URLSearchParams(mergeFilterParams('natureza=expense', { kinds: undefined }, undefined, REF_DATE));
+      expect(sp.get('natureza')).toBeNull();
+    });
+  });
+
   describe('ida e volta (serializeFilters -> parseFilters)', () => {
-    const base = defaultFilters(REF_DATE);
+    // Base como vem da URL sem natureza: kinds ausente.
+    const base: TxFilters = { ...defaultFilters(REF_DATE), kinds: undefined };
 
     it('combinação 1: mês diferente da base', () => {
       const original: TxFilters = {
