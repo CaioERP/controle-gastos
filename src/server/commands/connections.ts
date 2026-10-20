@@ -2,10 +2,15 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { connections } from '@/server/db/schema';
+import { CommandError, toCommandError } from '@/server/domain/errors';
 
 const registerConnectionInput = z.object({
   provider: z.literal('pluggy'),
   externalId: z.string().min(1),
+});
+
+const reconnectConnectionInput = z.object({
+  connectionId: z.string().uuid(),
 });
 
 /**
@@ -43,4 +48,33 @@ export async function registerConnection(
     .from(connections)
     .where(and(eq(connections.provider, data.provider), eq(connections.externalId, data.externalId)));
   return { connectionId: retry!.id };
+}
+
+/**
+ * STUB (A2-05 / B2-02): reativa a conexão e limpa o último erro.
+ */
+export async function reconnectConnection(
+  db: Db,
+  input: z.infer<typeof reconnectConnectionInput>,
+): Promise<{ connectionId: string; syncRunId: string | null }> {
+  try {
+    const data = reconnectConnectionInput.parse(input);
+    const updated = await db
+      .update(connections)
+      .set({
+        status: 'active',
+        lastError: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(connections.id, data.connectionId))
+      .returning({ id: connections.id });
+
+    if (updated.length === 0) {
+      throw new CommandError('NOT_FOUND', 'Conexão não encontrada');
+    }
+
+    return { connectionId: data.connectionId, syncRunId: null };
+  } catch (err) {
+    throw toCommandError(err);
+  }
 }
