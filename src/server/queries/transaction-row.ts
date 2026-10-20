@@ -18,6 +18,7 @@ export type TransactionTag = { id: string; name: string; color: string };
 
 export type TransactionRow = {
   id: string;
+  parentTransactionId?: string | null;
   date: string;
   description: string;
   descriptionRaw: string;
@@ -31,7 +32,7 @@ export type TransactionRow = {
   categoryConfidence: number | null;
   category: { id: string; name: string; color: string; icon: string; parentName: string | null } | null;
   merchant: { id: string; name: string } | null;
-  account: { id: string; name: string; type: AccountType };
+  account: { id: string; name: string; displayName?: string | null; type: AccountType };
   institution: { id: string; name: string; color: string };
   card: { last4: string; isVirtual: boolean } | null;
   installment: { number: number; total: number; groupId: string | null } | null;
@@ -41,6 +42,7 @@ export type TransactionRow = {
 /** Colunas comuns a todas as listagens de transação. */
 const transactionRowColumns = {
   id: transactions.id,
+  parentTransactionId: transactions.parentTransactionId,
   date: transactions.date,
   description: transactions.description,
   descriptionRaw: transactions.descriptionRaw,
@@ -113,6 +115,7 @@ export async function loadTagsByTransaction(db: Db, ids: string[]): Promise<Map<
 export function toTransactionRow(r: TransactionRowRecord, tagList: TransactionTag[] = []): TransactionRow {
   return {
     id: r.id,
+    parentTransactionId: r.parentTransactionId ?? null,
     date: r.date,
     description: r.description,
     descriptionRaw: r.descriptionRaw,
@@ -134,7 +137,12 @@ export function toTransactionRow(r: TransactionRowRecord, tagList: TransactionTa
         }
       : null,
     merchant: r.merchantId ? { id: r.merchantId, name: r.merchantName! } : null,
-    account: { id: r.accountId, name: r.accountDisplayName ?? r.accountName, type: r.accountType },
+    account: {
+      id: r.accountId,
+      name: r.accountDisplayName ?? r.accountName,
+      displayName: r.accountDisplayName ?? null,
+      type: r.accountType,
+    },
     institution: { id: r.institutionId, name: r.institutionName, color: r.institutionColor },
     card: r.cardLast4 ? { last4: r.cardLast4, isVirtual: r.cardIsVirtual ?? false } : null,
     installment:

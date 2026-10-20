@@ -8,3 +8,4 @@ export * from './connections';
 export * from './sync';
 export * from './manual';
 export * from './imports';
+export * from './split';

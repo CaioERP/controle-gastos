@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ScissorsIcon } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,7 @@ import { DateBR } from '@/components/format/date-br';
 import { formatAmountInput, parseOptionalAmount } from '@/components/catalog/catalog-helpers';
 import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
 import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
-import type { TagWithCount } from '@/server/queries/catalog';
+import type { CategoryTree, TagWithCount } from '@/server/queries/catalog';
 import type { TransactionRow as Tx, TransactionTag } from '@/server/queries/transaction-row';
 import {
   deleteManualTransactionAction,
@@ -24,20 +25,22 @@ import {
 } from '@/app/(app)/transacoes/actions';
 import { TagPicker, nextTagColor } from './tag-picker';
 import { TransactionDetailInfo } from './transaction-detail-info';
+import { SplitDialog } from './split-dialog';
 import { buildEditPatch } from './tx-utils';
 
 type TransactionSheetProps = {
   tx: Tx | null;
+  categories?: CategoryTree[];
   tags: TagWithCount[];
   onClose: () => void;
   onSaved: (id: string, changes: Partial<Tx>) => void;
 };
 
-export function TransactionSheet({ tx, tags, onClose, onSaved }: TransactionSheetProps) {
+export function TransactionSheet({ tx, categories = [], tags, onClose, onSaved }: TransactionSheetProps) {
   return (
     <Sheet open={tx !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-        {tx && <SheetBody key={tx.id} tx={tx} tags={tags} onClose={onClose} onSaved={onSaved} />}
+        {tx && <SheetBody key={tx.id} tx={tx} categories={categories} tags={tags} onClose={onClose} onSaved={onSaved} />}
       </SheetContent>
     </Sheet>
   );
@@ -46,7 +49,13 @@ export function TransactionSheet({ tx, tags, onClose, onSaved }: TransactionShee
 const selectClass =
   'h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30';
 
-function SheetBody({ tx, tags, onClose, onSaved }: Omit<TransactionSheetProps, 'tx'> & { tx: Tx }) {
+function SheetBody({
+  tx,
+  categories,
+  tags,
+  onClose,
+  onSaved,
+}: Omit<TransactionSheetProps, 'tx'> & { tx: Tx; categories: CategoryTree[] }) {
   const [description, setDescription] = React.useState(tx.description);
   const [kind, setKind] = React.useState<TxKind>(tx.kind);
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(tx.paymentMethod);
@@ -60,21 +69,28 @@ function SheetBody({ tx, tags, onClose, onSaved }: Omit<TransactionSheetProps, '
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   });
   const [isManual, setIsManual] = React.useState(false);
+  const [hasSplitParts, setHasSplitParts] = React.useState(false);
   const [saving, startSave] = React.useTransition();
+  const [splitOpen, setSplitOpen] = React.useState(false);
+
+  const canSplit = (tx.kind === 'expense' || tx.kind === 'income') && !tx.parentTransactionId && !hasSplitParts;
 
   React.useEffect(() => {
     let active = true;
     loadTransactionDetailAction(tx.id).then((res) => {
       if (!active) return;
       if (res.ok) {
-        const manual = res.data.detail.sources.some((s) => s.source === 'manual');
+        const splitActive = res.data.splitParts.length > 0;
+        setHasSplitParts(splitActive);
+        const manual =
+          !tx.parentTransactionId && !splitActive && res.data.detail.sources.some((s) => s.source === 'manual');
         setIsManual(manual);
       }
     });
     return () => {
       active = false;
     };
-  }, [tx.id]);
+  }, [tx.id, tx.parentTransactionId]);
 
   const createTag = async (name: string): Promise<TransactionTag | null> => {
     const color = nextTagColor(allTags.length);
@@ -183,7 +199,7 @@ function SheetBody({ tx, tags, onClose, onSaved }: Omit<TransactionSheetProps, '
         </SheetDescription>
       </SheetHeader>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-4 pt-4">
         {/* Campos editáveis exclusivos de transações manuais: Data e Valor */}
         {isManual && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -209,7 +225,6 @@ function SheetBody({ tx, tags, onClose, onSaved }: Omit<TransactionSheetProps, '
             </div>
           </div>
         )}
-
         <div className="space-y-1.5">
           <Label htmlFor="tx-description">Descrição</Label>
           <Input
@@ -264,6 +279,20 @@ function SheetBody({ tx, tags, onClose, onSaved }: Omit<TransactionSheetProps, '
           <TagPicker tags={allTags} selectedIds={tagIds} onChange={setTagIds} onCreate={createTag} />
         </div>
 
+        {canSplit && (
+          <div className="pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSplitOpen(true)}
+              className="w-full gap-1.5 text-xs"
+            >
+              <ScissorsIcon className="size-3.5" />
+              Dividir transação
+            </Button>
+          </div>
+        )}
         <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
           {isManual
             ? 'Lançamento manual: alterações de data e valor atualizam o saldo da conta.'
@@ -297,7 +326,18 @@ function SheetBody({ tx, tags, onClose, onSaved }: Omit<TransactionSheetProps, '
         )}
       </form>
 
-      <TransactionDetailInfo tx={tx} />
+      <TransactionDetailInfo tx={tx} onReload={onClose} />
+
+      {canSplit && (
+        <SplitDialog
+          key={`${tx.id}-${splitOpen}`}
+          tx={tx}
+          categories={categories}
+          open={splitOpen}
+          onOpenChange={setSplitOpen}
+          onSuccess={onClose}
+        />
+      )}
     </>
   );
 }
