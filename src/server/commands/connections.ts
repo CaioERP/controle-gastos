@@ -2,45 +2,88 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { connections } from '@/server/db/schema';
+import type { ConnectionStatus } from '@/server/domain/enums';
+import { toCommandError } from '@/server/domain/errors';
+import { resolveInstitution } from '@/server/ingestion/institutions';
+import type { PluggyApi } from '@/server/ingestion/pluggy/api';
+import { getPluggyApi } from '@/server/ingestion/pluggy/client';
 
 const registerConnectionInput = z.object({
   provider: z.literal('pluggy'),
-  externalId: z.string().min(1),
+  externalId: z.string().trim().min(1),
 });
 
-/**
- * STUB (F0-03): insere ou busca conexão com status pending.
- */
+export type RegisterConnectionDeps = {
+  pluggy?: PluggyApi;
+};
+
+function mapPluggyStatus(status: string): ConnectionStatus {
+  switch (status.toUpperCase()) {
+    case 'UPDATED':
+      return 'active';
+    case 'UPDATING':
+      return 'syncing';
+    case 'LOGIN_ERROR':
+    case 'OUTDATED':
+    case 'ERROR':
+      return 'error';
+    case 'WAITING_USER_INPUT':
+    default:
+      return 'pending';
+  }
+}
+
 export async function registerConnection(
   db: Db,
   input: z.infer<typeof registerConnectionInput>,
+  deps: RegisterConnectionDeps = {},
 ): Promise<{ connectionId: string }> {
   const data = registerConnectionInput.parse(input);
+  const pluggy = deps.pluggy ?? getPluggyApi();
 
-  const [existing] = await db
-    .select({ id: connections.id })
-    .from(connections)
-    .where(and(eq(connections.provider, data.provider), eq(connections.externalId, data.externalId)));
+  try {
+    const item = await pluggy.fetchItem(data.externalId);
+    const status = mapPluggyStatus(item.status);
+    const consentExpiresAt = item.consentExpiresAt ? new Date(item.consentExpiresAt) : null;
 
-  if (existing) {
-    return { connectionId: existing.id };
+    let institutionId: string | null = null;
+    if (item.connector?.name) {
+      const inst = await resolveInstitution(db, item.connector.name, item.connector.id);
+      institutionId = inst.id;
+    }
+
+    const [existing] = await db
+      .select({ id: connections.id })
+      .from(connections)
+      .where(and(eq(connections.provider, data.provider), eq(connections.externalId, data.externalId)));
+
+    if (existing) {
+      await db
+        .update(connections)
+        .set({
+          status,
+          consentExpiresAt,
+          institutionId: institutionId ?? undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(connections.id, existing.id));
+
+      return { connectionId: existing.id };
+    }
+
+    const [created] = await db
+      .insert(connections)
+      .values({
+        provider: data.provider,
+        externalId: data.externalId,
+        status,
+        consentExpiresAt,
+        institutionId,
+      })
+      .returning({ id: connections.id });
+
+    return { connectionId: created!.id };
+  } catch (err) {
+    throw toCommandError(err);
   }
-
-  const [created] = await db
-    .insert(connections)
-    .values({
-      provider: data.provider,
-      externalId: data.externalId,
-      status: 'pending',
-    })
-    .onConflictDoNothing()
-    .returning({ id: connections.id });
-
-  if (created) return { connectionId: created.id };
-
-  const [retry] = await db
-    .select({ id: connections.id })
-    .from(connections)
-    .where(and(eq(connections.provider, data.provider), eq(connections.externalId, data.externalId)));
-  return { connectionId: retry!.id };
 }
