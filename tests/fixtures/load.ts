@@ -3,18 +3,26 @@ import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
+  assetPrices,
+  assets,
+  benchmarkSeries,
   cards,
   categories,
   connections,
+  holdings,
   institutions,
+  investmentTransactions,
   invoices,
   merchants,
+  netWorthSnapshots,
   syncRuns,
   transactions,
   transactionSources,
   transactionTags,
 } from '@/server/db/schema';
 import { generateFixtures, type FixtureOptions } from './generate';
+import { loadInvestmentFixtures } from './investments';
+
 
 export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> {
   const data = generateFixtures(opts);
@@ -28,6 +36,12 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
     const catMap = new Map(catRows.map((r) => [r.slug, r.id]));
 
     // 2. Apagar na ordem correta
+    await tx.delete(netWorthSnapshots);
+    await tx.delete(benchmarkSeries);
+    await tx.delete(assetPrices);
+    await tx.delete(investmentTransactions);
+    await tx.delete(holdings);
+    await tx.delete(assets);
     await tx.delete(transactionTags);
     await tx.delete(transactionSources);
     await tx.delete(transactions);
@@ -37,6 +51,7 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
     await tx.delete(accounts);
     await tx.delete(syncRuns);
     await tx.delete(connections);
+
 
     // 2b. Inserir conexão fictícia para a tela de conexões e saúde
     const nubankInstId = instMap.get('nubank');
@@ -258,5 +273,12 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
           .where(eq(accounts.id, accountId));
       }
     }
+
+    // 8. Inserir fixtures realistas de investimentos e patrimônio
+    await loadInvestmentFixtures(tx, {
+      referenceDate: opts.referenceDate,
+      institutionId: nubankInstId,
+    });
   });
 }
+
