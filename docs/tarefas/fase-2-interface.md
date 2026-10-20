@@ -221,3 +221,64 @@
 - [ ] Não é possível lançar em conta sincronizada pelo Pluggy
 - [ ] Transação manual pode ter data e valor editados e pode ser excluída; as de outras fontes, não
 - [ ] Funciona em 390 px de largura
+
+---
+
+## B2-03b — Divisão de transação (`parent_transaction_id`)
+
+**Depende de:** B1-05, B2-03a · **Tamanho:** médio · **Contrato:** aditivo (coluna `parent_transaction_id` em `transactions` + comandos `splitTransaction` e `unsplitTransaction`) · **Entrega:** 2 PRs
+
+### Regras de negócio desta tarefa
+- **Divisão:** permite separar uma transação original ("mãe") em duas ou mais partes ("filhas"), por exemplo, para alocar itens de compras em categorias diferentes (ex.: Supermercado e Farmácia).
+- **Validação de soma:** a soma exata dos `amountCents` das partes filhas deve ser igual ao `amountCents` da transação original mãe. Se não bater exatamente em centavos, o comando recusa com `VALIDATION` ("A soma das partes deve ser exatamente igual ao valor da transação original").
+- **Mãe sai dos totais e relatórios:** uma transação dividida (que possui filhas ativas) é excluída dos cálculos de agregação, resumos e gráficos (`buildTxWhere`), e as transações filhas entram nos totais e relatórios com suas respectivas categorias e valores.
+- **Herança de propriedades:** as transações filhas herdam da mãe: `accountId`, `cardId`, `invoiceId`, `date`, `kind`, `paymentMethod`, `status`, `currency`, `installmentGroupId`, `installmentNumber`, `installmentTotal`.
+- **Origem e descrição:** cada filha recebe sua própria descrição (ou herda a da mãe com sufixo ou complemento) e sua própria categoria informada pelo usuário (`categorySource: 'user'`, `userEditedFields: ['category']`).
+- **Desfazer divisão (`unsplitTransaction`):** soft delete (`deleted_at = now()`) em todas as filhas ativas ligadas à mãe pelo `parent_transaction_id`. A transação mãe volta automaticamente a participar dos totais e relatórios.
+- **Impedir re-divisão inválida:** não é permitido dividir uma transação que já é filha de outra (`parent_transaction_id !== null`).
+
+### PR 1 — Contrato e Comandos de Divisão (branch `b/B2-03b-comandos`)
+#### Arquivos
+- **Criar:** `src/server/commands/split.ts` e `src/server/commands/split.test.ts`
+- **Editar:** `src/server/commands/index.ts`, `src/server/queries/base.ts` (filtro para transações divididas saírem dos totais)
+
+#### Passo a passo
+1. `splitTransaction(db, { transactionId, parts: Array<{ amountCents: number; categoryId: string | null; description?: string; notes?: string | null }> })`:
+   - Valida com Zod: mínimo de 2 partes.
+   - Executa em `db.transaction`:
+     - Busca a transação mãe: não excluída, não pode ser filha de outra (`parentTransactionId === null`).
+     - Não pode já estar dividida (se já tiver filhas ativas, recusa ou exige desfazer antes).
+     - Valida sinal de cada parte: mesmo sinal da mãe (se despesa, partes negativas; se receita, partes positivas). Nenhuma parte pode ser zero.
+     - Valida soma dos centavos: `parts.reduce((s, p) => s + p.amountCents, 0) === mother.amountCents`.
+     - Insere as filhas com `parentTransactionId = mother.id`.
+     - Retorna `{ splitIds: string[] }`.
+2. `unsplitTransaction(db, { transactionId })`:
+   - Executa em `db.transaction`:
+     - Busca transação mãe ou filha: se for informada a filha, resolve para a mãe (`motherId = t.parentTransactionId ?? t.id`).
+     - Dá soft delete (`deleted_at = now()`) em todas as filhas ativas (`parentTransactionId = motherId`).
+3. Em `src/server/queries/base.ts`:
+   - Atualiza `buildTxWhere`: transações que possuem filhas ativas são excluídas dos totais analíticos e da agregação.
+4. **Testes** (`split.test.ts`):
+   - divisão em 2 partes com categorias diferentes: filhas criadas com sucesso, soma conferida;
+   - soma divergente em 1 centavo: recusada com `VALIDATION`;
+   - tentar dividir transação filha: recusada;
+   - `unsplitTransaction`: filhas sofrem soft delete e mãe volta a constar nos totais.
+
+### PR 2 — Telas de Divisão (branch `b/B2-03b-telas`)
+#### Arquivos
+- **Criar:** `src/components/transactions/split-dialog.tsx`
+- **Editar:** `src/components/transactions/transaction-sheet.tsx`, `src/app/(app)/transacoes/actions.ts`
+
+#### Passo a passo
+1. Server Actions: `splitTransactionAction` e `unsplitTransactionAction` em `actions.ts`.
+2. No `TransactionSheet`:
+   - Botão "Dividir transação" que abre `SplitDialog`.
+   - Se a transação já estiver dividida: exibe a lista das divisões filhas e botão "Desfazer divisão".
+   - Se for uma transação filha: exibe aviso "Esta transação é parte de uma divisão de [Descrição Mãe]" com opção de ver a mãe ou desfazer divisão.
+3. `SplitDialog`:
+   - Tabela/lista de partes com valor, descrição e `CategoryPicker`.
+   - Botão "Adicionar parte" e botão "Remover".
+   - Indicador dinâmico de diferença de centavos ("Faltam R$ X,XX para fechar o total").
+   - Botão "Confirmar divisão" só habilitado quando a diferença for zero.
+4. Teste e2e Playwright cobrindo divisão de transação e conferência das parcelas na listagem.
+
