@@ -3,7 +3,7 @@ import { createTestDb } from '../../../tests/helpers/db';
 import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from '../../../tests/fixtures/load';
 import type { Db } from '@/server/db/client';
-import { getInvestmentsOverview } from './investments';
+import { getDividendsOverview, getInvestmentsOverview } from './investments';
 
 const TODAY = '2026-10-15';
 
@@ -49,4 +49,27 @@ describe('queries / investments (B3-01)', () => {
     expect(overview.performanceSeries.length).toBe(12);
     expect(overview.totals.income12mCents).toBeGreaterThan(0);
   });
+
+  it('retorna getDividendsOverview com total12mCents > 0 e lista ordenada por data desc (B3-03)', async () => {
+    const divOverview = await getDividendsOverview(db, { today: TODAY });
+
+    expect(divOverview.total12mCents).toBeGreaterThan(0);
+    expect(divOverview.averageMonthlyCents).toBeGreaterThan(0);
+    expect(divOverview.monthlyTotals.length).toBe(12);
+    expect(divOverview.items.length).toBeGreaterThan(0);
+
+    // Itens ordenados por data decrescente
+    for (let i = 0; i < divOverview.items.length - 1; i++) {
+      const a = divOverview.items[i]!;
+      const b = divOverview.items[i + 1]!;
+      expect(a.date.localeCompare(b.date)).toBeGreaterThanOrEqual(0);
+    }
+
+    // netAmountCents = amountCents - taxCents
+    for (const item of divOverview.items) {
+      expect(item.netAmountCents).toBe(item.amountCents - item.taxCents);
+      expect(item.assetName).toBeDefined();
+    }
+  });
 });
+
