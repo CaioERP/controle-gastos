@@ -1,4 +1,14 @@
-import type { AccountType, ConnectionStatus, InvoiceStatus, PaymentMethod, TxKind } from './enums';
+import type {
+  AccountType,
+  AssetClass,
+  BenchmarkCode,
+  ConnectionStatus,
+  InvestmentIndexer,
+  InvestmentTxType,
+  InvoiceStatus,
+  PaymentMethod,
+  TxKind,
+} from './enums';
 
 export const KIND_LABELS: Record<TxKind, string> = {
   expense: 'Despesa',
@@ -47,3 +57,40 @@ export const CONNECTION_STATUS_LABELS: Record<ConnectionStatus, string> = {
   expired: 'Expirada',
   revoked: 'Revogada',
 };
+
+export const ASSET_CLASS_LABELS: Record<AssetClass, string> = {
+  fixed_income: 'Renda fixa',
+  stocks: 'Ações',
+  fii: 'Fundos imobiliários',
+  etf: 'ETFs',
+  funds: 'Fundos de investimento',
+  treasury: 'Tesouro Direto',
+  crypto: 'Cripto',
+  pension: 'Previdência',
+  other: 'Outros',
+};
+
+export const INVESTMENT_INDEXER_LABELS: Record<InvestmentIndexer, string> = {
+  cdi: 'CDI',
+  ipca: 'IPCA',
+  selic: 'Selic',
+  prefixado: 'Prefixado',
+  other: 'Outro',
+};
+
+export const INVESTMENT_TX_TYPE_LABELS: Record<InvestmentTxType, string> = {
+  buy: 'Aplicação / Compra',
+  sell: 'Resgate / Venda',
+  income: 'Provento / Rendimento',
+  tax: 'Imposto (IR/IOF)',
+  fee: 'Taxa / Corretagem',
+  transfer: 'Transferência de custódia',
+};
+
+export const BENCHMARK_LABELS: Record<BenchmarkCode, string> = {
+  cdi: 'CDI',
+  selic: 'Selic',
+  ipca: 'IPCA',
+  ibov: 'Ibovespa',
+};
+

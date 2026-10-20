@@ -13,4 +13,11 @@ export type Tag = typeof s.tags.$inferSelect;
 export type CategorizationRule = typeof s.categorizationRules.$inferSelect;
 export type SyncRun = typeof s.syncRuns.$inferSelect;
 export type ImportBatch = typeof s.importBatches.$inferSelect;
+export type Asset = typeof s.assets.$inferSelect;
+export type Holding = typeof s.holdings.$inferSelect;
+export type InvestmentTransactionRow = typeof s.investmentTransactions.$inferSelect;
+export type AssetPrice = typeof s.assetPrices.$inferSelect;
+export type BenchmarkSeriesRow = typeof s.benchmarkSeries.$inferSelect;
+export type NetWorthSnapshot = typeof s.netWorthSnapshots.$inferSelect;
+
 

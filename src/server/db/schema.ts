@@ -7,6 +7,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -19,12 +20,17 @@ import {
 } from 'drizzle-orm/pg-core';
 import {
   ACCOUNT_TYPES,
+  ASSET_CLASSES,
+  BENCHMARK_CODES,
   CATEGORY_KINDS,
   CATEGORY_SOURCES,
   CONNECTION_STATUSES,
   IMPORT_BATCH_STATUSES,
+  INVESTMENT_INDEXERS,
+  INVESTMENT_TX_TYPES,
   INVOICE_STATUSES,
   PAYMENT_METHODS,
+  PRICE_SOURCES,
   SOURCES,
   TX_KINDS,
   TX_STATUSES,
@@ -41,6 +47,11 @@ export const invoiceStatusEnum = pgEnum('invoice_status', INVOICE_STATUSES);
 export const connectionStatusEnum = pgEnum('connection_status', CONNECTION_STATUSES);
 export const categoryKindEnum = pgEnum('category_kind', CATEGORY_KINDS);
 export const importBatchStatusEnum = pgEnum('import_batch_status', IMPORT_BATCH_STATUSES);
+export const assetClassEnum = pgEnum('asset_class', ASSET_CLASSES);
+export const investmentIndexerEnum = pgEnum('investment_indexer', INVESTMENT_INDEXERS);
+export const investmentTxTypeEnum = pgEnum('investment_tx_type', INVESTMENT_TX_TYPES);
+export const benchmarkCodeEnum = pgEnum('benchmark_code', BENCHMARK_CODES);
+export const priceSourceEnum = pgEnum('price_source', PRICE_SOURCES);
 
 // ---------- helpers ----------
 const id = () => uuid('id').primaryKey().defaultRandom();
@@ -292,3 +303,124 @@ export const syncRuns = pgTable('sync_runs', {
   stats: jsonb('stats').notNull().default({}),
   error: text('error'),
 });
+
+export const assets = pgTable(
+  'assets',
+  {
+    id: id(),
+    code: text('code').notNull().unique(),
+    ticker: text('ticker'),
+    isin: text('isin'),
+    cnpj: text('cnpj'),
+    name: text('name').notNull(),
+    assetClass: assetClassEnum('asset_class').notNull(),
+    currency: text('currency').notNull().default('BRL'),
+    issuer: text('issuer'),
+    indexer: investmentIndexerEnum('indexer'),
+    rateBps: integer('rate_bps'),
+    maturityDate: isoDate('maturity_date'),
+    isTaxExempt: boolean('is_tax_exempt').notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [
+    index('assets_ticker_idx').on(t.ticker),
+    index('assets_asset_class_idx').on(t.assetClass),
+  ],
+);
+
+export const holdings = pgTable(
+  'holdings',
+  {
+    id: id(),
+    accountId: uuid('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+    assetId: uuid('asset_id').notNull().references(() => assets.id, { onDelete: 'restrict' }),
+    source: sourceEnum('source').notNull(),
+    externalId: text('external_id').notNull(),
+    quantity: numeric('quantity', { precision: 20, scale: 8 }).notNull(),
+    averagePriceCents: money('average_price_cents'),
+    investedCents: money('invested_cents').notNull().default(0),
+    currentValueCents: money('current_value_cents').notNull().default(0),
+    netValueCents: money('net_value_cents'),
+    profitCents: money('profit_cents'),
+    asOfDate: isoDate('as_of_date').notNull(),
+    isRedeemed: boolean('is_redeemed').notNull().default(false),
+    userEditedFields: text('user_edited_fields').array().notNull().default(sql`'{}'::text[]`),
+    raw: jsonb('raw'),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('holdings_source_external_uq').on(t.source, t.externalId),
+    index('holdings_account_idx').on(t.accountId),
+    index('holdings_asset_idx').on(t.assetId),
+  ],
+);
+
+export const investmentTransactions = pgTable(
+  'investment_transactions',
+  {
+    id: id(),
+    holdingId: uuid('holding_id').notNull().references(() => holdings.id, { onDelete: 'cascade' }),
+    accountId: uuid('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+    source: sourceEnum('source').notNull(),
+    externalId: text('external_id').notNull(),
+    type: investmentTxTypeEnum('type').notNull(),
+    date: isoDate('date').notNull(),
+    quantity: numeric('quantity', { precision: 20, scale: 8 }),
+    unitPriceCents: money('unit_price_cents'),
+    amountCents: money('amount_cents').notNull(),
+    feeCents: money('fee_cents').notNull().default(0),
+    taxCents: money('tax_cents').notNull().default(0),
+    description: text('description'),
+    linkedTransactionId: uuid('linked_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+    raw: jsonb('raw'),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('investment_transactions_source_external_uq').on(t.source, t.externalId),
+    index('investment_transactions_holding_date_idx').on(t.holdingId, t.date),
+    index('investment_transactions_linked_tx_idx').on(t.linkedTransactionId),
+  ],
+);
+
+export const assetPrices = pgTable(
+  'asset_prices',
+  {
+    id: id(),
+    assetId: uuid('asset_id').notNull().references(() => assets.id, { onDelete: 'cascade' }),
+    date: isoDate('date').notNull(),
+    priceCents: money('price_cents').notNull(),
+    source: priceSourceEnum('source').notNull(),
+    createdAt: tstz('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('asset_prices_asset_date_uq').on(t.assetId, t.date)],
+);
+
+export const benchmarkSeries = pgTable(
+  'benchmark_series',
+  {
+    id: id(),
+    benchmark: benchmarkCodeEnum('benchmark').notNull(),
+    date: isoDate('date').notNull(),
+    valueMicros: money('value_micros').notNull(),
+    createdAt: tstz('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('benchmark_series_benchmark_date_uq').on(t.benchmark, t.date)],
+);
+
+export const netWorthSnapshots = pgTable(
+  'net_worth_snapshots',
+  {
+    id: id(),
+    date: isoDate('date').notNull().unique(),
+    cashAccountsCents: money('cash_accounts_cents').notNull().default(0),
+    investmentsCents: money('investments_cents').notNull().default(0),
+    openInvoicesCents: money('open_invoices_cents').notNull().default(0),
+    futureInstallmentsCents: money('future_installments_cents').notNull().default(0),
+    assetsCents: money('assets_cents').notNull().default(0),
+    liabilitiesCents: money('liabilities_cents').notNull().default(0),
+    netWorthCents: money('net_worth_cents').notNull().default(0),
+    breakdown: jsonb('breakdown'),
+    ...timestamps,
+  },
+);
+
