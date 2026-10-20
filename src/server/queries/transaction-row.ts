@@ -18,6 +18,7 @@ export type TransactionTag = { id: string; name: string; color: string };
 
 export type TransactionRow = {
   id: string;
+  parentTransactionId?: string | null;
   date: string;
   description: string;
   descriptionRaw: string;
@@ -41,6 +42,7 @@ export type TransactionRow = {
 /** Colunas comuns a todas as listagens de transação. */
 const transactionRowColumns = {
   id: transactions.id,
+  parentTransactionId: transactions.parentTransactionId,
   date: transactions.date,
   description: transactions.description,
   descriptionRaw: transactions.descriptionRaw,
@@ -113,6 +115,7 @@ export async function loadTagsByTransaction(db: Db, ids: string[]): Promise<Map<
 export function toTransactionRow(r: TransactionRowRecord, tagList: TransactionTag[] = []): TransactionRow {
   return {
     id: r.id,
+    parentTransactionId: r.parentTransactionId ?? null,
     date: r.date,
     description: r.description,
     descriptionRaw: r.descriptionRaw,

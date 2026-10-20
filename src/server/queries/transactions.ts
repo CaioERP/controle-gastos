@@ -109,6 +109,29 @@ export async function getInstallmentGroup(db: Db, groupId: string): Promise<Tran
   return toTransactionRows(db, rows);
 }
 
+export async function getSplitParts(db: Db, parentId: string): Promise<TransactionRow[]> {
+  if (!UUID.test(parentId)) return [];
+  const rows = await baseTransactionQuery(db)
+    .where(and(eq(transactions.parentTransactionId, parentId), isNull(transactions.deletedAt)))
+    .orderBy(transactions.id);
+  return toTransactionRows(db, rows);
+}
+
+export async function getParentTransaction(db: Db, childIdOrParentId: string): Promise<TransactionRow | null> {
+  if (!UUID.test(childIdOrParentId)) return null;
+  const [child] = await db
+    .select({ parentTransactionId: transactions.parentTransactionId })
+    .from(transactions)
+    .where(and(eq(transactions.id, childIdOrParentId), isNull(transactions.deletedAt)));
+  const parentId = child?.parentTransactionId ?? childIdOrParentId;
+  const [row] = await baseTransactionQuery(db).where(
+    and(eq(transactions.id, parentId), isNull(transactions.deletedAt)),
+  );
+  if (!row) return null;
+  const tagMap = await loadTagsByTransaction(db, [parentId]);
+  return toTransactionRow(row, tagMap.get(parentId));
+}
+
 export async function getReviewCount(db: Db): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
