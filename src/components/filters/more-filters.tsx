@@ -16,6 +16,8 @@ type MoreFiltersProps = {
   categoryIds?: string[];
   tagIds?: string[];
   kinds?: TxKind[];
+  /** Naturezas que a página usa quando `kinds` está ausente (só exibição). */
+  defaultKinds?: readonly TxKind[];
   includeProjected?: boolean;
   needsReview?: boolean;
   categories: CategoryTree[];
@@ -35,6 +37,7 @@ export function MoreFilters({
   categoryIds,
   tagIds,
   kinds,
+  defaultKinds = REPORTABLE_KINDS,
   includeProjected,
   needsReview,
   categories,
@@ -51,11 +54,8 @@ export function MoreFilters({
   if (includeProjected) extraCount += 1;
   if (needsReview) extraCount += 1;
 
-  const defaultKindsSet = new Set(REPORTABLE_KINDS);
-  const isKindsModified =
-    kinds &&
-    (kinds.length !== defaultKindsSet.size || kinds.some((k) => !defaultKindsSet.has(k)));
-  if (isKindsModified) extraCount += 1;
+  // Qualquer natureza escolhida explicitamente conta como filtro (vai para a URL, mesmo igual ao padrão).
+  if (kinds) extraCount += 1;
 
   const handleTogglePaymentMethod = (method: PaymentMethod) => {
     const current = paymentMethods ?? [];
@@ -82,11 +82,12 @@ export function MoreFilters({
   };
 
   const handleToggleKind = (kind: TxKind) => {
-    const current = kinds ?? [...REPORTABLE_KINDS];
+    const current = kinds ?? [...defaultKinds];
     const next = current.includes(kind)
       ? current.filter((k) => k !== kind)
       : [...current, kind];
-    onChange({ kinds: next.length > 0 ? next : undefined });
+    // Seleção explícita sempre grava `natureza`; desmarcar tudo volta ao padrão da página.
+    onChange({ kinds: next.length > 0 ? TX_KINDS.filter((k) => next.includes(k)) : undefined });
   };
 
   return (
@@ -215,12 +216,25 @@ export function MoreFilters({
           )}
 
           <div className="border-t pt-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Natureza da Transação
-            </h4>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Natureza da Transação
+              </h4>
+              {kinds ? (
+                <button
+                  type="button"
+                  onClick={() => onChange({ kinds: undefined })}
+                  className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                >
+                  Usar padrão
+                </button>
+              ) : (
+                <span className="text-[11px] text-muted-foreground">Padrão</span>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-1.5">
               {TX_KINDS.map((kind) => {
-                const currentKinds = kinds ?? [...REPORTABLE_KINDS];
+                const currentKinds = kinds ?? [...defaultKinds];
                 const checked = currentKinds.includes(kind);
                 return (
                   <label
