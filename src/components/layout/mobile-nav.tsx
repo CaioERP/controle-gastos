@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Wallet } from 'lucide-react';
 import { ReviewCountBadge } from '@/components/review/review-count-badge';
+import { SearchTrigger } from './command-palette';
 
 export interface MobileNavProps {
   footerSlot?: React.ReactNode;
@@ -30,6 +31,7 @@ export function MobileNav({ footerSlot, reviewCount = 0 }: MobileNavProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <SearchTrigger iconOnly />
         <ThemeToggle />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
@@ -46,6 +48,9 @@ export function MobileNav({ footerSlot, reviewCount = 0 }: MobileNavProps) {
                 Controle de Gastos
               </SheetTitle>
             </SheetHeader>
+            <div className="p-3 pb-0">
+              <SearchTrigger />
+            </div>
             <nav className="flex-1 overflow-y-auto p-3 space-y-1">
               {NAV_ITEMS.map((item) => {
                 const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
