@@ -4,6 +4,7 @@ import { InstitutionSection } from '@/components/accounts/institution-section';
 import { AccountRow } from '@/components/accounts/account-row';
 import { CardAccountRow } from '@/components/accounts/card-account-row';
 import { PageHeader } from '@/components/layout/page-header';
+import { ManualAccountDialog } from '@/components/manual/manual-account-dialog';
 import { EmptyState } from '@/components/states/empty-state';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,11 @@ export default async function ContasPage() {
     .filter((inst) => inst.accounts.length > 0);
 
   const hiddenAccounts = institutions.flatMap((inst) =>
-    inst.accounts.filter((a) => a.isHidden).map((acc) => ({ ...acc, institutionColor: inst.institution.color, institutionName: inst.institution.name }))
+    inst.accounts.filter((a) => a.isHidden).map((acc) => ({
+      ...acc,
+      institutionColor: inst.institution.color,
+      institutionName: inst.institution.name,
+    })),
   );
 
   return (
@@ -29,12 +34,13 @@ export default async function ContasPage() {
       <PageHeader
         title="Contas e cartões"
         description="Gerencie suas contas correntes, poupanças, cartões de crédito e limites."
+        actions={<ManualAccountDialog />}
       />
 
       {visibleInstitutions.length === 0 && hiddenAccounts.length === 0 ? (
         <EmptyState
           title="Nenhuma conta cadastrada"
-          description="Conecte seu banco pelo Open Finance ou importe seus dados para visualizar suas contas aqui."
+          description="Conecte seu banco pelo Open Finance ou crie uma conta manual para gerenciar seus gastos."
         />
       ) : (
         <div className="space-y-6">

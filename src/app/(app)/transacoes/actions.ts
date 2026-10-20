@@ -3,7 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getDb } from '@/server/db/client';
-import { recategorize, updateTransaction, upsertTag } from '@/server/commands';
+import {
+  createManualTransaction,
+  deleteManualTransaction,
+  recategorize,
+  updateManualTransaction,
+  updateTransaction,
+  upsertTag,
+} from '@/server/commands';
 import { txFiltersSchema, type TxFilters } from '@/server/domain/filters';
 import { getInstallmentGroup, getTransaction, listTransactions } from '@/server/queries/transactions';
 import { getTransactionInvoice } from '@/server/queries/transaction-detail';
@@ -24,6 +31,24 @@ export async function updateTransactionAction(input: Parameters<typeof updateTra
 
 export async function upsertTagAction(input: Parameters<typeof upsertTag>[1]) {
   const result = await runAction(() => upsertTag(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function createManualTransactionAction(input: Parameters<typeof createManualTransaction>[1]) {
+  const result = await runAction(() => createManualTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function updateManualTransactionAction(input: Parameters<typeof updateManualTransaction>[1]) {
+  const result = await runAction(() => updateManualTransaction(getDb(), input));
+  if (result.ok) revalidatePath('/', 'layout');
+  return result;
+}
+
+export async function deleteManualTransactionAction(input: Parameters<typeof deleteManualTransaction>[1]) {
+  const result = await runAction(() => deleteManualTransaction(getDb(), input));
   if (result.ok) revalidatePath('/', 'layout');
   return result;
 }

@@ -43,7 +43,7 @@ function rowToCsv(r: TransactionRow): string {
     r.category ? (r.category.parentName ? `${r.category.parentName} > ${r.category.name}` : r.category.name) : ''
   );
   const merchant = escapeText(r.merchant?.name ?? '');
-  const account = escapeText(r.account.name);
+  const account = escapeText(r.account.displayName ?? r.account.name);
   const inst = escapeText(r.institution.name);
   const card = escapeText(r.card ? `final ${r.card.last4}` : '');
   const instl = escapeText(r.installment ? `${r.installment.number}/${r.installment.total}` : '');

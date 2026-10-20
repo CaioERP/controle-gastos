@@ -1,14 +1,235 @@
-# Fase 2 — Trilha Interface (Agente B) · tarefas antecipadas
+# Fase 2 — Robustez · Trilha Interface (Agente B)
 
-> A `P2-00`, que detalha a Fase 2 inteira, depende do marco M1, e o M1 está parado esperando H-01/H-02. Por decisão do coordenador, a **B2-04** foi antecipada: ela não depende do Pluggy e não muda contrato. As outras tarefas da Fase 2 continuam esperando a `P2-00` (ver [`fases-2-a-5.md`](./fases-2-a-5.md)).
+> Especificação passo a passo das tarefas da Fase 2 na Trilha Interface.
+> As tarefas **B2-04**, **B2-03a** e **B2-03b** foram antecipadas; as tarefas **B2-01** e **B2-02** completam a Fase 2.
 >
 > Siga os padrões da trilha descritos em [`fase-1-interface.md`](./fase-1-interface.md), seção "Padrões desta trilha". Quanto testar: `AGENTS.md` §6, "Quanto testar".
 
 ---
 
-## B2-04 — Exportar CSV e busca global
+## B2-01 — Tela de importação (arrastar, pré-visualizar, confirmar)
+
+**Depende de:** P2-00, A2-01 (para PDF real: A2-02) · **Tamanho:** médio · **Contrato:** usa `import_batches` e os comandos `previewFileImport`, `previewPdfInvoiceImport`, `confirmFileImport` e `discardFileImport` de `CONTRATOS.md` (§4 e §5.4)
+
+### Objetivo
+Permitir ao usuário arrastar e soltar extratos e faturas (OFX, CSV do Nubank e PDF de fatura), escolher a conta de destino (ou criar um cartão de crédito manual em `/contas`), informar a senha do PDF quando protegido, revisar cada lançamento marcado como **Nova**, **Duplicada** ou **Conflito**, confirmar ou descartar o lote e consultar o histórico de importações.
+
+### Arquivos
+- **Criar:**
+  - `src/server/queries/imports.ts` e `src/server/queries/imports.test.ts`
+  - `src/app/(app)/importar/page.tsx` e `src/app/(app)/importar/actions.ts`
+  - `src/components/imports/import-dropzone.tsx`
+  - `src/components/imports/import-preview-card.tsx`
+  - `src/components/imports/import-history-table.tsx`
+- **Editar:**
+  - `src/server/queries/index.ts` (reexportar `./imports`)
+  - `src/components/layout/nav-items.tsx` (adicionar `{ href: '/importar', label: 'Importar', icon: Upload }` de `lucide-react`)
+  - `src/components/manual/manual-account-dialog.tsx` (incluir opção `credit_card` com campos de dia de fechamento, dia de vencimento e limite opcional)
+
+### Passo a passo
+
+1. **Cartão de crédito manual em `src/components/manual/manual-account-dialog.tsx`:**
+   - Acrescente `{ value: 'credit_card', label: ACCOUNT_TYPE_LABELS.credit_card }` em `MANUAL_TYPES`.
+   - Quando `type === 'credit_card'`:
+     - Esconda o campo "Saldo inicial (R$)".
+     - Mostre os campos:
+       - "Dia de fechamento" (`input type="number"`, 1 a 31, obrigatório, ex.: `3`);
+       - "Dia de vencimento" (`input type="number"`, 1 a 31, obrigatório, ex.: `10`);
+       - "Limite total (R$)" (opcional, dinheiro em pt-BR convertido com `parseOptionalAmount`).
+     - Envie `closingDay`, `dueDay` e `creditLimitCents` para `createManualAccountAction`.
+
+2. **Consultas de importação (`src/server/queries/imports.ts`):**
+   ```ts
+   export type ImportBatchRow = {
+     id: string;
+     accountId: string;
+     accountName: string;
+     institutionName: string;
+     institutionColor: string;
+     filename: string;
+     format: string;
+     status: ImportBatchStatus;
+     stats: {
+       totalItems?: number;
+       created?: number;
+       linked?: number;
+       skippedDuplicates?: number;
+       newCount?: number;
+       divergenceCents?: number;
+     };
+     createdAt: Date;
+   };
+
+   export async function listImportBatches(db: Db, opts?: { limit?: number }): Promise<ImportBatchRow[]>;
+   export async function getPendingImportPreview(db: Db, batchId: string): Promise<ImportBatchPreview | null>;
+   ```
+   - `listImportBatches`: busca os últimos `limit ?? 20` lotes em `import_batches` (join com `accounts` e `institutions`), ordenados por `createdAt desc`. Usa `accounts.displayName ?? accounts.name` em `accountName`.
+   - `getPendingImportPreview`: busca um lote específico com `status = 'preview'` e reconstrói `ImportBatchPreview` a partir de `previewData` e `stats` (para que recarregar `/importar?lote=<batchId>` mantenha a pré-visualização aberta).
+
+3. **Server Actions (`src/app/(app)/importar/actions.ts`):**
+   - `previewFileImportAction(input: { accountId: string; filename: string; content: string })` → chama `previewFileImport(getDb(), input)` dentro de `runAction`.
+   - `previewPdfInvoiceImportAction(input: { accountId: string; filename: string; pdfBase64: string; password?: string | null })` → chama `previewPdfInvoiceImport(getDb(), input)` dentro de `runAction`.
+   - `confirmFileImportAction(input: Parameters<typeof confirmFileImport>[1])` → chama `confirmFileImport(getDb(), input)` e `revalidatePath('/', 'layout')`.
+   - `discardFileImportAction(input: { batchId: string })` → chama `discardFileImport(getDb(), input)` e `revalidatePath('/importar')`.
+
+4. **Zona de upload e seleção de conta (`src/components/imports/import-dropzone.tsx`, `'use client'`):**
+   - Recebe `accounts` (lista de todas as contas não ocultas de `getAccountsOverview`, com `id`, `name`, `type`, `institutionName`, `institutionColor`, `isSynchronized: a.connection !== null`) e `defaultAccountId?: string`.
+   - **Seletor de conta de destino:**
+     - Agrupado ou identificado por instituição e tipo (`Conta corrente`, `Cartão de crédito`).
+     - Se a conta selecionada tiver `isSynchronized === true`, mostre um aviso informativo discreto:
+       `"Esta conta é sincronizada via Open Finance. Transações que já vieram pelo banco serão identificadas na pré-visualização para evitar duplicidade."`
+     - Se o arquivo escolhido for `.pdf` e a conta selecionada não for `credit_card`, avise: `"Faturas em PDF só podem ser importadas em contas do tipo Cartão de crédito."`
+   - **Arrastar e soltar / escolher arquivo:**
+     - Aceita `.ofx`, `.csv` e `.pdf` (tamanho máximo 5 MB).
+     - Texto da área: `"Arraste um arquivo OFX, CSV (Nubank) ou PDF de fatura aqui, ou clique para selecionar"`.
+     - Para `.ofx` e `.csv`: lê no navegador como `ArrayBuffer`, decodifica (UTF-8 com fallback `windows-1252` via `TextDecoder`) e chama `previewFileImportAction`.
+     - Para `.pdf`: converte `ArrayBuffer` para base64 e chama `previewPdfInvoiceImportAction`.
+   - **Senha do PDF:**
+     - Se `previewPdfInvoiceImportAction` retornar `error.code === 'PASSWORD_REQUIRED'` ou `'INVALID_PASSWORD'`, exiba no próprio card o campo `"Senha do PDF"` (`input type="password"`, placeholder `"Ex.: primeiros dígitos do CPF"`) e botão `"Desbloquear e analisar"`, reenviando com `password`. Nunca salve a senha no `localStorage` ou na URL.
+
+5. **Pré-visualização do lote (`src/components/imports/import-preview-card.tsx`, `'use client'`):**
+   - Exibe o resumo no topo:
+     - Nome do arquivo, formato reconhecido (`OFX`, `CSV Conta Nubank`, `CSV Cartão Nubank`, `Fatura PDF`) e conta de destino.
+     - Contadores em badges:
+       - `X novas` (verde)
+       - `Y duplicadas já existentes` (cinza — soma de `exactDuplicateCount + fuzzyDuplicateCount`)
+       - `Z conflitos para decidir` (âmbar — `ambiguousCount`)
+   - **Resumo de fatura PDF (`invoiceMeta`):**
+     - Se `invoiceMeta` estiver presente, mostre: Fechamento, Vencimento, Total da fatura (`<Money cents={invoiceMeta.totalCents} />`) e Soma dos itens (`<Money cents={invoiceMeta.itemsSumCents} />`).
+     - Se `Math.abs(invoiceMeta.divergenceCents) > 5` (tolerância de R$ 0,05): mostre alerta âmbar:
+       `"Atenção: a soma dos itens extraídos difere em R$ X do total da fatura no PDF. Revise os lançamentos abaixo antes de confirmar."`
+   - **Tabela de itens pré-visualizados:**
+     - Colunas: Data (`<DateBR />`), Descrição (com badge de parcela `2/10` se houver), Forma de pagamento, Valor (`<Money signed />`), Status e Ação.
+     - Status e ação por linha:
+       - `new` → badge verde `"Nova"`; select opcional permitindo mudar de `"Importar"` (padrão) para `"Ignorar"`.
+       - `exact_duplicate` → badge cinza `"Já importada"`; linha esmaecida ("Será ignorada").
+       - `fuzzy_duplicate` → badge azul `"Já sincronizada (Pluggy)"`; padrão `"Vincular à existente"` (ou opção de `"Importar como nova"` / `"Ignorar"`).
+       - `ambiguous_duplicate` → badge âmbar `"Conflito"`; select para o usuário escolher entre `"Vincular a: <descrição/data da candidata>"`, `"Importar como nova"` ou `"Ignorar"`.
+   - **Botões de rodapé:**
+     - `"Confirmar importação"` → chama `confirmFileImportAction({ batchId, decisions })`, mostra toast `"Importação concluída: X criadas, Y vinculadas, Z ignoradas"` e limpa a pré-visualização.
+     - `"Descartar"` → chama `discardFileImportAction({ batchId })`, mostra toast `"Importação descartada"` e limpa a pré-visualização.
+
+6. **Histórico de importações (`src/components/imports/import-history-table.tsx`):**
+   - Lista os lotes de `listImportBatches`: Data/hora, Arquivo, Conta, Formato, Status (`Confirmada`, `Em pré-visualização`, `Descartada`) e resumo (`X novas · Y vinculadas · Z ignoradas`).
+   - Se um lote estiver `"Em pré-visualização"`, botão `"Retomar"` que abre a pré-visualização daquele lote (`?lote=<id>`).
+
+7. **Página `src/app/(app)/importar/page.tsx` e navegação:**
+   - Adicione `/importar` em `NAV_ITEMS` (`src/components/layout/nav-items.tsx`) logo após `Conexões`.
+   - Na página `/importar`: `PageHeader` com título `"Importar arquivos"` e descrição `"Importe extratos OFX, CSV do Nubank ou faturas em PDF com detecção de duplicatas."`, seguido de `ImportDropzone` (ou `ImportPreviewCard` se houver lote ativo) e `ImportHistoryTable`.
+
+8. **Testes:**
+   - **Um** teste de consulta (`src/server/queries/imports.test.ts`): insere um lote em `import_batches` e confere `listImportBatches` e `getPendingImportPreview`.
+   - **Um** e2e de fumaça (`tests/e2e/importar.spec.ts`): abre `/importar`, seleciona uma conta, envia um arquivo CSV do Nubank de exemplo, vê a pré-visualização com os itens marcados como `"Nova"` e clica em `"Confirmar importação"`, verificando o toast de sucesso.
+
+### Critérios de aceite
+- [ ] É possível enviar um arquivo OFX ou CSV, visualizar as transações classificadas como nova/duplicada/conflito e confirmar ou descartar
+- [ ] Enviar o mesmo arquivo uma segunda vez mostra todos os itens como `"Já importada"` na pré-visualização
+- [ ] Quando um PDF exige senha, o campo de senha aparece e permite reenviar sem gravar a senha
+- [ ] É possível criar uma conta manual do tipo `Cartão de crédito` em `/contas` e usá-la como destino na importação
+- [ ] Funciona em 390 px de largura
+
+---
+
+## B2-02 — Tela de saúde das conexões e histórico de sincronização
+
+**Depende de:** P2-00, B1-06, A2-05 · **Tamanho:** médio · **Contrato:** usa `reconnectConnection` de `CONTRATOS.md` §5.4 e `evaluateConnectionHealth` de `src/server/ingestion/connection-lifecycle.ts`
+
+### Objetivo
+Exibir o diagnóstico detalhado de saúde de cada conexão Open Finance (expiração do consentimento, contagem de erros seguidos, ação recomendada em linguagem amigável, botão **Reconectar** abrindo o widget Pluggy Connect em modo `updateItem` e gráfico de novas transações sincronizadas por dia).
+
+### Arquivos
+- **Criar:**
+  - `src/app/(app)/conexoes/[id]/page.tsx`
+  - `src/components/connections/reconnect-button.tsx`
+  - `src/components/connections/sync-daily-chart.tsx`
+- **Editar:**
+  - `src/server/queries/connections.ts` e `src/server/queries/connections.test.ts` (adicionar `getConnectionHealthDetail`)
+  - `src/app/(app)/conexoes/actions.ts` (adicionar `reconnectConnectionAction`)
+  - `src/components/connections/connection-card.tsx` (mostrar aviso de pausa/ação recomendada, botão `"Reconectar"` quando aplicável e link `"Detalhes da conexão"` para `/conexoes/[id]`)
+
+### Passo a passo
+
+1. **Consulta de detalhe e série diária (`src/server/queries/connections.ts`):**
+   ```ts
+   export type DailySyncStat = {
+     date: string;       // YYYY-MM-DD (últimos 30 dias)
+     createdCount: number;
+     errorCount: number;
+   };
+
+   export type ConnectionHealthDetail = {
+     connection: ConnectionRow;
+     accounts: Array<{
+       id: string;
+       name: string;
+       type: AccountType;
+       balanceCents: number;
+       balanceUpdatedAt: Date | null;
+     }>;
+     health: {
+       consecutiveErrors: number;
+       isPausedByErrors: boolean;
+       consentExpiringSoon: boolean;
+       consentDaysRemaining: number | null;
+       consentExpired: boolean;
+       recommendedAction: string | null;
+     };
+     runs: SyncRunRow[];
+     dailyStats: DailySyncStat[];
+   };
+
+   export async function getConnectionHealthDetail(
+     db: Db,
+     connectionId: string,
+     opts?: { today?: string },
+   ): Promise<ConnectionHealthDetail | null>;
+   ```
+   - Busca a conexão por `connectionId` (retorna `null` se não for UUID válido ou não existir).
+   - Busca as contas vinculadas (`accounts.connectionId = connectionId`) e as últimas 50 execuções em `sync_runs` daquela conexão.
+   - Chama `evaluateConnectionHealth` (de `src/server/ingestion/connection-lifecycle.ts`).
+   - Monta `dailyStats` para os últimos 30 dias a partir de `runs`: para cada dia `YYYY-MM-DD`, soma `Number((r.stats as { created?: number })?.created ?? 0)` das execuções bem-sucedidas naquele dia e conta quantas execuções terminaram com `status === 'error'`. Preenche dias sem execução com `0`.
+
+2. **Server Action e botão de reconexão (`src/components/connections/reconnect-button.tsx`, `'use client'`):**
+   - Em `src/app/(app)/conexoes/actions.ts`, crie `reconnectConnectionAction(input: { connectionId: string })` chamando `reconnectConnection(getDb(), input)` + `revalidatePath('/', 'layout')`.
+   - Em `reconnect-button.tsx`:
+     - Recebe `connectionId: string`, `externalItemId: string` e `label?: string` (padrão `"Reconectar"`).
+     - Ao clicar: faz `POST /api/pluggy/connect-token` enviando `JSON.stringify({ itemId: externalItemId })` com header `'Content-Type': 'application/json'`.
+     - Renderiza `<PluggyConnect connectToken={token} updateItem={externalItemId} includeSandbox={false} ... />`.
+     - Em `onSuccess`: chama `reconnectConnectionAction({ connectionId })`, exibe `toast.success('Conexão atualizada e sincronizada com sucesso!')` e fecha o widget.
+
+3. **Melhorias no `ConnectionCard` (`src/components/connections/connection-card.tsx`):**
+   - Quando `connection.status` for `'error'`, `'expired'` ou `'revoked'`, ou quando o consentimento estiver a ≤ 15 dias do vencimento, mostre o `ReconnectButton` ao lado de `"Sincronizar agora"`.
+   - Adicione um link `"Ver saúde e histórico →"` apontando para `/conexoes/${connection.id}`.
+
+4. **Página de detalhe `/conexoes/[id]` (`src/app/(app)/conexoes/[id]/page.tsx`):**
+   - Se `getConnectionHealthDetail` retornar `null`, chame `notFound()`.
+   - Cabeçalho com link `"← Voltar para Conexões"`, nome da instituição (ou `"Meu Pluggy"`), badge de status e botões `"Sincronizar agora"` e `"Reconectar"` (`ReconnectButton`).
+   - **Bloco de diagnóstico de saúde:**
+     - Se `health.recommendedAction` existir, exiba um banner destacado (vermelho se `expired`/`revoked`/`isPausedByErrors`/`error`, âmbar se `consentExpiringSoon`) com a mensagem amigável de `health.recommendedAction`.
+     - Cards de indicadores:
+       1. **Status do consentimento:** data de expiração (`formatDateBR`) e dias restantes (`"Expira em X dias"`, `"Expirado"` ou `"Sem data de expiração"`).
+       2. **Última sincronização:** tempo relativo + data/hora exata.
+       3. **Estabilidade:** `"Operando normalmente"` (0 erros seguidos), `"Atenção (1–2 falhas recentes)"` ou `"Pausada (3+ falhas seguidas)"`.
+   - **Gráfico de transações novas por dia (`src/components/connections/sync-daily-chart.tsx`, `'use client'`):**
+     - Gráfico de barras (Recharts / `ChartContainer` do shadcn) com os últimos 30 dias (`dailyStats`), mostrando `createdCount` (transações novas sincronizadas no dia).
+   - **Contas vinculadas a esta conexão:** lista compacta com nome, tipo, saldo atual e última atualização.
+   - **Histórico de execuções da conexão:** reutilize `<SyncHistory runs={detail.runs} />`, mostrando também o resumo de `stats` (`+X novas, Y atualizadas`) em cada linha.
+
+5. **Testes:**
+   - **Um** teste em `src/server/queries/connections.test.ts`: cria uma conexão com execuções de sync e confere `getConnectionHealthDetail` (incluindo `health.isPausedByErrors` após 3 erros e `dailyStats` com 30 dias).
+   - **Um** e2e de fumaça (`tests/e2e/conexoes-saude.spec.ts`): abre `/conexoes`, clica para abrir o detalhe de uma conexão (`/conexoes/[id]`) e verifica que o status do consentimento, o gráfico diário e o histórico de execuções aparecem na tela.
+
+### Critérios de aceite
+- [ ] `/conexoes/[id]` mostra data de expiração do consentimento, diagnóstico amigável, gráfico de transações novas por dia e histórico da conexão
+- [ ] Conexão com status `expired` ou `error` exibe o botão `"Reconectar"`, que solicita connect token com `itemId` e abre o widget em modo `updateItem`
+- [ ] Funciona em 390 px de largura
+
+---
+
+## B2-04 — Exportar CSV e busca global (antecipada — concluída)
 
 **Depende de:** B1-05 · **Tamanho:** médio · **Contrato:** nenhuma mudança · **Entrega:** 2 PRs (um por parte)
+
 
 ### Parte 1 — Exportar CSV (branch `b/B2-04-exportar-csv`)
 
