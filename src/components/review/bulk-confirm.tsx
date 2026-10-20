@@ -33,22 +33,35 @@ export function BulkConfirm({ pending, onConfirmed, onRunningChange }: BulkConfi
     onRunningChange(true);
     startBulk(async () => {
       let ok = 0;
-      for (let i = 0; i < list.length; i++) {
-        setProgress({ current: i + 1, total: list.length });
-        const s = list[i]!;
-        const res = await confirmSuggestionAction({ transactionId: s.transactionId, categoryId: s.categoryId });
-        if (res.ok) {
-          ok++;
-          onConfirmed(s.transactionId);
+      let networkError = false;
+      try {
+        for (let i = 0; i < list.length; i++) {
+          setProgress({ current: i + 1, total: list.length });
+          const s = list[i]!;
+          const res = await confirmSuggestionAction({ transactionId: s.transactionId, categoryId: s.categoryId });
+          if (res.ok) {
+            ok++;
+            onConfirmed(s.transactionId);
+          }
         }
+      } catch {
+        // Falha de rede/servidor: a action rejeita em vez de devolver { ok: false }. Para o lote aqui.
+        networkError = true;
+      } finally {
+        // Sempre destrava o botão e os atalhos, mesmo se o laço quebrar.
+        startBulk(() => {
+          router.refresh();
+          setProgress(null);
+          onRunningChange(false);
+        });
       }
-      startBulk(() => {
-        router.refresh();
-        setProgress(null);
-        onRunningChange(false);
-      });
-      if (ok === list.length) toast.success(`${ok} sugest${ok === 1 ? 'ão confirmada' : 'ões confirmadas'}`);
-      else toast.error(`${ok} de ${list.length} sugestões confirmadas; tente de novo as restantes.`);
+      if (networkError) {
+        toast.error(`Falha de conexão: ${ok} de ${list.length} sugestões confirmadas. Tente de novo.`);
+      } else if (ok === list.length) {
+        toast.success(`${ok} sugest${ok === 1 ? 'ão confirmada' : 'ões confirmadas'}`);
+      } else {
+        toast.error(`${ok} de ${list.length} sugestões confirmadas; tente de novo as restantes.`);
+      }
     });
   };
 
