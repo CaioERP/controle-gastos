@@ -6,7 +6,7 @@ import { accounts, invoices, transactions, transactionSources } from '@/server/d
 import { seedBase } from '@/server/db/seed';
 import { createTestDb } from '../../../tests/helpers/db';
 import { confirmFileImport, discardFileImport, previewFileImport } from './imports';
-import { createManualAccount } from './manual';
+import { createManualAccount, createManualTransaction } from './manual';
 
 const fixturesDir = join(process.cwd(), 'tests', 'fixtures', 'files');
 
@@ -134,5 +134,36 @@ describe('previewFileImport, confirmFileImport e discardFileImport (A2-01)', () 
     await expect(confirmFileImport(db, { batchId: preview.batchId })).rejects.toThrow(
       /já foi descartado/,
     );
+  });
+
+  it('confirmFileImport que falha no meio não grava nada; nova tentativa deixa o saldo igual à soma', async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+    const { accountId } = await createManualAccount(db, { name: 'Conta Teste', type: 'checking' });
+    await createManualTransaction(db, {
+      accountId,
+      date: '2026-04-06',
+      amountCents: -1200,
+      description: 'Padaria',
+      kind: 'expense',
+      paymentMethod: 'debit_card',
+      categoryId: null,
+    });
+    const csv =
+      'Data,Valor,Identificador,Descrição\n05/04/2026,-35.90,x1,Uber\n06/04/2026,-12.00,x2,Padaria\n';
+    const preview = await previewFileImport(db, { accountId, filename: 'a.csv', content: csv });
+    expect(preview.items.map((i) => i.status)).toEqual(['new', 'fuzzy_duplicate']);
+
+    // Vincular a uma transação inexistente falha no 2º item, depois de o 1º já ter sido criado
+    const missingId = '00000000-0000-4000-8000-000000000000';
+    await expect(
+      confirmFileImport(db, { batchId: preview.batchId, decisions: { '1': { linkTransactionId: missingId } } }),
+    ).rejects.toThrow();
+    expect(await db.select().from(transactions).where(eq(transactions.accountId, accountId))).toHaveLength(1);
+
+    await confirmFileImport(db, { batchId: preview.batchId });
+    const txs = await db.select().from(transactions).where(eq(transactions.accountId, accountId));
+    const [acc] = await db.select().from(accounts).where(eq(accounts.id, accountId));
+    expect(acc?.balanceCents).toBe(txs.reduce((s, t) => s + t.amountCents, 0));
   });
 });

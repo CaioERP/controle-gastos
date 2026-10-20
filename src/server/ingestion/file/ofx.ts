@@ -128,14 +128,25 @@ export function parseOfx(
 
   const withOccurrences = assignDayOccurrences(rawItems);
 
+  // Alguns bancos repetem o FITID para lançamentos diferentes no mesmo arquivo. Sem isso, o segundo
+  // sobrescreveria o primeiro no upsert por (source, externalId). A 1ª ocorrência mantém o FITID puro.
+  const fitIdCounts = new Map<string, number>();
+
   const transactions: NormalizedTransaction[] = withOccurrences.map((item) => {
+    let nativeId = item.fitId?.trim() || null;
+    // FITID só de zeros é inválido: fica como está e cai no hash por dayOccurrence
+    if (nativeId && !/^0+$/.test(nativeId)) {
+      const n = (fitIdCounts.get(nativeId) ?? 0) + 1;
+      fitIdCounts.set(nativeId, n);
+      if (n > 1) nativeId = `${nativeId}#${n}`;
+    }
     const externalId = buildFileExternalId({
       accountId: account.id,
       date: item.date,
       amountCents: item.amountCents,
       descriptionRaw: item.descriptionRaw,
       dayOccurrence: item.dayOccurrence,
-      nativeId: item.fitId,
+      nativeId,
     });
 
     const parsedInst = parseInstallment(item.descriptionRaw);

@@ -61,4 +61,17 @@ describe('parseOfx (A2-01)', () => {
       externalId: `ofx:${accountId}:XML2026040802`,
     });
   });
+
+  it('FITID repetido no mesmo arquivo gera externalId distinto e estável para cada lançamento', () => {
+    const content = [
+      '<OFX><BANKTRANLIST>',
+      '<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260405<TRNAMT>-10.00<FITID>20260405<MEMO>PADARIA',
+      '<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260405<TRNAMT>-99.00<FITID>20260405<MEMO>FARMACIA',
+      '</BANKTRANLIST></OFX>',
+    ].join('\n');
+    const ids = parseOfx(content, { id: accountId, type: 'checking' }).transactions.map(
+      (t) => t.externalId,
+    );
+    expect(ids).toEqual([`ofx:${accountId}:20260405`, `ofx:${accountId}:20260405#2`]);
+  });
 });

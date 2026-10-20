@@ -148,11 +148,16 @@ export function parseNubankCsv(
     const date = parseFlexibleDate(rawDate);
     if (!date || !rawAmount || !rawDesc) continue;
 
-    const num = Number(rawAmount.replace(',', '.'));
-    if (!Number.isFinite(num)) continue;
+    // toCents aceita "1500.00", "-45,90" e "1.500,00" (CSV salvo pelo Excel em pt-BR).
+    // Antes, "1.500,00" virava NaN e a linha sumia sem aviso.
+    let rawCents: number;
+    try {
+      rawCents = toCents(rawAmount);
+    } catch {
+      continue;
+    }
 
     // No CSV de fatura do cartão do Nubank, compras são positivas e estornos/pagamentos negativos -> inverte sinal (R1)
-    const rawCents = toCents(num);
     const amountCents = format === 'csv_nubank_card' ? -rawCents : rawCents;
 
     rawItems.push({

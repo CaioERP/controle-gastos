@@ -250,197 +250,218 @@ const confirmFileImportInput = z.object({
   decisions: z.record(z.string(), confirmDecisionSchema).optional(),
 });
 
-export async function confirmFileImport(
-  db: Db,
-  input: z.infer<typeof confirmFileImportInput>,
-): Promise<{
+type ConfirmFileImportResult = {
   batchId: string;
   created: number;
   linked: number;
   skippedDuplicates: number;
-}> {
+};
+
+export async function confirmFileImport(
+  db: Db,
+  input: z.infer<typeof confirmFileImportInput>,
+): Promise<ConfirmFileImportResult> {
   const data = confirmFileImportInput.parse(input);
 
   try {
-    const [batch] = await db
-      .select()
-      .from(importBatches)
-      .where(eq(importBatches.id, data.batchId));
+    // Tudo numa transação: se um item falhar, nada fica gravado pela metade (nem o saldo da conta
+    // manual fica defasado ao tentar de novo), e duas confirmações simultâneas não duplicam nada.
+    const outcome = await db.transaction((tx) => applyFileImport(tx, data));
 
-    if (!batch) {
-      throw new CommandError('NOT_FOUND', 'Lote de importação não encontrado');
+    if (outcome.pipeline) {
+      const { created, linked, skippedDuplicates } = outcome.result;
+      await runPipeline({
+        db,
+        transactionIds: outcome.pipeline.transactionIds,
+        accountIds: [outcome.pipeline.accountId],
+        connectionId: null,
+        stats: { created, linked, skippedDuplicates },
+      });
     }
 
-    if (batch.status === 'confirmed') {
-      const existingStats = batch.stats as Record<string, unknown>;
-      return {
+    return outcome.result;
+  } catch (err) {
+    throw toCommandError(err);
+  }
+}
+
+async function applyFileImport(
+  db: Db,
+  data: z.infer<typeof confirmFileImportInput>,
+): Promise<{
+  result: ConfirmFileImportResult;
+  pipeline: { transactionIds: string[]; accountId: string } | null;
+}> {
+  // FOR UPDATE: uma segunda confirmação simultânea espera esta terminar e cai no caminho idempotente
+  const [batch] = await db
+    .select()
+    .from(importBatches)
+    .where(eq(importBatches.id, data.batchId))
+    .for('update');
+
+  if (!batch) {
+    throw new CommandError('NOT_FOUND', 'Lote de importação não encontrado');
+  }
+
+  if (batch.status === 'confirmed') {
+    const existingStats = batch.stats as Record<string, unknown>;
+    return {
+      result: {
         batchId: batch.id,
         created: Number(existingStats.created ?? 0),
         linked: Number(existingStats.linked ?? 0),
         skippedDuplicates: Number(existingStats.skippedDuplicates ?? 0),
-      };
-    }
-
-    if (batch.status === 'discarded') {
-      throw new CommandError('CONFLICT', 'Este lote de importação já foi descartado');
-    }
-
-    const [account] = await db
-      .select({
-        id: accounts.id,
-        type: accounts.type,
-        connectionId: accounts.connectionId,
-      })
-      .from(accounts)
-      .where(eq(accounts.id, batch.accountId));
-
-    if (!account) {
-      throw new CommandError('NOT_FOUND', 'Conta não encontrada');
-    }
-
-    const previewData = batch.previewData as {
-      items?: PreviewTransactionItem[];
-      invoiceMeta?: ImportBatchPreview['invoiceMeta'];
+      },
+      pipeline: null,
     };
-    const items = previewData.items ?? [];
-    const decisions = data.decisions ?? {};
+  }
 
-    let created = 0;
-    let linked = 0;
-    let skippedDuplicates = 0;
-    let createdSumCents = 0;
-    const createdOrChangedIds: string[] = [];
+  if (batch.status === 'discarded') {
+    throw new CommandError('CONFLICT', 'Este lote de importação já foi descartado');
+  }
 
-    for (const item of items) {
-      const decision = decisions[String(item.index)];
+  const [account] = await db
+    .select({
+      id: accounts.id,
+      type: accounts.type,
+      connectionId: accounts.connectionId,
+    })
+    .from(accounts)
+    .where(eq(accounts.id, batch.accountId));
 
-      if (item.status === 'exact_duplicate') {
-        skippedDuplicates++;
-        continue;
-      }
+  if (!account) {
+    throw new CommandError('NOT_FOUND', 'Conta não encontrada');
+  }
 
-      if (item.status === 'fuzzy_duplicate') {
-        if (decision === 'skip') {
-          skippedDuplicates++;
-          continue;
-        }
-        if (decision === 'import_as_new') {
-          const res = await upsertTransaction(db, batch.accountId, item.normalized, {
-            importBatchId: batch.id,
-          });
-          if (res.created) {
-            created++;
-            createdSumCents += item.normalized.amountCents;
-          }
-          if (res.created || res.changed) {
-            createdOrChangedIds.push(res.id);
-          }
-          continue;
-        }
-        const targetId =
-          typeof decision === 'object' && decision !== null
-            ? decision.linkTransactionId
-            : item.matchedTransactionId;
-        if (targetId) {
-          const linkRes = await linkSourceToTransaction(db, {
-            transactionId: targetId,
-            incoming: item.normalized,
-            importBatchId: batch.id,
-          });
-          if (linkRes.updated) {
-            createdOrChangedIds.push(targetId);
-          }
-          linked++;
-        } else {
-          skippedDuplicates++;
-        }
-        continue;
-      }
+  const previewData = batch.previewData as {
+    items?: PreviewTransactionItem[];
+    invoiceMeta?: ImportBatchPreview['invoiceMeta'];
+  };
+  const items = previewData.items ?? [];
+  const decisions = data.decisions ?? {};
 
-      if (item.status === 'ambiguous_duplicate') {
-        if (typeof decision === 'object' && decision !== null) {
-          const linkRes = await linkSourceToTransaction(db, {
-            transactionId: decision.linkTransactionId,
-            incoming: item.normalized,
-            importBatchId: batch.id,
-          });
-          if (linkRes.updated) {
-            createdOrChangedIds.push(decision.linkTransactionId);
-          }
-          linked++;
-        } else if (decision === 'import_as_new') {
-          const res = await upsertTransaction(db, batch.accountId, item.normalized, {
-            importBatchId: batch.id,
-          });
-          if (res.created) {
-            created++;
-            createdSumCents += item.normalized.amountCents;
-          }
-          if (res.created || res.changed) {
-            createdOrChangedIds.push(res.id);
-          }
-        } else {
-          skippedDuplicates++;
-        }
-        continue;
-      }
+  let created = 0;
+  let linked = 0;
+  let skippedDuplicates = 0;
+  let createdSumCents = 0;
+  const createdOrChangedIds: string[] = [];
 
-      // item.status === 'new'
+  for (const item of items) {
+    const decision = decisions[String(item.index)];
+
+    if (item.status === 'exact_duplicate') {
+      skippedDuplicates++;
+      continue;
+    }
+
+    if (item.status === 'fuzzy_duplicate') {
       if (decision === 'skip') {
         skippedDuplicates++;
         continue;
       }
-
-      const res = await upsertTransaction(db, batch.accountId, item.normalized, {
-        importBatchId: batch.id,
-      });
-      if (res.created) {
-        created++;
-        createdSumCents += item.normalized.amountCents;
+      if (decision === 'import_as_new') {
+        const res = await upsertTransaction(db, batch.accountId, item.normalized, {
+          importBatchId: batch.id,
+        });
+        if (res.created) {
+          created++;
+          createdSumCents += item.normalized.amountCents;
+        }
+        if (res.created || res.changed) {
+          createdOrChangedIds.push(res.id);
+        }
+        continue;
+      }
+      const targetId =
+        typeof decision === 'object' && decision !== null
+          ? decision.linkTransactionId
+          : item.matchedTransactionId;
+      if (targetId) {
+        const linkRes = await linkSourceToTransaction(db, {
+          transactionId: targetId,
+          incoming: item.normalized,
+          importBatchId: batch.id,
+        });
+        if (linkRes.updated) {
+          createdOrChangedIds.push(targetId);
+        }
+        linked++;
       } else {
         skippedDuplicates++;
       }
-      if (res.created || res.changed) {
-        createdOrChangedIds.push(res.id);
+      continue;
+    }
+
+    if (item.status === 'ambiguous_duplicate') {
+      if (typeof decision === 'object' && decision !== null) {
+        const linkRes = await linkSourceToTransaction(db, {
+          transactionId: decision.linkTransactionId,
+          incoming: item.normalized,
+          importBatchId: batch.id,
+        });
+        if (linkRes.updated) {
+          createdOrChangedIds.push(decision.linkTransactionId);
+        }
+        linked++;
+      } else if (decision === 'import_as_new') {
+        const res = await upsertTransaction(db, batch.accountId, item.normalized, {
+          importBatchId: batch.id,
+        });
+        if (res.created) {
+          created++;
+          createdSumCents += item.normalized.amountCents;
+        }
+        if (res.created || res.changed) {
+          createdOrChangedIds.push(res.id);
+        }
+      } else {
+        skippedDuplicates++;
       }
+      continue;
     }
 
-    if (account.connectionId === null && account.type !== 'credit_card' && createdSumCents !== 0) {
-      await db
-        .update(accounts)
-        .set({
-          balanceCents: sql`${accounts.balanceCents} + ${createdSumCents}`,
-          balanceUpdatedAt: new Date(),
-        })
-        .where(eq(accounts.id, account.id));
+    // item.status === 'new'
+    if (decision === 'skip') {
+      skippedDuplicates++;
+      continue;
     }
 
-    const pipelineStats: Record<string, number> = {
-      created,
-      linked,
-      skippedDuplicates,
-    };
-
-    await runPipeline({
-      db,
-      transactionIds: createdOrChangedIds,
-      accountIds: [batch.accountId],
-      connectionId: null,
-      stats: pipelineStats,
+    const res = await upsertTransaction(db, batch.accountId, item.normalized, {
+      importBatchId: batch.id,
     });
-
-    await db
-      .update(importBatches)
-      .set({
-        status: 'confirmed',
-        stats: { created, linked, skippedDuplicates },
-      })
-      .where(eq(importBatches.id, batch.id));
-
-    return { batchId: batch.id, created, linked, skippedDuplicates };
-  } catch (err) {
-    throw toCommandError(err);
+    if (res.created) {
+      created++;
+      createdSumCents += item.normalized.amountCents;
+    } else {
+      skippedDuplicates++;
+    }
+    if (res.created || res.changed) {
+      createdOrChangedIds.push(res.id);
+    }
   }
+
+  if (account.connectionId === null && account.type !== 'credit_card' && createdSumCents !== 0) {
+    await db
+      .update(accounts)
+      .set({
+        balanceCents: sql`${accounts.balanceCents} + ${createdSumCents}`,
+        balanceUpdatedAt: new Date(),
+      })
+      .where(eq(accounts.id, account.id));
+  }
+
+  await db
+    .update(importBatches)
+    .set({
+      status: 'confirmed',
+      stats: { created, linked, skippedDuplicates },
+    })
+    .where(eq(importBatches.id, batch.id));
+
+  return {
+    result: { batchId: batch.id, created, linked, skippedDuplicates },
+    pipeline: { transactionIds: createdOrChangedIds, accountId: batch.accountId },
+  };
 }
 
 const discardFileImportInput = z.object({
