@@ -5,7 +5,7 @@
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída
 
-**Regra para pegar tarefa:** status ⬜ **e** todas as dependências ✅ **e** é da sua trilha (A ou B). Tarefas `H-*` são do usuário.
+**Regra para pegar tarefa:** status ⬜ **e** todas as dependências ✅ **e** é da sua trilha (A ou B). Tarefas `H-*` são do usuário. Sem antecipar tarefas (ver `AGENTS.md` §3). Prompts de cada rodada, em ordem: [`PROMPTS.md`](./PROMPTS.md).
 
 ---
 
