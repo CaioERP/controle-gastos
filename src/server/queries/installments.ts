@@ -3,6 +3,7 @@ import type { Db } from '@/server/db/client';
 import { accounts, invoices, transactions } from '@/server/db/schema';
 import type { TxFilters } from '@/server/domain/filters';
 import { addMonthsISO, monthStart, today } from '@/server/domain/dates';
+import { notSplitParent } from './split-filter';
 
 export type FutureInstallmentMonth = {
   month: string;
@@ -26,6 +27,7 @@ export async function getFutureInstallments(
 
   const conds = [
     isNull(transactions.deletedAt),
+    notSplitParent,
     eq(transactions.status, 'projected'),
     f.institutionIds?.length ? inArray(accounts.institutionId, f.institutionIds) : undefined,
     f.accountIds?.length ? inArray(transactions.accountId, f.accountIds) : undefined,

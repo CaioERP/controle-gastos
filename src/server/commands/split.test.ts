@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { createTestDb } from '../../../tests/helpers/db';
-import { accounts, categories, institutions, transactions } from '../db/schema';
+import { accounts, categories, institutions, invoices, tags, transactions, transactionTags } from '../db/schema';
 import { seedBase } from '../db/seed';
 import { CommandError } from '../domain/errors';
 import { defaultFilters } from '../domain/filters';
-import { listTransactions } from '../queries/transactions';
+import { getInvoiceItems, getInvoices } from '../queries/invoices';
+import { getReviewCount, listTransactions } from '../queries/transactions';
 import { splitTransaction, unsplitTransaction } from './split';
 
 describe('split commands', () => {
@@ -207,5 +208,47 @@ describe('split commands', () => {
     await expect(unsplitTransaction(db, { transactionId: mother.id })).rejects.toThrow(
       'não possui divisões ativas',
     );
+  });
+
+  it('regressão: mãe dividida sai da fatura e da fila de revisão; filhas herdam tags; prevista é recusada', async () => {
+    const { db, acc, mother } = await setup();
+    const [inv] = await db
+      .insert(invoices)
+      .values({ accountId: acc.id, referenceMonth: '2026-10-01', closingDate: '2026-10-25', dueDate: '2026-11-05' })
+      .returning();
+    await db.update(transactions).set({ invoiceId: inv!.id, needsReview: true }).where(eq(transactions.id, mother.id));
+    const [tag] = await db.insert(tags).values({ name: 'Viagem', color: '#000000' }).returning();
+    await db.insert(transactionTags).values({ transactionId: mother.id, tagId: tag!.id });
+    const reviewBefore = await getReviewCount(db);
+
+    const { splitIds } = await splitTransaction(db, {
+      transactionId: mother.id,
+      parts: [
+        { amountCents: -6000, categoryId: null },
+        { amountCents: -4000, categoryId: null },
+      ],
+    });
+
+    const items = await getInvoiceItems(db, inv!.id);
+    expect(items.map((t) => t.id).sort()).toEqual([...splitIds].sort());
+    expect(items.reduce((s, t) => s + t.amountCents, 0)).toBe(-10000);
+    expect((await getInvoices(db, acc.id))[0]!.itemCount).toBe(2);
+    expect(await getReviewCount(db)).toBe(reviewBefore - 1);
+    const childTags = await db.select().from(transactionTags).where(inArray(transactionTags.transactionId, splitIds));
+    expect(childTags).toHaveLength(2);
+
+    const [projected] = await db
+      .insert(transactions)
+      .values({ ...mother, id: undefined, status: 'projected', invoiceId: null, needsReview: false })
+      .returning();
+    await expect(
+      splitTransaction(db, {
+        transactionId: projected!.id,
+        parts: [
+          { amountCents: -5000, categoryId: null },
+          { amountCents: -5000, categoryId: null },
+        ],
+      }),
+    ).rejects.toThrow('Parcelas previstas não podem ser divididas');
   });
 });

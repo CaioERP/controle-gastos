@@ -2,7 +2,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { categoryKindFor } from '@/server/categorization/engine';
 import type { Db } from '@/server/db/client';
-import { categories, transactions, transactionSources } from '@/server/db/schema';
+import { categories, transactions, transactionSources, transactionTags } from '@/server/db/schema';
 import { CommandError, toCommandError } from '@/server/domain/errors';
 
 const splitPartInput = z.object({
@@ -37,6 +37,11 @@ export async function splitTransaction(
 
       if (mother.parentTransactionId !== null) {
         throw new CommandError('VALIDATION', 'Não é possível dividir uma transação que já é resultado de uma divisão');
+      }
+
+      // A parcela prevista é substituída pela real na sincronização, e a divisão se perderia.
+      if (mother.status === 'projected') {
+        throw new CommandError('VALIDATION', 'Parcelas previstas não podem ser divididas. Divida quando a parcela for lançada');
       }
 
       // 2. Verifica se a mãe já possui filhas ativas
@@ -90,7 +95,11 @@ export async function splitTransaction(
         }
       }
 
-      // 5. Inserção das filhas
+      // 5. Inserção das filhas (herdam as tags da mãe, para os totais por tag não mudarem com a divisão)
+      const motherTags = await tx
+        .select({ tagId: transactionTags.tagId })
+        .from(transactionTags)
+        .where(eq(transactionTags.transactionId, mother.id));
       const splitIds: string[] = [];
 
       for (const part of data.parts) {
@@ -133,6 +142,12 @@ export async function splitTransaction(
           source: 'manual',
           externalId: inserted!.id,
         });
+
+        if (motherTags.length > 0) {
+          await tx
+            .insert(transactionTags)
+            .values(motherTags.map((t) => ({ transactionId: inserted!.id, tagId: t.tagId })));
+        }
       }
 
       return { splitIds };
