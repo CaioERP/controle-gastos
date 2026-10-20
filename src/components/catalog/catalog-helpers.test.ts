@@ -13,6 +13,9 @@ import {
   hasCategoryOption,
   parentOptions,
   parseOptionalAmount,
+  previewInputFrom,
+  previewMessage,
+  previewUserNote,
   splitCategories,
 } from './catalog-helpers';
 
@@ -117,6 +120,31 @@ describe('catalog-helpers (funções puras)', () => {
     expect(parseOptionalAmount('1.50')).toBe(150);
     expect(formatAmountInput(123456)).toBe('1234,56');
     expect(formatAmountInput(null)).toBe('');
+  });
+
+  it('monta a entrada da prévia a partir do formulário', () => {
+    const base = { matchField: 'description', matchType: 'contains', accountId: '', amountMin: '', amountMax: '' } as const;
+    expect(previewInputFrom({ ...base, pattern: '  ' })).toBeNull();
+    expect(previewInputFrom({ ...base, pattern: ' uber ', accountId: 'acc', amountMin: '10', amountMax: '1.000' })).toEqual({
+      matchField: 'description',
+      matchType: 'contains',
+      pattern: 'uber',
+      accountId: 'acc',
+      amountMinCents: 1000,
+      amountMaxCents: 100000,
+    });
+    expect(previewInputFrom({ ...base, pattern: 'uber' })).toMatchObject({ accountId: null, amountMinCents: null });
+    expect(previewInputFrom({ ...base, pattern: 'uber', amountMin: 'abc' })).toBe('invalid_amount');
+    expect(previewInputFrom({ ...base, pattern: 'uber', amountMin: '50', amountMax: '10' })).toBe('invalid_amount');
+  });
+
+  it('textos da prévia no singular e no plural', () => {
+    expect(previewMessage(0, 90)).toBe('Esta regra casaria com 0 transações dos últimos 90 dias');
+    expect(previewMessage(1, 90)).toBe('Esta regra casaria com 1 transação dos últimos 90 dias');
+    expect(previewMessage(7, 90)).toBe('Esta regra casaria com 7 transações dos últimos 90 dias');
+    expect(previewUserNote(0)).toBe('');
+    expect(previewUserNote(1)).toBe('1 delas tem categoria definida por você e não será alterada.');
+    expect(previewUserNote(3)).toBe('3 delas têm categoria definida por você e não serão alteradas.');
   });
 
   it('mensagem de regra salva com a contagem no singular e no plural', () => {
