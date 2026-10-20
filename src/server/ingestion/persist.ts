@@ -110,6 +110,7 @@ export async function upsertTransaction(
   db: Db,
   accountId: string,
   n: NormalizedTransaction,
+  opts?: { importBatchId?: string },
 ): Promise<{ id: string; created: boolean; changed: boolean }> {
   const [existingSource] = await db
     .select({
@@ -155,6 +156,7 @@ export async function upsertTransaction(
       externalId: n.externalId,
       raw: n.raw,
       fetchedAt: new Date(),
+      importBatchId: opts?.importBatchId ?? null,
     });
 
     return { id: created!.id, created: true, changed: false };
@@ -203,7 +205,11 @@ export async function upsertTransaction(
 
   await db
     .update(transactionSources)
-    .set({ raw: n.raw, fetchedAt: new Date() })
+    .set({
+      raw: n.raw,
+      fetchedAt: new Date(),
+      ...(opts?.importBatchId ? { importBatchId: opts.importBatchId } : {}),
+    })
     .where(eq(transactionSources.id, existingSource.id));
 
   return { id: existingTx.id, created: false, changed };

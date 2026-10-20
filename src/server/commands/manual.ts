@@ -6,13 +6,16 @@ import { accounts, categories, institutions, transactions, transactionSources, t
 import { PAYMENT_METHODS, TX_KINDS, type TxKind } from '@/server/domain/enums';
 import { CommandError, toCommandError } from '@/server/domain/errors';
 
-const MANUAL_ACCOUNT_TYPES = ['wallet', 'checking', 'savings', 'benefit', 'investment'] as const;
+const MANUAL_ACCOUNT_TYPES = ['wallet', 'checking', 'savings', 'credit_card', 'benefit', 'investment'] as const;
 
 const createManualAccountInput = z.object({
   name: z.string().trim().min(1).max(100),
   type: z.enum(MANUAL_ACCOUNT_TYPES),
   institutionId: z.string().uuid().nullable().optional(),
   initialBalanceCents: z.number().int().optional(),
+  closingDay: z.number().int().min(1).max(31).nullable().optional(),
+  dueDay: z.number().int().min(1).max(31).nullable().optional(),
+  creditLimitCents: z.number().int().min(0).nullable().optional(),
 });
 
 export async function createManualAccount(
@@ -42,6 +45,7 @@ export async function createManualAccount(
       }
     }
 
+    const isCreditCard = data.type === 'credit_card';
     const [created] = await db
       .insert(accounts)
       .values({
@@ -52,6 +56,10 @@ export async function createManualAccount(
         name: data.name,
         balanceCents: data.initialBalanceCents ?? 0,
         balanceUpdatedAt: data.initialBalanceCents !== undefined ? new Date() : null,
+        closingDay: isCreditCard ? (data.closingDay ?? null) : null,
+        dueDay: isCreditCard ? (data.dueDay ?? null) : null,
+        creditLimitCents: isCreditCard ? (data.creditLimitCents ?? null) : null,
+        availableLimitCents: isCreditCard ? (data.creditLimitCents ?? null) : null,
       })
       .returning({ id: accounts.id });
 
