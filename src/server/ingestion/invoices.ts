@@ -5,6 +5,7 @@ import { addDaysISO, addMonthsISO, monthStart, today as getToday } from '@/serve
 import type { InvoiceStatus } from '@/server/domain/enums';
 import { getInvoiceCycle } from '@/server/domain/invoice-cycle';
 import type { PipelineContext } from './pipeline';
+import { onePerTransaction } from './source-raw';
 import type { RawInvoice } from './types';
 
 export function computeInvoiceStatus(
@@ -217,16 +218,27 @@ export async function assignInvoices(
       byRefMonth.set(inv.referenceMonth, inv);
     }
 
-    const txRows = await db
+    const joinedRows = await db
       .select({
         id: transactions.id,
         date: transactions.date,
         invoiceId: transactions.invoiceId,
+        source: transactionSources.source,
+        externalId: transactionSources.externalId,
         raw: transactionSources.raw,
       })
       .from(transactions)
       .leftJoin(transactionSources, eq(transactionSources.transactionId, transactions.id))
       .where(and(eq(transactions.accountId, accountId), isNull(transactions.deletedAt)));
+    // Uma linha por transação: a fonte com billId (Pluggy) vence o ciclo calculado
+    const txRows = onePerTransaction(
+      joinedRows,
+      (r) => r.id,
+      (raw) => {
+        const billId = extractBillId(raw);
+        return billId !== null && byExternalId.has(billId);
+      },
+    );
 
     for (const tx of txRows) {
       let targetInvoiceId: string | null = null;

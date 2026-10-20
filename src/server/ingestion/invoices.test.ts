@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createTestDb } from '../../../tests/helpers/db';
-import { accounts, invoices, institutions, transactions } from '../db/schema';
+import { accounts, invoices, institutions, transactions, transactionSources } from '../db/schema';
 import { seedBase } from '../db/seed';
 import {
   assignInvoices,
@@ -173,5 +173,51 @@ describe('invoices association and totals (A1-04)', () => {
     const [inv] = await db.select().from(invoices).where(eq(invoices.accountId, card!.id));
     // Fatura da fonte mantém o totalCents informado pela fonte
     expect(inv!.totalCents).toBe(99900);
+  });
+});
+
+describe('assignInvoices com transação deduplicada (revisão pós-merge)', () => {
+  it('fonte Pluggy com billId vence o ciclo calculado mesmo com uma fonte file ligada', async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+    const [inst] = await db.select().from(institutions).limit(1);
+    const [card] = await db
+      .insert(accounts)
+      .values({ institutionId: inst!.id, type: 'credit_card', name: 'Cartão', closingDay: 10, dueDay: 17 })
+      .returning();
+    // Pelo ciclo, 05/10 cairia na fatura de outubro; o Pluggy diz que está na de novembro
+    const [billInv] = await db
+      .insert(invoices)
+      .values({
+        accountId: card!.id,
+        referenceMonth: '2026-11-01',
+        closingDate: '2026-11-10',
+        dueDate: '2026-11-17',
+        totalCents: 10000,
+        externalId: 'bill-nov',
+        status: 'open',
+      })
+      .returning();
+    const [tx] = await db
+      .insert(transactions)
+      .values({
+        accountId: card!.id,
+        date: '2026-10-05',
+        amountCents: -10000,
+        descriptionRaw: 'LOJA',
+        description: 'Loja',
+        kind: 'expense',
+        paymentMethod: 'credit_card_single',
+      })
+      .returning();
+    await db.insert(transactionSources).values([
+      { transactionId: tx!.id, source: 'pluggy', externalId: 'pl-1', raw: { creditCardMetadata: { billId: 'bill-nov' } } },
+      { transactionId: tx!.id, source: 'file', externalId: 'file-1', raw: { memo: 'LOJA' } },
+    ]);
+
+    await assignInvoices(db, [card!.id], '2026-10-20');
+
+    const [after] = await db.select().from(transactions).where(eq(transactions.id, tx!.id));
+    expect(after!.invoiceId).toBe(billInv!.id);
   });
 });
