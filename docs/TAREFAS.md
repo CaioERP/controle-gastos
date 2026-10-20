@@ -110,7 +110,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00 | ⬜ |
 | B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00 | ⬜ |
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00 | ⬜ |
-| B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B (PR 1 em andamento) |
+| B2-03a | Lançamento manual (contas e transações manuais) | B | B1-05, B1-06 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | 🟡 Agente B — PR 1 #28 em revisão; PR 2 em andamento |
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | P2-00 | ⬜ |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ⬜ |
