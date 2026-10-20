@@ -1,8 +1,9 @@
-import { and, asc, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { connections, syncRuns } from '@/server/db/schema';
-import { toCommandError } from '@/server/domain/errors';
+import { CommandError, toCommandError } from '@/server/domain/errors';
+import { evaluateConnectionHealth } from '@/server/ingestion/connection-lifecycle';
 import { createPluggyAdapter } from '@/server/ingestion/pluggy/adapter';
 import { getPluggyApi } from '@/server/ingestion/pluggy/client';
 import { syncConnection } from '@/server/ingestion/sync';
@@ -35,6 +36,18 @@ export async function triggerSync(
 
   try {
     if (connectionId !== null) {
+      const [conn] = await db
+        .select({ id: connections.id, status: connections.status })
+        .from(connections)
+        .where(eq(connections.id, connectionId));
+
+      if (conn?.status === 'revoked') {
+        throw new CommandError(
+          'CONFLICT',
+          'Esta conexão foi revogada. Reconecte a conta antes de sincronizar.',
+        );
+      }
+
       const res = await syncConnection(db, connectionId, { adapter, today: deps.today });
       return { syncRunId: res.syncRunId };
     }
@@ -42,8 +55,13 @@ export async function triggerSync(
     const now = deps.now ?? new Date();
     const stuckThreshold = new Date(now.getTime() - STUCK_SYNC_MS);
 
-    const eligible = await db
-      .select({ id: connections.id })
+    const candidates = await db
+      .select({
+        id: connections.id,
+        status: connections.status,
+        consentExpiresAt: connections.consentExpiresAt,
+        lastError: connections.lastError,
+      })
       .from(connections)
       .where(
         or(
@@ -52,6 +70,34 @@ export async function triggerSync(
         ),
       )
       .orderBy(asc(connections.createdAt), asc(connections.id));
+
+    const eligible: Array<{ id: string }> = [];
+    for (const conn of candidates) {
+      if (conn.status === 'expired' || conn.status === 'revoked') continue;
+
+      const recentRuns = await db
+        .select({ status: syncRuns.status })
+        .from(syncRuns)
+        .where(eq(syncRuns.connectionId, conn.id))
+        .orderBy(desc(syncRuns.startedAt), desc(syncRuns.id))
+        .limit(5);
+
+      const health = evaluateConnectionHealth(
+        {
+          status: conn.status,
+          consentExpiresAt: conn.consentExpiresAt,
+          lastError: conn.lastError,
+        },
+        recentRuns,
+        now,
+      );
+
+      if (health.isPausedByErrors || health.consentExpired) {
+        continue;
+      }
+
+      eligible.push({ id: conn.id });
+    }
 
     if (eligible.length === 0) {
       const [emptyRun] = await db

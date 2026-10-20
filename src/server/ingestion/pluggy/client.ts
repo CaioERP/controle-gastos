@@ -48,9 +48,9 @@ export class RealPluggyApi implements PluggyApi {
     return this.client;
   }
 
-  async createConnectToken(): Promise<string> {
+  async createConnectToken(itemId?: string): Promise<string> {
     return withRetry(async () => {
-      const res = await this.getClient().createConnectToken();
+      const res = await this.getClient().createConnectToken(itemId);
       return res.accessToken;
     });
   }
