@@ -165,7 +165,11 @@ export async function syncConnection(
 
         // Pendentes que a própria sincronização apagou antes (sumiram numa busca parcial)
         const syncDeletedPending = await tx
-          .select({ id: transactions.id, externalId: transactionSources.externalId })
+          .select({
+            id: transactions.id,
+            externalId: transactionSources.externalId,
+            deletedAt: transactions.deletedAt,
+          })
           .from(transactions)
           .innerJoin(transactionSources, eq(transactionSources.transactionId, transactions.id))
           .where(
@@ -191,14 +195,23 @@ export async function syncConnection(
         }
 
         // Voltaram na busca → restaura (senão ficariam escondidas para sempre, R10)
-        const restoreIds = syncDeletedPending
-          .filter((r) => fetchedExternalIds.has(r.externalId))
-          .map((r) => r.id);
+        const toRestore = syncDeletedPending.filter((r) => fetchedExternalIds.has(r.externalId));
+        const restoreIds = toRestore.map((r) => r.id);
         if (restoreIds.length > 0) {
           await tx
             .update(transactions)
             .set({ deletedAt: null, updatedAt: new Date() })
             .where(inArray(transactions.id, restoreIds));
+          // Partes da divisão apagadas junto com a mãe (mesmo deleted_at); não traz de volta as
+          // que o usuário apagou ao desfazer a divisão
+          for (const r of toRestore) {
+            await tx
+              .update(transactions)
+              .set({ deletedAt: null, updatedAt: new Date() })
+              .where(
+                and(eq(transactions.parentTransactionId, r.id), eq(transactions.deletedAt, r.deletedAt!)),
+              );
+          }
           for (const id of restoreIds) {
             if (!transactionIds.includes(id)) transactionIds.push(id);
           }
@@ -230,10 +243,17 @@ export async function syncConnection(
         const disappearedIds = disappeared.map((r) => r.id);
 
         if (disappearedIds.length > 0) {
+          const deletedAt = new Date();
           await tx
             .update(transactions)
-            .set({ deletedAt: new Date() })
+            .set({ deletedAt })
             .where(inArray(transactions.id, disappearedIds));
+          // Partes de divisão da mãe apagada: senão continuam somando junto com o lançado que
+          // chega com outro id (gasto em dobro)
+          await tx
+            .update(transactions)
+            .set({ deletedAt })
+            .where(and(inArray(transactions.parentTransactionId, disappearedIds), isNull(transactions.deletedAt)));
           stats.deleted = (stats.deleted ?? 0) + disappearedIds.length;
 
           // Pagamento de fatura pendente que sumiu (o lançado costuma vir com outro id): desfaz a

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { accounts, cards, transactions, transactionSources } from '@/server/db/schema';
 import { findCrossSourceMatches, linkSourceToTransaction } from './dedupe';
@@ -101,6 +101,25 @@ export async function upsertCard(db: Db, accountId: string, last4: string): Prom
     .where(and(eq(cards.accountId, accountId), eq(cards.last4, last4)));
 
   return fallback!.id;
+}
+
+/**
+ * A fonte mudou o valor de uma transação já dividida: a soma das partes deixa de bater. A divisão é
+ * do usuário (R9), então fica como está; mãe e partes vão para a fila de revisão. A mãe sai das
+ * listas e da fila (`notSplitParent`), por isso as partes também são marcadas.
+ */
+async function flagSplitMismatch(db: Db, parentId: string, newAmountCents: number): Promise<void> {
+  const parts = await db
+    .select({ id: transactions.id, amountCents: transactions.amountCents })
+    .from(transactions)
+    .where(and(eq(transactions.parentTransactionId, parentId), isNull(transactions.deletedAt)));
+  if (parts.length === 0) return;
+  const partsTotal = parts.reduce((sum, p) => sum + p.amountCents, 0);
+  if (partsTotal === newAmountCents) return;
+  await db
+    .update(transactions)
+    .set({ needsReview: true, updatedAt: new Date() })
+    .where(inArray(transactions.id, [parentId, ...parts.map((p) => p.id)]));
 }
 
 /**
@@ -216,6 +235,10 @@ export async function upsertTransaction(
       (patch as Record<string, unknown>)[key] = nextVal;
       changed = true;
     }
+  }
+
+  if (patch.amountCents !== undefined) {
+    await flagSplitMismatch(db, existingTx.id, patch.amountCents);
   }
 
   if (changed) {
