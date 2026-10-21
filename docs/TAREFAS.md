@@ -1,4 +1,4 @@
-✅ (#67, via #68) |✅ (#66, via #68) |✅ (#65, via #68) |✅ (#63, via #68) |✅ (#64, via #68) |✅ (#62, via #68) |# Quadro de Tarefas
+# Quadro de Tarefas
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
@@ -131,13 +131,13 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | ✅ (PR #58) |
 | P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ✅ |
 | A4-02 | Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas | A | P4-00 (iniciar primeiro; gera migration 0004) | ✅ (PR #57) |
-| A4-01 | Detecção de recorrências e assinaturas | A | P4-00, A4-02 | 🟡 Agente A — PR #62 em revisão |
-| A4-03 | Projeção de fluxo de caixa | A | P4-00, A4-01 | 🟡 Agente A — PR #64 em revisão |
+| A4-01 | Detecção de recorrências e assinaturas | A | P4-00, A4-02 | ✅ (#62, via #68) |
+| A4-03 | Projeção de fluxo de caixa | A | P4-00, A4-01 | ✅ (#64, via #68) |
 | A4-04 | Perguntas em linguagem natural (Claude) | A | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
-| B4-01 | Tela de limites e orçamentos (`/limites`) | B | P4-00, A4-02 | 🟡 Agente B — PR #63 em revisão |
-| B4-05 | Central de notificações e preferências de alerta | B | P4-00, A4-02 | 🟡 Agente B — PR #65 em revisão |
-| B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | 🟡 Agente B — PR #66 em revisão |
-| B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | 🟡 Agente B — PR #67 em revisão |
+| B4-01 | Tela de limites e orçamentos (`/limites`) | B | P4-00, A4-02 | ✅ (#63, via #68) |
+| B4-05 | Central de notificações e preferências de alerta | B | P4-00, A4-02 | ✅ (#65, via #68) |
+| B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | ✅ (#66, via #68) |
+| B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | ✅ (#67, via #68) |
 | B4-04 | Tela de perguntas / chat (`/perguntas`) | B | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
 | P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
 | A5-01 | Banco Neon, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
