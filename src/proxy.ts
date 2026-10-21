@@ -1,23 +1,23 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SESSION_COOKIE, verifySessionToken } from '@/server/auth/session';
+import { SESSION_COOKIE } from '@/server/auth/session';
+import { authConfigured, authDisabled, hasValidSession } from '@/server/auth/guard';
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // 1. Arquivos estáticos e rotas públicas liberadas
+  // 1. Arquivos estáticos e rotas com segredo próprio (jobs: CRON_SECRET; webhook: PLUGGY_WEBHOOK_SECRET)
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/api/webhooks') ||
-    pathname.startsWith('/api/jobs')
+    pathname.startsWith('/api/webhooks/') ||
+    pathname.startsWith('/api/jobs/')
   ) {
     return NextResponse.next();
   }
 
   // 2. Auth desabilitada em ambiente de desenvolvimento/teste
-  const isAuthDisabled = process.env.AUTH_DISABLED === 'true' && process.env.NODE_ENV !== 'production';
-  if (isAuthDisabled) {
+  if (authDisabled()) {
     if (pathname === '/login') {
       return NextResponse.redirect(new URL('/', request.url));
     }
@@ -25,15 +25,11 @@ export async function proxy(request: NextRequest) {
   }
 
   // 3. Em produção, se não estiver configurado, retorna erro 500
-  if (process.env.NODE_ENV === 'production') {
-    if (!process.env.SESSION_SECRET || !process.env.APP_PASSWORD_HASH) {
-      return new NextResponse('Autenticação não configurada', { status: 500 });
-    }
+  if (process.env.NODE_ENV === 'production' && !authConfigured()) {
+    return new NextResponse('Autenticação não configurada', { status: 500 });
   }
 
-  const sessionSecret = process.env.SESSION_SECRET;
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const isAuthenticated = Boolean(token && sessionSecret && (await verifySessionToken(token, sessionSecret)));
+  const isAuthenticated = await hasValidSession(request.cookies.get(SESSION_COOKIE)?.value);
 
   // 4. Se usuário está logado
   if (isAuthenticated) {

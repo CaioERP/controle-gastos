@@ -8,6 +8,7 @@ const envSchema = z.object({
   AUTH_DISABLED: z.string().optional().transform((v) => v === 'true'),
   APP_PASSWORD_HASH: optional,
   SESSION_SECRET: optional,
+  APP_TOTP_SECRET: optional,
   PLUGGY_CLIENT_ID: optional,
   PLUGGY_CLIENT_SECRET: optional,
   PLUGGY_ITEM_IDS: optional,
@@ -15,6 +16,7 @@ const envSchema = z.object({
   COINGECKO_API_KEY: optional,
   SCHEDULER_ENABLED: z.string().optional().transform((v) => v !== 'false'),
   CRON_SECRET: optional,
+  PLUGGY_WEBHOOK_SECRET: optional,
 });
 
 export type Env = z.infer<typeof envSchema>;
