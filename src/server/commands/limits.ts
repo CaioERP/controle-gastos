@@ -139,3 +139,18 @@ export async function evaluateSpendingLimits(
     throw toCommandError(err);
   }
 }
+
+/**
+ * Avaliação depois de gravar transações (lançamento manual, importação). A gravação já foi
+ * confirmada: uma falha aqui só vira log, senão o usuário vê erro e repete o lançamento em dobro.
+ */
+export async function evaluateSpendingLimitsSafely(
+  db: Db,
+  opts?: { transactionIds?: string[]; today?: string },
+): Promise<void> {
+  try {
+    await evaluateSpendingLimits(db, opts);
+  } catch (err) {
+    console.error('[limits] avaliação de limites e alertas falhou', err);
+  }
+}

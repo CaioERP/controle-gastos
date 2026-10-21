@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { describe, expect, it, vi } from 'vitest';
+import { eq, sql } from 'drizzle-orm';
 import { createTestDb } from '../../../tests/helpers/db';
 import { accounts, categories, connections, institutions, transactions, transactionSources } from '../db/schema';
 import { seedBase } from '../db/seed';
@@ -220,5 +220,27 @@ describe('manual commands', () => {
 
     // Excluir de novo deve lançar NOT_FOUND
     await expect(deleteManualTransaction(db, { transactionId })).rejects.toThrow(CommandError);
+  });
+
+  it('falha na avaliação de limites não derruba o lançamento já gravado', async () => {
+    const { db, expenseCat } = await setup();
+    const { accountId } = await createManualAccount(db, { name: 'Carteira', type: 'wallet', initialBalanceCents: 0 });
+    // Força a avaliação a falhar: a tabela de limites some do banco de teste em memória
+    await db.execute(sql`alter table spending_limits rename to spending_limits_off`);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { transactionId } = await createManualTransaction(db, {
+      accountId,
+      date: '2026-10-15',
+      amountCents: -3500,
+      description: 'Lanche',
+      kind: 'expense',
+      paymentMethod: 'cash',
+      categoryId: expenseCat.id,
+    });
+
+    expect(transactionId).toBeTruthy();
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
   });
 });
