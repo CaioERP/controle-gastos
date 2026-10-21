@@ -135,8 +135,8 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A4-03 | Projeção de fluxo de caixa | A | P4-00, A4-01 | 🟡 Agente A — PR #64 em revisão |
 | A4-04 | Perguntas em linguagem natural (Claude) | A | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
 | B4-01 | Tela de limites e orçamentos (`/limites`) | B | P4-00, A4-02 | 🟡 Agente B — PR #63 em revisão |
-| B4-05 | Central de notificações e preferências de alerta | B | P4-00, A4-02 | 🟡 Agente B (em andamento) |
-| B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | ⬜ |
+| B4-05 | Central de notificações e preferências de alerta | B | P4-00, A4-02 | 🟡 Agente B — PR #65 em revisão |
+| B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | 🟡 Agente B (em andamento) |
 | B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | ⬜ |
 | B4-04 | Tela de perguntas / chat (`/perguntas`) | B | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
 | P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
