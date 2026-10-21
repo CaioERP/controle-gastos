@@ -11,7 +11,7 @@
 | # | Melhoria | Valor | Esforço | Custo mensal | Depende de |
 |---|---|---|---|---|---|
 | 1 | Bot no Telegram | Alto | M | R$ 0 (+ centavos de IA) | Fase 4 (alertas); deploy público ou polling local |
-| 2 | Leitor de e-mail (faturas e alertas de compra) | Alto | M–G | R$ 0 (+ IA por PDF) | A2-02 (PDF via IA) |
+| 2 | Leitor de e-mail (faturas e alertas de compra) | Alto | M–G | R$ 0 | A2-02 (PDF por parser) |
 | 3 | Captura de notificações do celular (Android) | Médio | P | R$ 0 | Deploy público (Fase 5) |
 | 4 | 2FA / passkey | Alto antes do deploy | P–M | R$ 0 | F0-06 |
 | 5 | Backup automático criptografado | Alto | P | R$ 0 | — |
@@ -25,6 +25,7 @@
 | 13 | App nativo | Baixo (o PWA cobre) | G | Contas de loja (Apple é paga) | Fase 5 |
 | 14 | Simulador de metas e aposentadoria | Médio | M | R$ 0 | Fase 3 |
 | 15 | Contingência: agregador pago se o Meu Pluggy acabar | Crítico se acontecer | P (troca de adapter) | Alto (planos comerciais) | Interface `SourceAdapter` |
+| 16 | IA com a Claude API: categorização automática, PDF de qualquer banco e perguntas em linguagem natural | Alto | P (categorização: restaurar) · M (PDF, perguntas) | Centavos por uso | H-03 (chave da Claude) |
 
 ---
 
@@ -44,7 +45,7 @@
 ---
 
 ## 1. Bot no Telegram
-- **O que é:** um bot privado para lançar gastos rápidos ("50 uber", "32,90 farmácia pix"), mandar foto de recibo, receber alertas (orçamento, fatura vencendo, gasto fora do padrão) e o resumo semanal/mensal.
+- **O que é:** um bot privado para lançar gastos rápidos ("50 uber", "32,90 farmácia pix"), mandar foto de recibo, receber alertas (limite de gasto atingido ou no ritmo de estourar, fatura vencendo, gasto fora do padrão) e o resumo semanal/mensal.
 - **Valor:** é o canal de entrada mais rápido para gastos em dinheiro e torna os alertas da Fase 4 realmente úteis (chegam no celular).
 - **Esforço:** M. Interpretação da mensagem com Claude Haiku (texto → valor, descrição, categoria, forma de pagamento), confirmação com botões ("✅ Confirmar / ✏️ Editar"), envio de alertas, comandos `/resumo`, `/hoje`, `/fatura`.
 - **Custo mensal:** R$ 0 (a API do Telegram é gratuita) + centavos de IA por mensagem interpretada.
@@ -172,3 +173,14 @@
 - **Custo mensal:** alto.
 - **O que é necessário para funcionar:** na prática, o plano B **viável** é: leitor de e-mail (#2) + importação de arquivos (A2-01/A2-02) + notificações do celular (#3). Juntos, cobrem quase tudo com atraso maior.
 - **Riscos:** acompanhar os termos do Meu Pluggy; o sistema deve avisar quando a sincronização falhar por vários dias seguidos (A2-05).
+
+## 16. IA com a Claude API (retirada do escopo em 2026-10-20)
+- **O que é:** três usos de IA que o usuário decidiu deixar de fora por enquanto, para manter tudo só em código:
+  1. **Categorização por IA (A1-07):** já foi implementada (Claude Haiku, lotes de 40, dados pessoais mascarados, confiança < 0,8 vai para a revisão) e retirada pela A1-10. Para voltar: restaurar os arquivos `src/server/categorization/llm.ts`, `llm-prompt.ts` e `mask.ts` do histórico do Git (último commit antes da A1-10) e a opção `llm` no pipeline.
+  2. **Fatura em PDF de qualquer banco (antiga A2-02):** o Claude lê o PDF e devolve os itens; dispensa um parser por layout. Spec antiga em `docs/tarefas/fase-2-dados.md` (A2-02).
+  3. **Perguntas em linguagem natural (A4-04/B4-04):** "quanto gastei com Uber em 2026?", com ferramentas somente de leitura. Spec em `docs/tarefas/fase-4-*.md`.
+- **Valor:** menos transações na fila de revisão, PDF de qualquer banco sem manutenção de parser e respostas rápidas sem montar filtros.
+- **Esforço:** P para restaurar a categorização; M para o PDF e para as perguntas.
+- **Custo mensal:** centavos por uso (Haiku na categorização e nas perguntas, cerca de R$ 0,02–0,05 por pergunta). Confirmar preços atuais.
+- **O que é necessário para funcionar:** H-03 (`ANTHROPIC_API_KEY` no `.env.local` ou no painel da hospedagem).
+- **Riscos:** descrições de transações (mascaradas) saem do sistema para a Anthropic; custo variável se o volume crescer.

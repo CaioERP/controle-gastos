@@ -16,10 +16,11 @@ Revisar o `docs/spikes/pluggy.md`, os problemas encontrados em I1-01 e as amostr
 - **Decisões:** um parser por formato em `src/server/ingestion/file/`; OFX (padrão, Itaú exporta) e CSV com perfis por banco (Nubank exporta CSV de fatura e de conta). Cada parser produz `NormalizedTransaction` com `source: 'file'` e `externalId` = hash estável de `(conta, data, valor, descrição, ordem no dia)`. Fluxo em duas etapas: **pré-visualizar** (cria `import_batches` com `status: 'preview'`) → **confirmar** (persiste usando o mesmo `persist.ts` + pipeline).
 - **Aceite:** reimportar o mesmo arquivo não duplica nada; amostras de H-04 importam sem erro; testes com arquivos anonimizados.
 
-### A2-02 — Importação de fatura em PDF via IA
-- **Objetivo:** ler o PDF da fatura de qualquer banco.
-- **Decisões:** PDFs com senha → pedir a senha na UI (nunca armazenar). Enviar o PDF para o Claude (Sonnet) com ferramenta de saída estruturada `{ closingDate, dueDate, totalCents, items: [{ date, description, amountCents, installment }] }`. **Validação obrigatória:** soma dos itens = total da fatura (tolerância de R$ 0,05); se não bater, a importação fica em pré-visualização com aviso.
-- **Aceite:** faturas de exemplo do Nubank, Itaú e Mercado Pago extraídas com total conferido; custo por fatura registrado no `stats`.
+### A2-02 — Importação de fatura em PDF por parser de cada banco (sem IA)
+- **Mudança (2026-10-20):** a versão com o Claude saiu do escopo por decisão do usuário. A spec detalhada em `fase-2-dados.md` está obsoleta e será refeita na **P2-01**, a partir das amostras de H-04.
+- **Objetivo:** ler o PDF da fatura do Nubank, do Itaú e do Mercado Pago **só com código**: extração do texto do PDF e um parser por layout de banco.
+- **Decisões:** PDFs com senha → pedir a senha na UI (nunca armazenar). Saída `{ closingDate, dueDate, totalCents, items: [{ date, description, amountCents, installment }] }`. **Validação obrigatória:** soma dos itens = total da fatura (tolerância de R$ 0,05); se não bater, a importação fica em pré-visualização com aviso. Layout desconhecido → mensagem amigável sugerindo OFX/CSV.
+- **Aceite:** as amostras de H-04 de cada banco são lidas com o total conferido.
 
 ### A2-03 — Deduplicação entre fontes
 - **Objetivo:** a mesma compra vinda do Pluggy e de um arquivo vira **uma** transação, com duas linhas em `transaction_sources`.
@@ -27,8 +28,8 @@ Revisar o `docs/spikes/pluggy.md`, os problemas encontrados em I1-01 e as amostr
 - **Aceite:** importar a fatura em PDF de um mês já sincronizado não altera o total de gastos.
 
 ### A2-04 — Conferência de faturas
-- **Objetivo:** alertar quando o total da fatura (fonte oficial: PDF/bill) ≠ soma dos lançamentos sincronizados.
-- **Aceite:** divergência acima de R$ 1 aparece na tela de faturas com a lista do que falta/sobra.
+- **Objetivo:** alertar quando o total oficial da fatura ≠ soma dos lançamentos. Fonte oficial: o total da fatura que vem do Pluggy (`bills`); os itens do PDF entram quando o parser da A2-02 existir.
+- **Aceite:** divergência acima de R$ 1 aparece na tela de faturas (com a lista do que falta/sobra quando houver itens do PDF).
 
 ### A2-05 — Ciclo de vida das conexões
 - **Objetivo:** tratar consentimento expirado, erros de login e reconexão.
@@ -85,22 +86,31 @@ Formulários de posição manual; lista de proventos recebidos (dividendos, JCP,
 ## Fase 4 — Inteligência
 
 ### P4-00 — Detalhar a Fase 4 (modelo forte)
-Definir `budgets`, `recurrences` e `notifications`; desenhar o motor de alertas e a ferramenta de perguntas (quais consultas serão expostas como ferramentas para o Claude).
+Definir `spending_limits` (limites e metas de gasto, incluindo os orçamentos sugeridos), `recurrences` e `notifications`; desenhar o motor de alertas e a ferramenta de perguntas (quais consultas serão expostas como ferramentas para o Claude).
+**Limites de gasto** (pedido do usuário em 2026-10-20): A4-02, B4-01 e B4-05 não dependem do Pluggy nem das recorrências e **podem ser antecipadas** antes do resto da Fase 4, se o usuário decidir. Nesse caso a `P4-00` detalha primeiro essas três tarefas.
 
 ### A4-01 — Detecção de recorrências e assinaturas
 Agrupar por estabelecimento; recorrente = 3+ ocorrências com intervalo regular (mensal ±3 dias, anual) e valor estável (±10%). Detectar aumento de preço e assinatura que parou de ser cobrada.
 
-### A4-02 — Orçamentos sugeridos e motor de alertas
-Orçamento por categoria sugerido pela média dos últimos 3 meses (arredondado). Alertas: 80% e 100% do orçamento, gasto fora do padrão (> 2 desvios da média da categoria), fatura vencendo em 3 dias, consentimento expirando, sincronização com erro. Gravados em `notifications`.
+### A4-02 — Limites de gasto, orçamentos sugeridos e motor de alertas
+- **Objetivo:** o usuário define metas ou limites de gasto e é avisado quando se aproxima deles ou os ultrapassa.
+- **Escopo de um limite:** uma **categoria** (a categoria pai inclui as filhas) e/ou uma **forma de pagamento** (ex.: "Delivery ≤ R$ 400/mês", "Crédito parcelado ≤ R$ 1.500/mês", "Lazer no cartão de crédito ≤ R$ 300/mês"); opcionalmente restrito a uma conta ou cartão.
+- **Período:** mensal (padrão), semanal ou anual. Soma o gasto pelo regime de competência (R5), com estorno abatendo (R2) e só naturezas reportáveis; transações divididas contam pelas partes.
+- **Avisos:** limiares configuráveis por limite (padrão 80% e 100%). Cada limiar dispara **uma vez por período**, e o período seguinte recomeça do zero. Alerta de **ritmo**: "no ritmo atual, você vai passar do limite em N dias", quando a projeção linear do mês ultrapassa 100% antes do fim do período.
+- **Orçamento sugerido:** valor sugerido pela média dos últimos 3 meses (arredondado), que o usuário aceita e transforma em limite com um clique.
+- **Quando avaliar:** depois de cada sincronização, importação ou lançamento manual (gancho no pipeline) e num job diário. A avaliação é idempotente: rodar duas vezes não gera notificação repetida.
+- **Outros alertas que usam o mesmo motor:** gasto fora do padrão (> 2 desvios da média da categoria), fatura vencendo em 3 dias, consentimento expirando e sincronização com erro.
+- **Saída:** linhas em `notifications` (tipo, título, mensagem, link para a tela filtrada, lida/não lida). **Canais:** dentro do app agora; Telegram (MELHORIAS #1), e-mail e push no celular (depende do PWA da B5-01) ficam como canais futuros que leem a mesma tabela.
+- **Aceite:** com um limite de Delivery de R$ 400 e R$ 330 gastos, um lançamento de R$ 10 gera o aviso de 80%, e ultrapassar R$ 400 gera o de 100%; reprocessar não repete os avisos; no mês seguinte eles voltam a valer.
 
 ### A4-03 — Projeção de fluxo de caixa
 Saldo projetado para os próximos 6 meses: saldo atual + receitas recorrentes + despesas recorrentes + parcelas futuras + média de gastos variáveis por categoria.
 
 ### A4-04 — Perguntas em linguagem natural
-O Claude responde perguntas ("quanto gastei com Uber em 2026?") usando **ferramentas somente de leitura** que chamam as consultas da Trilha B (`getBreakdown`, `getMonthlySeries`, `listTransactions`). Nenhum SQL gerado pela IA. Dados pessoais mascarados como em A1-07.
+⏸️ **Fora do escopo por enquanto** (decisão do usuário, 2026-10-20: o sistema não usa a Claude API). A spec detalhada continua em `fase-4-dados.md` para quando a IA voltar; ver `MELHORIAS.md`.
 
 ### B4-01 a B4-05 — Telas
-Orçamentos (barras de progresso por categoria, edição), Assinaturas (lista com custo mensal e anual total), Projeção (gráfico de linha com faixa de incerteza), Perguntas (chat com respostas que linkam para as telas filtradas), Central de notificações (sino no topo, marcar como lida).
+Limites e orçamentos (B4-01: criar, editar e pausar limites por categoria e/ou forma de pagamento; barra de progresso por limite com a cor mudando nos limiares; previsão de ritmo; aceitar o orçamento sugerido; indicador nos cartões do dashboard), Assinaturas (lista com custo mensal e anual total), Projeção (gráfico de linha com faixa de incerteza), ~~Perguntas~~ (B4-04 fora do escopo por enquanto, junto com a A4-04), Central de notificações (B4-05: sino no topo com contador de não lidas, lista com link para a tela filtrada, marcar como lida, e preferências: quais tipos de alerta receber).
 
 ---
 

@@ -21,7 +21,6 @@
     "db:reset": "npm run db:wipe && npm run db:migrate && npm run db:seed && npm run db:fixtures"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.135.0",
     "@base-ui/react": "^1.9.0",
     "@date-fns/tz": "^1.5.0",
     "@electric-sql/pglite": "^0.5.10",

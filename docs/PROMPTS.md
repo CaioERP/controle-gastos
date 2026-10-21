@@ -11,14 +11,14 @@
 |---|---|---|---|---|
 | 1 | Agente A | A1-03, A1-04, A1-05, A1-08 (restante), A1-09 | PRs #33 e #34 (A1-01/A1-02) na main | 2 |
 | 2 | Agente forte | P2-00 (detalhar o resto da Fase 2) | nenhum | 1 |
-| 3 | Agente A | A2-01, A2-03, A2-05 (depois A2-02 e A2-04) | P2-00 ✅ e prompt 1 concluído | 4 |
+| 3 | Agente A | A2-01, A2-03, A2-05 (depois A2-04; A2-02 só depois da P2-01) | P2-00 ✅ e prompt 1 concluído | 4 |
 | 4 | Agente B | B2-01, B2-02 | P2-00 ✅ | 3 |
 | 5 | Agente A (+ usuário) | F0-07 e I1-01 → **Marco M1** | H-01/H-02 feitos pelo usuário, prompt 1 concluído | 3, 4 |
 | 6 | Agente forte | P3-00 (detalhar a Fase 3) | Fase 2 na main; de preferência depois do M1 | — |
 | 7 | Agente A | A3-01 a A3-04 | P3-00 ✅ | 8 |
 | 8 | Agente B | B3-01 a B3-03 | P3-00 ✅ e os PRs de dados correspondentes abertos | 7 |
 | 9 | Agente forte | P4-00 (detalhar a Fase 4) | Fase 3 na main | — |
-| 10 | Agente A | A4-01 a A4-04 | P4-00 ✅ | 11 |
+| 10 | Agente A | A4-02, A4-01, A4-03 (A4-04 fora do escopo) | P4-00 ✅ | 11 |
 | 11 | Agente B | B4-01 a B4-05 | P4-00 ✅ | 10 |
 | 12 | Agente forte | P5-00 (detalhar o deploy) | Fase 4 na main (ou antes, se o usuário quiser publicar cedo) | — |
 | 13 | Agente A | A5-01, A5-02 | P5-00 ✅ e H-06 feito pelo usuário | 14 |
@@ -372,31 +372,34 @@ os desvios e as pendências.
 
 ---
 
-## 10 e 13 — Agente A: implementar as Fases 4 e 5 (dados)
-
-Use o mesmo prompt, trocando `<N>`, a lista de tarefas e o pré-requisito:
-- Fase 4: tarefas A4-01 a A4-04; pré-requisito P4-00 ✅.
-- Fase 5: tarefas A5-01 e A5-02; pré-requisito P5-00 ✅ e H-06 ✅.
+## 10 — Agente A: Fase 4 (dados — limites, recorrências, projeção e perguntas IA)
 
 ```text
 Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
 C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
 
 Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
-docs/tarefas/fase-<N>-dados.md.
+docs/tarefas/fase-4-dados.md.
 
-Pré-requisito: <pré-requisito> no quadro. Se não estiver, pare e avise.
+Pré-requisito: P4-00 com ✅ no quadro. Se não estiver, pare e avise.
 
-Tarefas: <lista>, na ordem da spec, um PR cada. A primeira tarefa da fase faz o commit de contrato
-com a migration, conforme a spec e o CONTRATOS.md §6.
+Tarefas, nesta ordem, um PR cada:
+1. A4-02 — Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas.
+   Faz o commit de contrato com a migration 0004 das 5 tabelas novas (spending_limits, spending_limit_dispatches,
+   recurrences, notifications e notification_preferences), novos enums e stubs de comandos. Esta tarefa
+   vem primeiro para desbloquear imediatamente B4-01 e B4-05 do Agente B.
+2. A4-01 — Detecção de recorrências e assinaturas. Depende de A4-02 (migration 0004).
+3. A4-03 — Projeção de fluxo de caixa (6 meses com faixa de incerteza). Depende de A4-01.
+4. ~~A4-04 — Perguntas em linguagem natural~~ — fora do escopo por enquanto (IA desligada, 2026-10-20). Não implemente.
+
+Se abrir um PR antes do anterior ser aceito, empilhe a branch na anterior (--base <branch-anterior>),
+conforme "Dependência em revisão" do AGENTS.md §3.
 
 Regras:
-- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅.
-  Se faltar algo, se a spec não existir ou se ela contradisser o código, pare e registre em
-  "Pendências de coordenação".
-- Serviços externos só pela interface injetável da spec, com fake nos testes (testes nunca acessam
-  a rede).
-- Segredos só no .env.local.
+- Pegue só as tarefas listadas. Antes de cada uma, reserve no quadro: ⬜ → 🟡 Agente A.
+- Ferramentas de IA em A4-04 são estritamente de leitura (chamam consultas existentes); nenhum SQL gerado por IA.
+- Mascaramento de dados pessoais em A4-04 com maskForLlm de src/server/categorization/mask.ts.
+- Segredos (ANTHROPIC_API_KEY) só no .env.local.
 - Escreva só os testes que a spec pede.
 - Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
 - Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
@@ -407,29 +410,29 @@ os desvios e as pendências.
 
 ---
 
-## 11 e 14 — Agente B: implementar as Fases 4 e 5 (interface)
-
-Use o mesmo prompt, trocando `<N>`, a lista de tarefas e o pré-requisito:
-- Fase 4: tarefas B4-01 a B4-05; pré-requisito P4-00 ✅.
-- Fase 5: tarefas B5-01 e B5-02; pré-requisito P5-00 ✅ e, para a B5-02, H-06 ✅.
+## 11 — Agente B: Fase 4 (interface — limites, notificações, assinaturas, projeção e chat IA)
 
 ```text
 Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
 C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
 
-Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
-docs/tarefas/fase-<N>-interface.md.
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md,
+docs/tarefas/fase-4-interface.md e docs/tarefas/fase-4-dados.md (para referência do schema e dos comandos).
 
-Pré-requisito: <pré-requisito> no quadro. Se não estiver, pare e avise.
+Pré-requisito: P4-00 com ✅ no quadro, e a A4-02 aberta em PR (ou na main) para usar o schema e comandos
+de limites e notificações. Se a A4-02 ainda não tiver PR, espere e avise.
 
-Tarefas: <lista>, na ordem da spec, um PR cada. Se uma tarefa depende de dados da Trilha A ainda em PR,
-siga o "Dependência em revisão" do AGENTS.md §3. Se a dependência nem tiver PR, pule para a próxima
-tarefa e avise.
+Tarefas, um PR cada:
+1. B4-01 — Tela de limites e orçamentos (/limites e widget no dashboard). Vem primeiro junto com A4-02.
+   Se A4-02 estiver em PR, crie a branch a partir da branch da A4-02 e abra o PR com --base nela.
+2. B4-05 — Central de notificações e preferências de alerta (sino no cabeçalho com badge, popover e página /notificacoes).
+   Pode ser feita logo após B4-01, usando as notificações geradas por limites e faturas.
+3. B4-02 — Tela de assinaturas e recorrências (/assinaturas). Depende de A4-01.
+4. B4-03 — Tela de projeção de fluxo de caixa (/projecao). Depende de A4-03.
+5. ~~B4-04 — Tela de perguntas / chat~~ — fora do escopo por enquanto (IA desligada, 2026-10-20). Não implemente.
 
 Regras:
-- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅ (ou
-  em PR, no caso de dependência em revisão). Se faltar algo, se a spec não existir ou se ela contradisser
-  o código, pare e registre em "Pendências de coordenação".
+- Pegue só as tarefas listadas. Antes de cada uma, reserve no quadro: ⬜ → 🟡 Agente B.
 - Textos em pt-BR, dinheiro com <Money />, datas com <DateBR />, e tudo funcionando em 390 px.
 - Escreva só os testes que a spec pede.
 - Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
@@ -437,4 +440,82 @@ Regras:
 
 No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
 os desvios e as pendências.
+```
+
+---
+
+## 13 — Agente A: implementar a Fase 5 (deploy)
+
+```text
+Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
+docs/tarefas/fase-5-dados.md.
+
+Pré-requisito: P5-00 ✅ e H-06 ✅ no quadro. Se não estiver, pare e avise.
+
+Tarefas: A5-01 e A5-02, na ordem da spec, um PR cada.
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅.
+- Segredos só no painel da Vercel / .env.local.
+- Escreva só os testes que a spec pede.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
+os desvios e as pendências.
+```
+
+---
+
+## 14 — Agente B: implementar a Fase 5 (PWA e CI)
+
+```text
+Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
+docs/tarefas/fase-5-interface.md.
+
+Pré-requisito: P5-00 ✅ e, para a B5-02, H-06 ✅ no quadro. Se não estiver, pare e avise.
+
+Tarefas: B5-01 e B5-02, na ordem da spec, um PR cada.
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira se está ⬜ e se as dependências estão ✅.
+- Textos em pt-BR, dinheiro com <Money />, datas com <DateBR />, e tudo funcionando em 390 px.
+- Escreva só os testes que a spec pede.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3001. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
+os desvios e as pendências.
+```
+
+---
+
+## Avulso — Agente A: A1-10, retirar a integração com a Claude API
+
+```text
+Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/TAREFAS.md e docs/tarefas/fase-1-dados.md (seção A1-10).
+
+Tarefa: A1-10 — Retirar a integração com a Claude API. Decisão do usuário: por enquanto o sistema não usa IA
+e todas as features ficam só em código. Um PR só (branch a/A1-10-sem-ia), seguindo o passo a passo da spec.
+A spec autoriza você a editar também src/app/(app)/importar/** e src/components/imports/**, só para
+retirar a opção de PDF.
+
+Regras:
+- Antes de apagar qualquer arquivo, confira com grep que nada mais o importa.
+- Mantenha o valor 'llm' em CATEGORY_SOURCES (contrato).
+- Desinstale @anthropic-ai/sdk com npm uninstall e registre o motivo no commit.
+- Ajuste só os testes que quebrarem; não escreva testes novos. npm run check tem que passar.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+
+No fim, mande: número e link do PR, o que foi removido, o último commit que ainda tinha a integração,
+o resultado do npm run check e os desvios.
 ```

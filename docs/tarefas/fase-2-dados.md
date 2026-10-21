@@ -243,6 +243,8 @@ Materializar o contrato da tabela `import_batches` no banco, permitir criar cont
 
 ## A2-02 — Importação de fatura em PDF via IA
 
+> ⏸️ **Spec obsoleta (2026-10-20):** a IA saiu do escopo por decisão do usuário. A A2-02 será refeita como **parser de PDF por banco, sem IA**, na tarefa **P2-01** (depende das amostras de H-04). Não implemente o texto abaixo.
+
 **Depende de:** A2-01, H-03, H-04 · **Tamanho:** médio
 
 ### Objetivo
@@ -472,7 +474,9 @@ Garantir que a mesma transação vinda do Pluggy e de um arquivo (OFX/CSV/PDF) v
 
 ## A2-04 — Conferência de faturas (total oficial × lançamentos)
 
-**Depende de:** A2-02, A2-03 · **Tamanho:** pequeno
+**Depende de:** A1-04, A2-03 · **Tamanho:** pequeno
+
+> **Mudança (2026-10-20):** sem a A2-02 por enquanto, a fonte oficial é só o total da fatura do Pluggy (`bills`). Sem itens do PDF, a conferência mostra a diferença de total e as transações da fatura; `missing_in_system`/`amount_mismatch` por item só existem quando houver itens de PDF.
 
 ### Objetivo
 Comparar o total oficial da fatura (vindo do PDF importado ou do `bills` da Pluggy) com a soma dos lançamentos da fatura no sistema, identificando divergências acima de R$ 1,00 e listando o que falta ou sobra.

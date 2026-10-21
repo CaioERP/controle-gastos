@@ -1,8 +1,7 @@
-import { and, eq, isNull, ne } from 'drizzle-orm';
-import { categorizeWithLlm } from '@/server/categorization/llm';
+import { eq, ne } from 'drizzle-orm';
 import { triggerSync } from '@/server/commands/sync';
 import type { Db } from '@/server/db/client';
-import { invoices, syncRuns, transactions } from '@/server/db/schema';
+import { invoices, syncRuns } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
 import { checkConnectionsLifecycle } from '@/server/ingestion/connection-lifecycle';
 import { computeInvoiceStatus } from '@/server/ingestion/invoices';
@@ -11,7 +10,6 @@ import { updateMarketPricesAndBenchmarks } from '@/server/investments/update-pri
 
 export type JobName =
   | 'sync-all'
-  | 'categorize-pending'
   | 'invoice-status'
   | 'connection-health'
   | 'prices-daily'
@@ -31,26 +29,6 @@ export const JOBS: JobDef[] = [
       const res = await triggerSync(db, { connectionId: null });
       await captureNetWorthSnapshot(db);
       return res;
-    },
-  },
-  {
-    name: 'categorize-pending',
-    intervalMinutes: 60,
-    run: async (db) => {
-      const pending = await db
-        .select({ id: transactions.id })
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.needsReview, true),
-            isNull(transactions.categoryId),
-            isNull(transactions.deletedAt),
-          ),
-        );
-      return categorizeWithLlm(
-        db,
-        pending.map((r) => r.id),
-      );
     },
   },
   {
