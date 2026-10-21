@@ -16,6 +16,9 @@ import { computeInvoiceStatus } from './invoices';
 import { upsertAccount, upsertTransaction } from './persist';
 import { runPipeline } from './pipeline';
 import type { RawInvoice, SourceAdapter } from './types';
+import type { PluggyApi } from './pluggy/api';
+import { syncConnectionInvestments } from '@/server/investments/sync';
+
 
 export type SyncResult = {
   syncRunId: string;
@@ -89,7 +92,7 @@ async function unpayInvoicePaidBy(db: Db, date: string, amountCents: number, tod
 export async function syncConnection(
   db: Db,
   connectionId: string,
-  deps: { adapter: SourceAdapter; today?: string },
+  deps: { adapter: SourceAdapter; today?: string; pluggy?: PluggyApi },
 ): Promise<SyncResult> {
   const [conn] = await db.select().from(connections).where(eq(connections.id, connectionId));
 
@@ -277,7 +280,20 @@ export async function syncConnection(
       today: todayStr,
     });
 
+    const pluggy = deps.pluggy ?? (deps.adapter as { pluggyApi?: PluggyApi }).pluggyApi;
+    if (deps.adapter.provider === 'pluggy' && pluggy) {
+      try {
+        const invStats = await syncConnectionInvestments(db, conn.id, { pluggy, today: todayStr });
+        stats.holdingsUpserted = invStats.holdingsUpserted;
+        stats.investmentTransactionsUpserted = invStats.txUpserted;
+        stats.investmentTransactionsLinked = invStats.linkedCount;
+      } catch {
+        stats['error:investments'] = 1;
+      }
+    }
+
     const now = deps.today
+
       ? new Date(new TZDate(`${deps.today}T12:00:00`, TZ).getTime())
       : new Date();
     await db

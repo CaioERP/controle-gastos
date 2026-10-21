@@ -16,9 +16,11 @@ function toSaoPauloDate(dateInput: string): string {
   return format(new TZDate(new Date(dateInput), TZ), 'yyyy-MM-dd');
 }
 
-export function createPluggyAdapter(api: PluggyApi): SourceAdapter {
+export function createPluggyAdapter(api: PluggyApi): SourceAdapter & { pluggyApi: PluggyApi } {
   return {
     provider: 'pluggy',
+    pluggyApi: api,
+
 
     async listAccounts(conn: ConnectionRef): Promise<RawAccount[]> {
       const pluggyAccounts = await api.fetchAccounts(conn.externalId);

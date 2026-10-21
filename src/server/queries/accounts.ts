@@ -157,9 +157,9 @@ export async function getAccountsOverview(
       const openInv = a.type === 'credit_card' ? pickOpenInvoice(invoicesByAccount.get(a.id)) : null;
 
       if (a.includeInTotals) {
-        if (a.type !== 'credit_card') {
+        if (a.type !== 'credit_card' && a.type !== 'investment') {
           totalBalanceCents += a.balanceCents;
-        } else {
+        } else if (a.type === 'credit_card') {
           totalCardDebtCents += cardDebt(invoicesByAccount.get(a.id));
         }
       }

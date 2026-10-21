@@ -55,3 +55,36 @@ export const IMPORT_FORMATS = ['ofx', 'csv_nubank_checking', 'csv_nubank_card', 
 export type ImportBatchStatus = (typeof IMPORT_BATCH_STATUSES)[number];
 export type ImportFormat = (typeof IMPORT_FORMATS)[number];
 
+export const ASSET_CLASSES = [
+  'fixed_income', // CDB, LCI, LCA, CRI, CRA, debêntures
+  'stocks', // Ações e BDRs
+  'fii', // Fundos Imobiliários (FII, FI-Infra, Fiagro)
+  'etf', // ETFs
+  'funds', // Fundos de investimento (renda fixa, multimercado, ações, cambial)
+  'treasury', // Tesouro Direto
+  'crypto', // Criptomoedas
+  'pension', // Previdência privada (PGBL/VGBL)
+  'other', // COE, derivativos e outros
+] as const;
+
+export const INVESTMENT_INDEXERS = ['cdi', 'ipca', 'selic', 'prefixado', 'other'] as const;
+
+export const INVESTMENT_TX_TYPES = [
+  'buy', // aplicação / compra
+  'sell', // resgate / venda
+  'income', // dividendo, JCP, rendimento de FII, cupom
+  'tax', // IR / IOF retido
+  'fee', // taxa / corretagem
+  'transfer', // transferência de custódia
+] as const;
+
+export const BENCHMARK_CODES = ['cdi', 'selic', 'ipca', 'ibov'] as const;
+export const PRICE_SOURCES = ['brapi', 'tesouro', 'coingecko', 'pluggy', 'manual'] as const;
+
+export type AssetClass = (typeof ASSET_CLASSES)[number];
+export type InvestmentIndexer = (typeof INVESTMENT_INDEXERS)[number];
+export type InvestmentTxType = (typeof INVESTMENT_TX_TYPES)[number];
+export type BenchmarkCode = (typeof BENCHMARK_CODES)[number];
+export type PriceSource = (typeof PRICE_SOURCES)[number];
+
+

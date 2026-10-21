@@ -1,11 +1,21 @@
 import { CommandError } from '@/server/domain/errors';
-import type { PluggyAccount, PluggyApi, PluggyBill, PluggyItem, PluggyTransaction } from './api';
+import type {
+  PluggyAccount,
+  PluggyApi,
+  PluggyBill,
+  PluggyInvestment,
+  PluggyInvestmentTransaction,
+  PluggyItem,
+  PluggyTransaction,
+} from './api';
 
 export type FakePluggyData = {
   items?: PluggyItem[];
   accounts?: PluggyAccount[];
   transactions?: PluggyTransaction[];
   bills?: PluggyBill[];
+  investments?: PluggyInvestment[];
+  investmentTransactions?: Record<string, PluggyInvestmentTransaction[]>;
 };
 
 export function createFakePluggyApi(data: FakePluggyData = {}): PluggyApi {
@@ -13,6 +23,8 @@ export function createFakePluggyApi(data: FakePluggyData = {}): PluggyApi {
   const accounts = [...(data.accounts ?? [])];
   const transactions = [...(data.transactions ?? [])];
   const bills = [...(data.bills ?? [])];
+  const investments = [...(data.investments ?? [])];
+  const investmentTransactions = { ...(data.investmentTransactions ?? {}) };
 
   return {
     async createConnectToken(itemId?: string): Promise<string> {
@@ -38,5 +50,14 @@ export function createFakePluggyApi(data: FakePluggyData = {}): PluggyApi {
     async fetchBills(): Promise<PluggyBill[]> {
       return bills;
     },
+
+    async fetchInvestments(itemId: string): Promise<PluggyInvestment[]> {
+      return investments.filter((inv) => inv.itemId === itemId);
+    },
+
+    async fetchInvestmentTransactions(investmentId: string): Promise<PluggyInvestmentTransaction[]> {
+      return investmentTransactions[investmentId] ?? [];
+    },
   };
 }
+
