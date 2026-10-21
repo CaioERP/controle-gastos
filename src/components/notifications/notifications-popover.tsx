@@ -31,35 +31,17 @@ export function NotificationsPopover({
 }: NotificationsPopoverProps) {
   const [open, setOpen] = React.useState(false);
   const [prefsOpen, setPrefsOpen] = React.useState(false);
-  const [readIds, setReadIds] = React.useState<Set<string>>(new Set());
-  const [allRead, setAllRead] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
 
-  const items = React.useMemo(() => {
-    return initialNotifications.map((n) => {
-      if (allRead || readIds.has(n.id)) {
-        return { ...n, isRead: true, readAt: n.readAt ?? new Date().toISOString() };
-      }
-      return n;
-    });
-  }, [initialNotifications, allRead, readIds]);
-
-  const effectiveCount = allRead
-    ? 0
-    : Math.max(
-        0,
-        unreadCount -
-          Array.from(readIds).filter(
-            (id) => initialNotifications.find((n) => n.id === id && !n.isRead),
-          ).length,
-      );
+  // Dados vindos do servidor; as Server Actions revalidam o layout, então não há estado otimista.
+  const items = initialNotifications;
+  const effectiveCount = unreadCount;
 
   function handleMarkAllRead() {
     startTransition(async () => {
       try {
         const res = await markAllNotificationsReadAction();
         if (res.ok) {
-          setAllRead(true);
           toast.success('Todas as notificações foram marcadas como lidas');
         } else {
           toast.error('Erro ao marcar notificações como lidas');
@@ -68,10 +50,6 @@ export function NotificationsPopover({
         toast.error('Erro de conexão ao marcar notificações');
       }
     });
-  }
-
-  function handleItemRead(id: string) {
-    setReadIds((prev) => new Set([...prev, id]));
   }
 
   return (
@@ -133,12 +111,17 @@ export function NotificationsPopover({
                 <p className="text-xs">Nenhuma notificação recente</p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div
+                className="space-y-1"
+                onClick={(e) => {
+                  const el = e.target as HTMLElement;
+                  if (!el.closest("button") && el.closest("a")) setOpen(false);
+                }}
+              >
                 {items.map((notification) => (
                   <NotificationItem
                     key={notification.id}
                     notification={notification}
-                    onReadChanged={handleItemRead}
                     compact
                   />
                 ))}

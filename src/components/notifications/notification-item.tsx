@@ -15,6 +15,7 @@ import {
   CalendarX,
   ExternalLink,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import type { NotificationRow } from '@/server/queries/notifications';
 import { markNotificationReadAction } from '@/app/(app)/notificacoes/actions';
@@ -22,7 +23,6 @@ import { cn } from '@/lib/utils';
 
 type NotificationItemProps = {
   notification: NotificationRow;
-  onReadChanged?: (id: string) => void;
   compact?: boolean;
 };
 
@@ -88,7 +88,6 @@ export function getNotificationIcon(type: NotificationRow['type']) {
 
 export function NotificationItem({
   notification,
-  onReadChanged,
   compact = false,
 }: NotificationItemProps) {
   const [isPending, startTransition] = React.useTransition();
@@ -102,8 +101,8 @@ export function NotificationItem({
     if (notification.isRead || isPending) return;
 
     startTransition(async () => {
-      await markNotificationReadAction({ notificationId: notification.id });
-      onReadChanged?.(notification.id);
+      const res = await markNotificationReadAction({ notificationId: notification.id });
+      if (!res.ok) toast.error(res.error.message || 'Erro ao marcar notificação como lida');
     });
   }
 
