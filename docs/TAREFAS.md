@@ -67,10 +67,10 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A1-04 | Faturas e parcelas futuras | A | A1-03 | ✅ (PR #36) |
 | A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ✅ (PR #37) |
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
-| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ⏸️ implementada e depois retirada pela A1-10 (IA fora do escopo por enquanto); ver MELHORIAS |
+| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ⏸️ retirada pela A1-10 (PR #56); para restaurar, ver MELHORIAS #16 |
 | A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | ✅ (PRs #20, #38) |
 | A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ✅ (PR #39) |
-| A1-10 | Retirar a integração com a Claude API (categorização por IA e PDF via IA) | A | — | 🟡 Agente A — PR #56 em revisão |
+| A1-10 | Retirar a integração com a Claude API (categorização por IA e PDF via IA) | A | — | ✅ (PR #56) |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
 
