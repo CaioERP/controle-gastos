@@ -381,25 +381,23 @@ C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
 Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md e
 docs/tarefas/fase-4-dados.md.
 
-Pré-requisito: P4-00 com ✅ no quadro. Se não estiver, pare e avise.
+Pré-requisito: P4-00 e A4-02 com ✅ no quadro (A4-02 entrou na main pelo PR #57, com a migration 0004).
+Se não estiverem, pare e avise. Comece com git -C ../controle-gastos pull --ff-only e crie as branches a
+partir da main atualizada.
 
 Tarefas, nesta ordem, um PR cada:
-1. A4-02 — Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas.
-   Faz o commit de contrato com a migration 0004 das 5 tabelas novas (spending_limits, spending_limit_dispatches,
-   recurrences, notifications e notification_preferences), novos enums e stubs de comandos. Esta tarefa
-   vem primeiro para desbloquear imediatamente B4-01 e B4-05 do Agente B.
-2. A4-01 — Detecção de recorrências e assinaturas. Depende de A4-02 (migration 0004).
-3. A4-03 — Projeção de fluxo de caixa (6 meses com faixa de incerteza). Depende de A4-01.
-4. ~~A4-04 — Perguntas em linguagem natural~~ — fora do escopo por enquanto (IA desligada, 2026-10-20). Não implemente.
+1. A4-01 — Detecção de recorrências e assinaturas (usa a tabela recurrences da migration 0004).
+2. A4-03 — Projeção de fluxo de caixa (6 meses com faixa de incerteza). Depende de A4-01.
+   Atenção: a média de gastos variáveis não pode contar de novo as compras de cartão que já entram
+   como parcelas futuras (evite desconto em dobro); explique no PR como tratou isso.
+3. ~~A4-04 — Perguntas em linguagem natural~~ — fora do escopo por enquanto (IA desligada). Não implemente.
 
 Se abrir um PR antes do anterior ser aceito, empilhe a branch na anterior (--base <branch-anterior>),
 conforme "Dependência em revisão" do AGENTS.md §3.
 
 Regras:
 - Pegue só as tarefas listadas. Antes de cada uma, reserve no quadro: ⬜ → 🟡 Agente A.
-- Ferramentas de IA em A4-04 são estritamente de leitura (chamam consultas existentes); nenhum SQL gerado por IA.
-- Mascaramento de dados pessoais em A4-04 com maskForLlm de src/server/categorization/mask.ts.
-- Segredos (ANTHROPIC_API_KEY) só no .env.local.
+- Tudo em código: nada de IA nem de chamadas à Claude API.
 - Escreva só os testes que a spec pede.
 - Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
 - Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
