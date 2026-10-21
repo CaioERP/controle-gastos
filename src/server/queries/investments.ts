@@ -112,6 +112,19 @@ export type HoldingDetail = HoldingRow & {
   }>;
 };
 
+/**
+ * Valor final que dá retorno zero no Modified Dietz (`computeModifiedDietzMonthReturn`):
+ * G = fim − início − C + I − T = 0  →  fim = início + C − I + T, com C = compras − vendas.
+ */
+function netFlowCents(flows: MonthlyFlow[]): number {
+  let net = 0;
+  for (const f of flows) {
+    if (f.type === 'buy' || f.type === 'tax' || f.type === 'fee') net += f.amountCents;
+    else if (f.type === 'sell' || f.type === 'income') net -= f.amountCents;
+  }
+  return net;
+}
+
 export async function getInvestmentsOverview(
   db: Db,
   filters?: { institutionId?: string; assetClass?: AssetClass; today?: string },
@@ -326,22 +339,6 @@ export async function getInvestmentsOverview(
     const m = months[i]!;
     const nextMonthStart = monthStart(addMonthsISO(m, 1));
 
-    // Determina valor final do mês
-    let endVal: number;
-    if (m === currentMonthStart) {
-      endVal = currentValueCents;
-    } else {
-      const monthSnapshots = snapshots.filter((s) => s.date >= m && s.date < nextMonthStart);
-      if (monthSnapshots.length > 0) {
-        endVal = monthSnapshots[monthSnapshots.length - 1]?.investmentsCents ?? previousEndVal;
-      } else {
-        endVal = previousEndVal;
-      }
-    }
-
-    const startVal = previousEndVal;
-    previousEndVal = endVal;
-
     // Fluxos do mês
     const monthFlows: MonthlyFlow[] = allTxs
       .filter((tx) => tx.date >= m && tx.date < nextMonthStart)
@@ -351,16 +348,37 @@ export async function getInvestmentsOverview(
         amountCents: tx.amountCents,
       }));
 
+    // Determina valor final do mês. Sem snapshot no mês o valor real é desconhecido: o retorno do mês
+    // fica 0 e o valor final é estimado pelos fluxos, para um aporte não virar "perda" de -200%.
+    const startVal = previousEndVal;
+    let endVal: number;
+    let hasValuation = true;
+    if (m === currentMonthStart) {
+      endVal = currentValueCents;
+    } else {
+      const monthSnapshots = snapshots.filter((s) => s.date >= m && s.date < nextMonthStart);
+      const lastSnapshot = monthSnapshots[monthSnapshots.length - 1];
+      if (lastSnapshot) {
+        endVal = lastSnapshot.investmentsCents;
+      } else {
+        hasValuation = false;
+        endVal = startVal + netFlowCents(monthFlows);
+      }
+    }
+    previousEndVal = endVal;
+
     const [yStr = '2026', mStr = '01'] = m.split('-');
     const daysInMonth = new Date(Number(yStr), Number(mStr), 0).getDate();
 
-    const monthReturn = computeModifiedDietzMonthReturn({
-      month: m,
-      daysInMonth,
-      startValueCents: startVal,
-      endValueCents: endVal,
-      flows: monthFlows,
-    });
+    const monthReturn = hasValuation
+      ? computeModifiedDietzMonthReturn({
+          month: m,
+          daysInMonth,
+          startValueCents: startVal,
+          endValueCents: endVal,
+          flows: monthFlows,
+        })
+      : 0;
 
     monthlyReturns.push(monthReturn);
     const cumulativePortfolioBps = chainTwrReturns(monthlyReturns).returnBps;
