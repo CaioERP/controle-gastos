@@ -5,7 +5,7 @@ import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from '../../../tests/fixtures/load';
 import { categories, spendingLimits } from '@/server/db/schema';
 import type { Db } from '@/server/db/client';
-import { getLimitsOverview } from './limits';
+import { getLimitsOverview, limitStatus } from './limits';
 
 const TODAY = '2026-10-15';
 const fixtureOpts = { referenceDate: TODAY, months: 6, seed: 42 };
@@ -83,5 +83,19 @@ describe('getLimitsOverview', () => {
       .filter((l) => l.isActive)
       .reduce((acc, l) => acc + l.amountCents, 0);
     expect(overview.totalBudgetedCents).toBe(activeBudgetSum);
+  });
+});
+
+describe('limitStatus', () => {
+  it('usa 80% como atenção por padrão e 100% como estourado', () => {
+    expect(limitStatus(79)).toBe('ok');
+    expect(limitStatus(80)).toBe('warning');
+    expect(limitStatus(100)).toBe('exceeded');
+  });
+
+  it('respeita limiares configurados', () => {
+    expect(limitStatus(85, [90, 100])).toBe('ok');
+    expect(limitStatus(90, [90, 100])).toBe('warning');
+    expect(limitStatus(95, [100])).toBe('ok');
   });
 });

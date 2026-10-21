@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Money } from '@/components/format/money';
+import { formatDateBR } from '@/server/domain/dates';
 import { LIMIT_PERIOD_LABELS } from '@/server/domain/labels';
 import type { SpendingLimitRow } from '@/server/queries/limits';
 import {
@@ -220,7 +221,7 @@ export function LimitCard({ limit, onEdit }: LimitCardProps) {
         {/* Rodapé: Link para transações */}
         <div className="pt-1 flex items-center justify-between border-t border-border/40 text-xs">
           <span className="text-muted-foreground text-[11px]">
-            Período: {limit.periodFrom} a {limit.periodTo}
+            Período: {formatDateBR(limit.periodFrom)} a {formatDateBR(limit.periodTo)}
           </span>
           <Link
             href={limit.actionUrl}
