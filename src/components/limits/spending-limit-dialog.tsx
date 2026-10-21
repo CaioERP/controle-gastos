@@ -154,7 +154,10 @@ function SpendingLimitForm({
     const thresholds: number[] = [];
     if (notify80) thresholds.push(80);
     if (notify100) thresholds.push(100);
-    const finalThresholds = thresholds.length > 0 ? thresholds : [100];
+    // Limiares fora de 80/100 (definidos fora do formulário) são preservados na edição.
+    const extra = initialThresholds.filter((t) => t !== 80 && t !== 100);
+    const merged = [...thresholds, ...extra].sort((a, b) => a - b);
+    const finalThresholds = merged.length > 0 ? merged : [100];
 
     startTransition(async () => {
       try {

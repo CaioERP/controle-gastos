@@ -25,37 +25,19 @@ export function NotificationsView({
   initialUnreadCount,
   initialPreferences,
 }: NotificationsViewProps) {
-  const [readIds, setReadIds] = React.useState<Set<string>>(new Set());
-  const [allRead, setAllRead] = React.useState(false);
   const [tab, setTab] = React.useState<TabFilter>('all');
   const [prefsOpen, setPrefsOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
 
-  const items = React.useMemo(() => {
-    return initialNotifications.map((n) => {
-      if (allRead || readIds.has(n.id)) {
-        return { ...n, isRead: true, readAt: n.readAt ?? new Date().toISOString() };
-      }
-      return n;
-    });
-  }, [initialNotifications, allRead, readIds]);
-
-  const unreadCount = allRead
-    ? 0
-    : Math.max(
-        0,
-        initialUnreadCount -
-          Array.from(readIds).filter(
-            (id) => initialNotifications.find((n) => n.id === id && !n.isRead),
-          ).length,
-      );
+  // Dados vindos do servidor; as Server Actions revalidam o layout, então não há estado otimista.
+  const items = initialNotifications;
+  const unreadCount = initialUnreadCount;
 
   function handleMarkAllRead() {
     startTransition(async () => {
       try {
         const res = await markAllNotificationsReadAction();
         if (res.ok) {
-          setAllRead(true);
           toast.success('Todas as notificações foram marcadas como lidas');
         } else {
           toast.error('Erro ao marcar notificações como lidas');
@@ -64,10 +46,6 @@ export function NotificationsView({
         toast.error('Erro de conexão ao marcar notificações');
       }
     });
-  }
-
-  function handleItemRead(id: string) {
-    setReadIds((prev) => new Set([...prev, id]));
   }
 
   const filteredItems = React.useMemo(() => {
@@ -193,7 +171,6 @@ export function NotificationsView({
                   <NotificationItem
                     key={notification.id}
                     notification={notification}
-                    onReadChanged={handleItemRead}
                   />
                 ))}
               </div>

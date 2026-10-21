@@ -53,6 +53,16 @@ export type LimitsOverview = {
   suggestions: SuggestedBudgetRow[];
 };
 
+/** Status visual a partir dos limiares: atenção começa no menor limiar abaixo de 100% (80% por padrão). */
+export function limitStatus(
+  spentPercent: number,
+  thresholds: readonly number[] = [80, 100],
+): 'ok' | 'warning' | 'exceeded' {
+  if (spentPercent >= 100) return 'exceeded';
+  const warnAt = thresholds.filter((t) => t < 100).sort((a, b) => a - b)[0];
+  return warnAt !== undefined && spentPercent >= warnAt ? 'warning' : 'ok';
+}
+
 export async function getLimitsOverview(
   db: Db,
   refDate: string = getToday(),
@@ -94,8 +104,7 @@ export async function getLimitsOverview(
     const spentPercent =
       limit.amountCents > 0 ? Math.round((spentCents / limit.amountCents) * 100) : 0;
 
-    const status: 'ok' | 'warning' | 'exceeded' =
-      spentPercent >= 100 ? 'exceeded' : spentPercent >= 80 ? 'warning' : 'ok';
+    const status = limitStatus(spentPercent, limit.thresholds ?? undefined);
 
     let paceStatus: 'on_track' | 'accelerated' | null = null;
     let projectedExceedDays: number | null = null;
