@@ -130,7 +130,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | 🟡 Agente B — PR #55 em revisão |
 | B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | 🟡 Agente B — PR #54 em revisão |
 | P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ✅ |
-| A4-02 | Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas | A | P4-00 (iniciar primeiro; gera migration 0004) | ⬜ |
+| A4-02 | Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas | A | P4-00 (iniciar primeiro; gera migration 0004) | 🟡 Agente A |
 | A4-01 | Detecção de recorrências e assinaturas | A | P4-00, A4-02 | ⬜ |
 | A4-03 | Projeção de fluxo de caixa | A | P4-00, A4-01 | ⬜ |
 | A4-04 | Perguntas em linguagem natural (Claude) | A | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
