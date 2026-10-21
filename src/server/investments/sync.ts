@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, isNull, lte, notInArray, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -305,6 +305,15 @@ export async function syncConnectionInvestments(
       if (!userEdited.has('currentValueCents')) patch.currentValueCents = norm.holding.currentValueCents;
       if (!userEdited.has('netValueCents')) patch.netValueCents = norm.holding.netValueCents;
       if (!userEdited.has('profitCents')) patch.profitCents = norm.holding.profitCents;
+      // Lucro deriva de valor atual e custo: se um deles é do usuário (R9), recalcula com ele
+      if (
+        !userEdited.has('profitCents') &&
+        (userEdited.has('currentValueCents') || userEdited.has('investedCents'))
+      ) {
+        patch.profitCents =
+          (patch.currentValueCents ?? existingHolding.currentValueCents) -
+          (patch.investedCents ?? existingHolding.investedCents);
+      }
 
       await db
         .update(holdings)
@@ -366,6 +375,22 @@ export async function syncConnectionInvestments(
       // Ignora erro de transações de investimento individuais se falhar
     }
   }
+
+  // Posição que sumiu da resposta do Pluggy foi resgatada: não pode seguir somando no patrimônio
+  await db
+    .update(holdings)
+    .set({ isRedeemed: true, updatedAt: new Date() })
+    .where(
+      and(
+        eq(holdings.accountId, invAccount.id),
+        eq(holdings.source, 'pluggy'),
+        eq(holdings.isRedeemed, false),
+        notInArray(
+          holdings.externalId,
+          rawInvestments.map((inv) => inv.id),
+        ),
+      ),
+    );
 
   // Atualiza accounts.balanceCents da conta de investimento
   const [sumResult] = await db

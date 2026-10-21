@@ -222,4 +222,62 @@ describe('investment commands (A3-04)', () => {
     const [acc] = await db.select().from(accounts).where(eq(accounts.id, invAcc.id));
     expect(acc?.balanceCents).toBe(2000000);
   });
+
+  it('venda acima da custódia é recusada sem gravar movimentação', async () => {
+    const { db, invAcc } = await setup();
+    const { holdingId } = await createManualHolding(db, {
+      accountId: invAcc.id,
+      assetClass: 'stocks',
+      name: 'Petrobras PN',
+      ticker: 'PETR4',
+      quantity: '10',
+      investedCents: 300000,
+      currentValueCents: 400000,
+    });
+
+    await expect(
+      recordInvestmentTransaction(db, {
+        holdingId,
+        type: 'sell',
+        date: '2026-10-01',
+        amountCents: 2000000,
+        quantity: '50',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION' });
+
+    const rows = await db
+      .select()
+      .from(investmentTransactions)
+      .where(eq(investmentTransactions.holdingId, holdingId));
+    expect(rows).toHaveLength(0);
+  });
+
+  it('excluir uma venda devolve o custo baixado, não o valor recebido', async () => {
+    const { db, invAcc } = await setup();
+    const { holdingId } = await createManualHolding(db, {
+      accountId: invAcc.id,
+      assetClass: 'stocks',
+      name: 'Petrobras PN',
+      ticker: 'PETR4',
+      quantity: '100',
+      investedCents: 1000000,
+      currentValueCents: 1200000,
+    });
+
+    // Vende metade com lucro: custo baixado = R$ 5.000, valor recebido = R$ 6.000
+    const { investmentTransactionId } = await recordInvestmentTransaction(db, {
+      holdingId,
+      type: 'sell',
+      date: '2026-10-01',
+      amountCents: 600000,
+      quantity: '50',
+    });
+    await deleteInvestmentTransaction(db, { investmentTransactionId });
+
+    const [holding] = await db.select().from(holdings).where(eq(holdings.id, holdingId));
+    expect(holding?.quantity).toBe('100.00000000');
+    expect(holding?.investedCents).toBe(1000000);
+    expect(holding?.currentValueCents).toBe(1200000);
+    expect(holding?.profitCents).toBe(200000);
+  });
 });

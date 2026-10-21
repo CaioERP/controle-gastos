@@ -137,6 +137,27 @@ describe('investments sync', () => {
       .where(eq(holdings.id, petr4Holding!.id));
 
     expect(afterSyncHolding?.currentValueCents).toBe(555500);
+    // Lucro acompanha o valor editado, não o valor do Pluggy
+    expect(afterSyncHolding?.profitCents).toBe(555500 - afterSyncHolding!.investedCents);
+  });
+
+  it('posição que some da resposta do Pluggy deixa de contar (resgatada)', async () => {
+    const { db, conn, fakePluggy } = await setup();
+    await syncConnectionInvestments(db, conn.id, { pluggy: fakePluggy });
+
+    const remaining = (sampleInvestmentsFixture.investments as unknown as PluggyInvestment[]).filter(
+      (inv) => inv.id !== 'inv-petr4-1',
+    );
+    await syncConnectionInvestments(db, conn.id, {
+      pluggy: createFakePluggyApi({ investments: remaining }),
+    });
+
+    const [petr4] = await db.select().from(holdings).where(eq(holdings.externalId, 'inv-petr4-1'));
+    expect(petr4?.isRedeemed).toBe(true);
+
+    const [invAcc] = await db.select().from(accounts).where(eq(accounts.type, 'investment'));
+    // 4601850 menos a posição de PETR4 (R$ 4.118,00)
+    expect(invAcc?.balanceCents).toBe(4601850 - 411800);
   });
 
   it('vincula automaticamente aporte à transação da conta corrente sem duplicar gastos (R2)', async () => {

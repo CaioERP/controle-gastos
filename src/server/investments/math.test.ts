@@ -59,4 +59,10 @@ describe('investments math', () => {
     expect(toRateBps('100%')).toBe(10000);
     expect(toRateBps(0)).toBe(0);
   });
+
+  it('lê de volta a quantidade formatada em pt-BR (separador de milhar)', () => {
+    expect(toScaledQty(formatQtyBR('1234.56789'))).toBe(toScaledQty('1234.56789'));
+    expect(toScaledQty('1.234.567')).toBe(toScaledQty('1234567'));
+    expect(toScaledQty('10.5')).toBe(BigInt(1_050_000_000));
+  });
 });

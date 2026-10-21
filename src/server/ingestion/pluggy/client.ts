@@ -167,8 +167,16 @@ export class RealPluggyApi implements PluggyApi {
   async fetchInvestments(itemId: string): Promise<PluggyInvestment[]> {
     return withRetry(async () => {
       try {
-        const res = await this.getClient().fetchInvestments(itemId);
-        return res.results.map((inv) => ({
+        // GET /investments é paginado (padrão 20 por página): sem percorrer as páginas,
+        // quem tem mais de 20 posições perde o resto.
+        const pageSize = 500;
+        const first = await this.getClient().fetchInvestments(itemId, undefined, { page: 1, pageSize });
+        const results = [...first.results];
+        for (let page = 2; page <= (first.totalPages ?? 1); page++) {
+          const next = await this.getClient().fetchInvestments(itemId, undefined, { page, pageSize });
+          results.push(...next.results);
+        }
+        return results.map((inv) => ({
           id: inv.id,
           itemId: inv.itemId,
           name: inv.name,
