@@ -29,7 +29,7 @@ Nenhuma instituição é fixa no código: todas são **cadastro**. Adicionar o I
 4. Gastos por **categoria**: alimentação, saúde, lazer, transporte etc.
 5. Investimentos e patrimônio.
 6. Automação máxima.
-7. Roda **local** agora; deploy futuro via **GitHub + Vercel**.
+7. Roda **local** agora; deploy futuro via **GitHub + Supabase** e hospedagem a definir (Vercel ou Railway).
 
 ---
 
@@ -40,20 +40,20 @@ Nenhuma instituição é fixa no código: todas são **cadastro**. Adicionar o I
 | Linguagem / framework | **TypeScript + Next.js** (App Router) | Front e back no mesmo projeto, Server Actions, deploy nativo na Vercel |
 | Banco de dados | **PostgreSQL + Drizzle ORM** | Tipado, migrations versionadas |
 | Banco local | **PGlite** (Postgres embutido, arquivo em `.data/`) | Zero instalação (Docker não está instalado na máquina) e mesmo dialeto SQL da produção |
-| Banco produção | **Neon** (Postgres serverless, plano gratuito) | Integração nativa com Vercel |
+| Banco produção | **Supabase** (Postgres gerenciado, plano gratuito) | Decisão do usuário; a hospedagem do app (Vercel ou Railway) ainda está em aberto e é detalhada na P5-00 |
 | UI | **Tailwind + shadcn/ui + Recharts** | Componentes prontos, gráficos consistentes, tema claro/escuro |
 | Validação | **Zod** | Valida entradas de APIs, arquivos e formulários |
 | Testes | **Vitest** (PGlite em memória) + **Playwright** (e2e) | Testes rápidos sem infraestrutura |
 | Dinheiro | **Inteiros em centavos** (`bigint`) | Nunca `float` para dinheiro |
 | Datas | Tipo `date`, fuso `America/Sao_Paulo`, `date-fns` | Evita erro de fuso em virada de dia/mês |
-| Jobs agendados | Funções em `server/jobs`, expostas em `/api/jobs/*` | Local: agendador dentro do processo Next (`instrumentation.ts`). Vercel: Vercel Cron chama as mesmas rotas |
+| Jobs agendados | Funções em `server/jobs`, expostas em `/api/jobs/*` | Local: agendador dentro do processo Next (`instrumentation.ts`). Produção: o agendador da hospedagem chama as mesmas rotas |
 | Open Finance | **Pluggy via Meu Pluggy** (gratuito, uso pessoal) | Único caminho oficial e automático; fica atrás da interface `SourceAdapter` para ser substituível |
 | IA | **Desligada por enquanto** (decisão do usuário, 2026-10-20). Tudo é feito em código: categorização por regras, memória e categoria da fonte, com o resto na fila de revisão; PDF por parser de cada banco. A integração com a Claude API está guardada em `MELHORIAS.md` | Custo zero e nenhum dado enviado a terceiros |
 | Autenticação | Senha única + cookie de sessão assinado; desligável em dev | Usuário único. 2FA/passkey listado em MELHORIAS |
 | Pacotes | **npm** | Sem configuração extra |
 | Idioma | Código em **inglês**; interface e docs em **pt-BR** | Padrão de mercado + produto em português |
 
-> **Limitação do PGlite:** aceita um processo por vez. Por isso o agendador roda dentro do processo do Next. Scripts (`db:migrate`, `db:seed`) devem rodar com o app parado. Em produção (Neon) não há essa limitação.
+> **Limitação do PGlite:** aceita um processo por vez. Por isso o agendador roda dentro do processo do Next. Scripts (`db:migrate`, `db:seed`) devem rodar com o app parado. Em produção (Supabase) não há essa limitação.
 
 ---
 
@@ -148,7 +148,7 @@ Categoria · Forma de pagamento · Instituição · Conta/Cartão · Natureza ·
 | **2. Robustez** | Importação de arquivos, deduplicação entre fontes, conferência de faturas, ciclo de vida das conexões | Sistema funciona mesmo se o Pluggy falhar |
 | **3. Patrimônio** | Investimentos, cotações, rentabilidade, patrimônio líquido | Visão completa do patrimônio |
 | **4. Inteligência** | Limites de gasto com notificações, assinaturas, orçamentos sugeridos, alertas, projeção, perguntas em linguagem natural | Sistema avisa antes do problema |
-| **5. Deploy** | GitHub + Vercel + Neon, CI, segurança | Acessível de qualquer lugar com segurança |
+| **5. Deploy** | GitHub + Supabase + hospedagem (Vercel ou Railway), CI, segurança | Acessível de qualquer lugar com segurança |
 
 Quadro de status em [`TAREFAS.md`](./TAREFAS.md); especificação passo a passo de cada tarefa em [`tarefas/`](./tarefas/).
 
@@ -190,7 +190,7 @@ Regras operacionais completas em [`../AGENTS.md`](../AGENTS.md).
 | **H-03** | ~~Criar chave da **Claude API** (`ANTHROPIC_API_KEY`)~~ — adiada: IA fora do escopo por enquanto | — |
 | **H-04** | Exportar 1 fatura e 1 extrato de cada banco (PDF/CSV/OFX) para servirem de amostra | Fase 2 |
 | **H-05** | Ao abrir conta no Inter/PagBank, conectar no Meu Pluggy | Quando acontecer |
-| **H-06** | Criar contas no GitHub, Vercel e Neon | Fase 5 |
+| **H-06** | Criar contas no GitHub, na hospedagem (Vercel ou Railway) e no Supabase | Fase 5 |
 | **H-07** | Revisar a fila de categorização nas primeiras semanas (treina o sistema) | Após M1 |
 
 ---

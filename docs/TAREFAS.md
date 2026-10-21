@@ -40,7 +40,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | H-03 | Criar chave da Claude API; colocar `ANTHROPIC_API_KEY` no `.env.local` | — | ⏸️ adiada: IA fora do escopo por enquanto (decisão do usuário, 2026-10-20) |
 | H-04 | Exportar 1 fatura e 1 extrato de cada banco (PDF/CSV/OFX) para `.data/samples/` | Fase 2 | ⬜ |
 | H-05 | Conectar Inter/PagBank no Meu Pluggy quando abrir as contas | — | ⬜ |
-| H-06 | Criar contas GitHub, Vercel e Neon | Fase 5 | ⬜ |
+| H-06 | Criar contas GitHub, hospedagem (Vercel ou Railway) e Supabase | Fase 5 | ⬜ |
 | H-07 | Revisar a fila de categorização nas primeiras semanas | Após M1 | ⬜ |
 
 ---
@@ -140,8 +140,8 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | ✅ (#67, via #68) |
 | B4-04 | Tela de perguntas / chat (`/perguntas`) | B | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
 | P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
-| A5-01 | Banco Neon, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
-| A5-02 | Vercel Cron, webhook Pluggy, segredos | A | A5-01 | ⬜ |
+| A5-01 | Banco Supabase, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
+| A5-02 | Jobs agendados na hospedagem, webhook Pluggy, segredos | A | A5-01 | ⬜ |
 | B5-01 | Endurecimento da autenticação e PWA | B | P5-00 | ⬜ |
 | B5-02 | CI no GitHub Actions (check + e2e) | B | P5-00, H-06 | ⬜ |
 

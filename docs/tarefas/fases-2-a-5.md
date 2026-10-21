@@ -114,7 +114,9 @@ Limites e orçamentos (B4-01: criar, editar e pausar limites por categoria e/ou 
 
 ---
 
-## Fase 5 — Deploy (GitHub + Vercel + Neon)
+## Fase 5 — Deploy (GitHub + Supabase + hospedagem a definir)
+
+> **Desatualizado:** o banco de produção passou a ser o Supabase e a hospedagem (Vercel ou Railway) ainda não foi escolhida. O texto abaixo ainda cita Neon e Vercel Cron; a P5-00 reescreve esta seção quando a hospedagem for decidida.
 
 ### P5-00 — Detalhar a Fase 5 (modelo forte)
 Pode ser antecipada se o usuário quiser acessar pelo celular fora de casa. Verificar limites atuais dos planos gratuitos da Vercel e do Neon (duração de funções, número de crons).
