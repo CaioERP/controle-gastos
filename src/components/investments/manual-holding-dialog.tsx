@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toCents } from '@/server/domain/money';
-import { formatQtyBR, toRateBps } from '@/server/investments/math';
+import { toRateBps } from '@/server/investments/math';
 import {
   ASSET_CLASSES,
   INVESTMENT_INDEXERS,
@@ -32,6 +32,7 @@ import {
   upsertManualHoldingAction,
 } from '@/app/(app)/investimentos/actions';
 import type { HoldingRow } from '@/server/queries/investments';
+import { centsToInput, parseQuantityInput, quantityToInput } from './input-format';
 
 type ManualHoldingDialogProps = {
   holding?: HoldingRow;
@@ -40,7 +41,7 @@ type ManualHoldingDialogProps = {
 };
 
 const selectClass =
-  'h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30';
+  'h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30';
 
 export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldingDialogProps) {
   const [open, setOpen] = React.useState(false);
@@ -48,6 +49,8 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
   const [deleting, startDeleteTransition] = React.useTransition();
 
   const isEditing = Boolean(holding);
+  // Posição sincronizada (Pluggy): só quantidade e valores podem ser ajustados (R9); o resto vem da sincronização.
+  const isSynced = Boolean(holding && holding.source !== 'manual');
 
   // Form states
   const [accountId, setAccountId] = React.useState(holding?.accountId ?? accounts[0]?.id ?? '');
@@ -63,13 +66,13 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
   const [maturityDate, setMaturityDate] = React.useState(holding?.maturityDate ?? '');
   const [isTaxExempt, setIsTaxExempt] = React.useState(holding?.isTaxExempt ?? false);
   const [quantity, setQuantity] = React.useState(
-    holding ? formatQtyBR(holding.quantity) : '1',
+    holding ? quantityToInput(holding.quantity) : '1',
   );
   const [invested, setInvested] = React.useState(
-    holding ? (holding.investedCents / 100).toFixed(2).replace('.', ',') : '',
+    holding ? centsToInput(holding.investedCents) : '',
   );
   const [currentValue, setCurrentValue] = React.useState(
-    holding ? (holding.currentValueCents / 100).toFixed(2).replace('.', ',') : '',
+    holding ? centsToInput(holding.currentValueCents) : '',
   );
 
   const initForm = React.useCallback(() => {
@@ -81,11 +84,9 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
     setRate(holding?.rateBps ? (holding.rateBps / 100).toString().replace('.', ',') : '');
     setMaturityDate(holding?.maturityDate ?? '');
     setIsTaxExempt(holding?.isTaxExempt ?? false);
-    setQuantity(holding ? formatQtyBR(holding.quantity) : '1');
-    setInvested(holding ? (holding.investedCents / 100).toFixed(2).replace('.', ',') : '');
-    setCurrentValue(
-      holding ? (holding.currentValueCents / 100).toFixed(2).replace('.', ',') : '',
-    );
+    setQuantity(holding ? quantityToInput(holding.quantity) : '1');
+    setInvested(holding ? centsToInput(holding.investedCents) : '');
+    setCurrentValue(holding ? centsToInput(holding.currentValueCents) : '');
   }, [holding, accounts]);
 
   const showFixedIncomeFields = assetClass === 'fixed_income' || assetClass === 'treasury';
@@ -102,6 +103,12 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
       return;
     }
 
+    const qty = parseQuantityInput(quantity);
+    if (!qty.ok) {
+      toast.error(qty.message);
+      return;
+    }
+
     let investedCents: number;
     let currentValueCents: number;
     try {
@@ -112,7 +119,12 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
       return;
     }
 
-    const rateBps = rate.trim() ? toRateBps(rate) : null;
+    const rateText = rate.trim().replace(/%$/, '');
+    if (showFixedIncomeFields && !isSynced && rateText && !/^\d+([.,]\d+)?$/.test(rateText)) {
+      toast.error('Taxa contratada inválida');
+      return;
+    }
+    const rateBps = rateText ? toRateBps(rateText) : null;
 
     startTransition(async () => {
       const res = await upsertManualHoldingAction({
@@ -125,7 +137,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
         rateBps: showFixedIncomeFields ? rateBps : null,
         maturityDate: showFixedIncomeFields && maturityDate ? maturityDate : null,
         isTaxExempt: showFixedIncomeFields ? isTaxExempt : false,
-        quantity: quantity.trim() || '1',
+        quantity: qty.value,
         investedCents,
         currentValueCents,
       });
@@ -184,9 +196,11 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
               {isEditing ? 'Editar posição' : 'Nova posição manual de investimento'}
             </DialogTitle>
             <DialogDescription>
-              {isEditing
-                ? 'Atualize os dados e valores da sua posição de investimento.'
-                : 'Cadastre ativos de renda fixa, ações, FIIs ou cripto não sincronizados automaticamente.'}
+              {isSynced
+                ? 'Posição sincronizada pelo Open Finance: ajuste quantidade e valores. O ajuste é preservado nas próximas sincronizações.'
+                : isEditing
+                  ? 'Atualize os dados e valores da sua posição de investimento.'
+                  : 'Cadastre ativos de renda fixa, ações, FIIs ou cripto não sincronizados automaticamente.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -209,8 +223,14 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
                 className={selectClass}
+                disabled={isSynced}
                 required
               >
+                {isSynced && holding && !accounts.some((acc) => acc.id === holding.accountId) ? (
+                  <option value={holding.accountId}>
+                    {holding.institutionName} — {holding.accountName}
+                  </option>
+                ) : null}
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.institutionName} — {acc.name}
@@ -227,6 +247,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                 value={assetClass}
                 onChange={(e) => setAssetClass(e.target.value as AssetClass)}
                 className={selectClass}
+                disabled={isSynced}
                 required
               >
                 {ASSET_CLASSES.map((cls) => (
@@ -247,6 +268,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value)}
                 placeholder="Ex.: PETR4, HGLG11, BTC"
+                disabled={isSynced}
               />
             </div>
 
@@ -258,11 +280,14 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex.: CDB Banco Inter 110% CDI ou Tesouro Selic 2029"
+                disabled={isSynced}
                 required
               />
-              <p className="text-[11px] text-muted-foreground">
-                Dica: preencha o ticker acima para permitir a atualização automática de cotações.
-              </p>
+              {isSynced ? null : (
+                <p className="text-[11px] text-muted-foreground">
+                  Dica: preencha o ticker acima para permitir a atualização automática de cotações.
+                </p>
+              )}
             </div>
 
             {/* Campos de Renda Fixa e Tesouro */}
@@ -275,6 +300,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                     value={indexer}
                     onChange={(e) => setIndexer(e.target.value as InvestmentIndexer)}
                     className={selectClass}
+                    disabled={isSynced}
                   >
                     {INVESTMENT_INDEXERS.map((idx) => (
                       <option key={idx} value={idx}>
@@ -291,6 +317,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                     value={rate}
                     onChange={(e) => setRate(e.target.value)}
                     placeholder="Ex.: 110 (para 110% CDI) ou 6,25 (IPCA + 6,25%)"
+                    disabled={isSynced}
                   />
                 </div>
 
@@ -301,6 +328,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                     type="date"
                     value={maturityDate}
                     onChange={(e) => setMaturityDate(e.target.value)}
+                    disabled={isSynced}
                   />
                 </div>
 
@@ -309,6 +337,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                     id="isTaxExempt"
                     checked={isTaxExempt}
                     onCheckedChange={(checked) => setIsTaxExempt(Boolean(checked))}
+                    disabled={isSynced}
                   />
                   <Label htmlFor="isTaxExempt" className="text-xs font-normal cursor-pointer">
                     Isento de Imposto de Renda (LCI, LCA, CRI, CRA)
@@ -324,7 +353,8 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                 id="quantity"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Ex.: 100 ou 1"
+                placeholder="Ex.: 100 ou 0,015"
+                inputMode="decimal"
                 required
               />
             </div>
@@ -337,6 +367,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                 value={invested}
                 onChange={(e) => setInvested(e.target.value)}
                 placeholder="Ex.: 1.000,00"
+                inputMode="decimal"
                 required
               />
             </div>
@@ -349,6 +380,7 @@ export function ManualHoldingDialog({ holding, accounts, trigger }: ManualHoldin
                 value={currentValue}
                 onChange={(e) => setCurrentValue(e.target.value)}
                 placeholder="Ex.: 1.050,00"
+                inputMode="decimal"
                 required
               />
             </div>

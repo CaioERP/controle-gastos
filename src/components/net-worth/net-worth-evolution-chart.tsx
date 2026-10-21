@@ -36,7 +36,8 @@ const chartConfig: ChartConfig = {
   },
   netWorthCents: {
     label: 'Patrimônio líquido',
-    color: 'var(--color-net-worth, hsl(var(--primary)))',
+    // O tema usa cores lab()/oklch: hsl(var(--primary)) é inválido e a linha sumia
+    color: 'var(--primary)',
   },
 };
 
@@ -203,9 +204,9 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                     type="monotone"
                     dataKey="netWorthCents"
                     name="Patrimônio líquido"
-                    stroke="var(--color-net-worth, hsl(var(--primary)))"
+                    stroke="var(--color-netWorthCents)"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: 'var(--color-net-worth, hsl(var(--primary)))' }}
+                    dot={{ r: 3, fill: 'var(--color-netWorthCents)' }}
                     isAnimationActive={false}
                   />
                 </ComposedChart>

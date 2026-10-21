@@ -19,6 +19,7 @@ import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/
 import { Money } from '@/components/format/money';
 import { DateBR } from '@/components/format/date-br';
 import { formatBRL } from '@/server/domain/money';
+import { formatBRLCompact } from '@/components/charts/format';
 import { deleteInvestmentTransactionAction } from '@/app/(app)/investimentos/actions';
 import { InvestmentTxDialog } from './investment-tx-dialog';
 import type { DividendsOverview } from '@/server/queries/investments';
@@ -53,9 +54,9 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
   const chartData = overview.monthlyTotals.map((m) => ({
     month: m.month,
     label: formatMonthLabel(m.month),
-    total: m.totalCents / 100, // em reais para o gráfico
     totalCents: m.totalCents,
   }));
+  const hasChartData = chartData.some((m) => m.totalCents !== 0);
 
   const handleDelete = (txId: string, description: string | null) => {
     if (!confirm(`Deseja excluir o lançamento de provento "${description ?? 'Provento'}"?`)) {
@@ -127,6 +128,11 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {!hasChartData ? (
+            <div className="flex h-56 items-center justify-center text-sm text-muted-foreground">
+              Nenhum provento nos últimos 12 meses
+            </div>
+          ) : (
           <div className="w-full">
             <ChartContainer config={chartConfig} className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -144,7 +150,8 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v) => `R$ ${v}`}
+                    width={64}
+                    tickFormatter={(cents: number) => formatBRLCompact(cents)}
                   />
                   <ChartTooltip
                     content={({ active, payload, label }) => {
@@ -162,7 +169,7 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
                     }}
                   />
                   <Bar
-                    dataKey="total"
+                    dataKey="totalCents"
                     fill="var(--color-total, #10B981)"
                     radius={[4, 4, 0, 0]}
                     isAnimationActive={false}
@@ -171,6 +178,7 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
               </ResponsiveContainer>
             </ChartContainer>
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -250,6 +258,7 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
                             disabled={deletingId === item.id}
                             className="text-muted-foreground hover:text-destructive"
                             title="Excluir provento"
+                            aria-label={`Excluir provento de ${item.assetName}`}
                           >
                             <Trash2 className="size-3.5" />
                           </Button>

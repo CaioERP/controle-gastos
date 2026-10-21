@@ -21,6 +21,7 @@ import { toCents } from '@/server/domain/money';
 import { INVESTMENT_TX_TYPES, type InvestmentTxType } from '@/server/domain/enums';
 import { INVESTMENT_TX_TYPE_LABELS } from '@/server/domain/labels';
 import { recordInvestmentTransactionAction } from '@/app/(app)/investimentos/actions';
+import { parseQuantityInput } from './input-format';
 
 type InvestmentTxDialogProps = {
   holdings: Array<{ id: string; assetName: string; ticker: string | null; institutionName: string }>;
@@ -91,6 +92,20 @@ export function InvestmentTxDialog({
       toast.error('O valor deve ser maior que zero');
       return;
     }
+    if (taxCents > amountCents) {
+      toast.error('O imposto retido não pode ser maior que o valor bruto');
+      return;
+    }
+
+    let qtyValue: string | null = null;
+    if (showTradeFields && quantity.trim()) {
+      const qty = parseQuantityInput(quantity);
+      if (!qty.ok) {
+        toast.error(qty.message);
+        return;
+      }
+      qtyValue = qty.value;
+    }
 
     startTransition(async () => {
       const res = await recordInvestmentTransactionAction({
@@ -99,7 +114,7 @@ export function InvestmentTxDialog({
         date,
         amountCents,
         taxCents,
-        quantity: showTradeFields && quantity.trim() ? quantity.trim() : null,
+        quantity: qtyValue,
         unitPriceCents: showTradeFields ? unitPriceCents : null,
         description: description.trim() || null,
       });
@@ -233,7 +248,8 @@ export function InvestmentTxDialog({
                     id="qty"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="Ex.: 10"
+                    placeholder="Ex.: 10 ou 0,015"
+                    inputMode="decimal"
                   />
                 </div>
 

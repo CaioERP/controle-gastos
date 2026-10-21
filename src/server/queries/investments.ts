@@ -206,11 +206,12 @@ export async function getInvestmentsOverview(
     : allHoldingRows;
   filteredHoldings.sort((a, b) => b.currentValueCents - a.currentValueCents);
 
-  // Proventos dos últimos 12 meses
-  const oneYearAgoStr = addMonthsISO(todayStr, -12);
+  // Proventos dos últimos 12 meses: mesma janela (mês atual + 11 anteriores) e valor líquido da aba "Proventos"
+  const oneYearAgoStr = monthStart(addMonthsISO(todayStr, -11));
   const incomeTxs = await db
     .select({
       amountCents: investmentTransactions.amountCents,
+      taxCents: investmentTransactions.taxCents,
       date: investmentTransactions.date,
     })
     .from(investmentTransactions)
@@ -224,7 +225,7 @@ export async function getInvestmentsOverview(
         lte(investmentTransactions.date, todayStr),
       ),
     );
-  const income12mCents = incomeTxs.reduce((sum, tx) => sum + tx.amountCents, 0);
+  const income12mCents = incomeTxs.reduce((sum, tx) => sum + tx.amountCents - tx.taxCents, 0);
 
   // Instituições e contas de investimento disponíveis para filtros
   const allAccounts = await db

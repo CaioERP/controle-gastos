@@ -250,22 +250,22 @@ export function HoldingsTable({
                       {/* Ações */}
                       <TableCell className="align-top text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {row.source === 'manual' ? (
-                            <ManualHoldingDialog
-                              holding={row}
-                              accounts={investmentAccounts}
-                              trigger={
-                                <Button
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  className="text-muted-foreground hover:text-foreground"
-                                  title="Editar posição manual"
-                                >
-                                  <Pencil className="size-3.5" />
-                                </Button>
-                              }
-                            />
-                          ) : null}
+                          {/* Manual: edita tudo e exclui. Pluggy: só ajusta quantidade/valores (R9). */}
+                          <ManualHoldingDialog
+                            holding={row}
+                            accounts={investmentAccounts}
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                className="text-muted-foreground hover:text-foreground"
+                                title={row.source === 'manual' ? 'Editar posição' : 'Ajustar valores da posição'}
+                                aria-label={`${row.source === 'manual' ? 'Editar posição' : 'Ajustar valores da posição'} ${row.assetName}`}
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                            }
+                          />
 
                           <InvestmentTxDialog
                             holdings={holdingsForTx}
@@ -276,6 +276,7 @@ export function HoldingsTable({
                                 size="icon-xs"
                                 className="text-muted-foreground hover:text-foreground"
                                 title="Lançar movimentação ou provento"
+                                aria-label={`Lançar movimentação ou provento em ${row.assetName}`}
                               >
                                 <Plus className="size-3.5" />
                               </Button>

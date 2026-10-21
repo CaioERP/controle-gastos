@@ -33,7 +33,7 @@ export function NetWorthDecomposition({ current, byInstitution }: NetWorthDecomp
                 >
                   Contas correntes, poupança e carteira
                 </Link>
-                <Money cents={current.cashAccountsCents} />
+                <Money cents={current.cashAccountsCents} className="shrink-0 whitespace-nowrap pl-3" />
               </div>
               <div className="flex items-center justify-between py-2">
                 <Link
@@ -64,7 +64,7 @@ export function NetWorthDecomposition({ current, byInstitution }: NetWorthDecomp
                 >
                   (-) Faturas abertas e fechadas não pagas
                 </Link>
-                <Money cents={-current.openInvoicesCents} signed colored />
+                <Money cents={-current.openInvoicesCents} signed colored className="shrink-0 whitespace-nowrap pl-3" />
               </div>
               <div className="flex items-center justify-between py-2">
                 <Link
@@ -73,7 +73,7 @@ export function NetWorthDecomposition({ current, byInstitution }: NetWorthDecomp
                 >
                   (-) Parcelas futuras projetadas
                 </Link>
-                <Money cents={-current.futureInstallmentsCents} signed colored />
+                <Money cents={-current.futureInstallmentsCents} signed colored className="shrink-0 whitespace-nowrap pl-3" />
               </div>
               <div className="flex items-center justify-between py-2 font-medium">
                 <span className="text-muted-foreground">Total de Passivos</span>

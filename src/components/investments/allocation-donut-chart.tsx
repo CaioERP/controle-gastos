@@ -7,6 +7,7 @@ import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/
 import { Money } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
 import type { AllocationSlice } from '@/server/queries/investments';
+import { splitPercentTenths } from './input-format';
 
 type AllocationDonutChartProps = {
   allocation: AllocationSlice[];
@@ -15,6 +16,12 @@ type AllocationDonutChartProps = {
 
 export function AllocationDonutChart({ allocation, totalCents }: AllocationDonutChartProps) {
   const drawn = allocation.filter((s) => s.totalCents > 0);
+  // Participação em décimos de % pelo maior resto, para a legenda somar 100,0%.
+  const tenths = splitPercentTenths(drawn.map((s) => s.totalCents));
+  const shareText = (assetClass: string) => {
+    const i = drawn.findIndex((s) => s.assetClass === assetClass);
+    return `${((tenths[i] ?? 0) / 10).toFixed(1).replace('.', ',')}%`;
+  };
   const chartConfig: ChartConfig = Object.fromEntries(
     allocation.map((s) => [s.assetClass, { label: s.label, color: s.color }]),
   );
@@ -39,12 +46,11 @@ export function AllocationDonutChart({ allocation, totalCents }: AllocationDonut
                     content={({ active, payload }) => {
                       const item = payload?.[0]?.payload as AllocationSlice | undefined;
                       if (!active || !item) return null;
-                      const share = (item.shareBps / 100).toFixed(1).replace('.', ',');
                       return (
                         <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
                           <div className="font-medium">{item.label}</div>
                           <div className="tabular-nums">
-                            {formatBRL(item.totalCents)} · {share}%
+                            {formatBRL(item.totalCents)} · {shareText(item.assetClass)}
                           </div>
                         </div>
                       );
@@ -81,7 +87,6 @@ export function AllocationDonutChart({ allocation, totalCents }: AllocationDonut
               aria-label="Legenda: alocação por classe de ativos"
             >
               {drawn.map((s) => {
-                const shareText = `${(s.shareBps / 100).toFixed(1).replace('.', ',')}%`;
                 return (
                   <li key={s.assetClass} className="flex items-center justify-between gap-2">
                     <span className="flex min-w-0 items-center gap-2">
@@ -95,7 +100,7 @@ export function AllocationDonutChart({ allocation, totalCents }: AllocationDonut
                     <span className="flex shrink-0 items-baseline gap-2">
                       <Money cents={s.totalCents} />
                       <span className="w-12 text-right text-xs text-muted-foreground tabular-nums">
-                        {shareText}
+                        {shareText(s.assetClass)}
                       </span>
                     </span>
                   </li>
