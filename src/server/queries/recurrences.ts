@@ -104,9 +104,12 @@ export async function getSubscriptionsSummary(
   const rows = await query;
 
   const items: RecurrenceRow[] = rows.map((r) => {
-    const monthlyAmountCents = normalizeMonthlyAmount(r.amountCents, r.frequency);
+    const hasPriceHike = r.lastAmountCents > r.amountCents * 1.05; // mesmo limiar do detector
+    const monthlyAmountCents = normalizeMonthlyAmount(
+      hasPriceHike ? r.lastAmountCents : r.amountCents,
+      r.frequency,
+    );
     // Identifica se houve aumento recente de preço (> valor base)
-    const hasPriceHike = r.lastAmountCents > r.amountCents;
     const previousAmountCents = hasPriceHike ? r.amountCents : null;
 
     return {
@@ -155,7 +158,7 @@ export async function getSubscriptionsSummary(
   const activeItems = items.filter((r) => r.status === 'active');
   const monthlyTotalCents = activeItems.reduce((acc, r) => acc + r.monthlyAmountCents, 0);
   const yearlyTotalCents = activeItems.reduce(
-    (acc, r) => acc + (r.frequency === 'yearly' ? r.amountCents : r.monthlyAmountCents * 12),
+    (acc, r) => acc + (r.frequency === 'yearly' ? (r.hasPriceHike ? r.lastAmountCents : r.amountCents) : r.monthlyAmountCents * 12),
     0,
   );
   const activeCount = activeItems.length;

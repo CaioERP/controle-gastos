@@ -74,11 +74,11 @@ describe('recurrences queries', () => {
 
     const summary = await getSubscriptionsSummary(db);
 
-    // Ativas: Netflix (5000) + Amazon (1000) + Spotify (3490) = 9490 centavos/mês
+    // Ativas: Netflix (5000) + Amazon (1000) + Spotify no valor vigente (4090) = 10090 centavos/mês
     expect(summary.activeCount).toBe(3);
-    expect(summary.monthlyTotalCents).toBe(9490);
-    // Anual: Netflix (5000*12=60000) + Amazon (12000) + Spotify (3490*12=41880) = 113880
-    expect(summary.yearlyTotalCents).toBe(113880);
+    expect(summary.monthlyTotalCents).toBe(10090);
+    // Anual: Netflix (5000*12=60000) + Amazon (12000) + Spotify (4090*12=49080) = 121080
+    expect(summary.yearlyTotalCents).toBe(121080);
     expect(summary.priceHikesCount).toBe(1);
 
     const spotify = summary.items.find((i) => i.description === 'Spotify Family');
