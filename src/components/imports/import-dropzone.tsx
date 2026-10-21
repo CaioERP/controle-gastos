@@ -2,15 +2,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { AlertTriangleIcon, InfoIcon, KeyRoundIcon, UploadCloudIcon } from 'lucide-react';
+import { InfoIcon, UploadCloudIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  previewFileImportAction,
-  previewPdfInvoiceImportAction,
-} from '@/app/(app)/importar/actions';
+import { previewFileImportAction } from '@/app/(app)/importar/actions';
 import { ImportPreviewCard } from '@/components/imports/import-preview-card';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import type { AccountType } from '@/server/domain/enums';
 import { ACCOUNT_TYPE_LABELS } from '@/server/domain/labels';
@@ -59,15 +55,6 @@ async function safeSend<T>(call: () => Promise<T>): Promise<T | typeof SEND_FAIL
   }
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]!);
-  }
-  return btoa(binary);
-}
-
 export function ImportDropzone({
   accounts,
   defaultAccountId,
@@ -83,14 +70,6 @@ export function ImportDropzone({
   const [preview, setPreview] = React.useState<ImportBatchPreview | null>(initialPreview);
   const [isDragging, setIsDragging] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
-
-  // Estado para PDF protegido por senha (mantido apenas em memória)
-  const [pendingPdf, setPendingPdf] = React.useState<{
-    filename: string;
-    pdfBase64: string;
-  } | null>(null);
-  const [pdfPassword, setPdfPassword] = React.useState('');
-  const [selectedFileIsPdf, setSelectedFileIsPdf] = React.useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -108,49 +87,12 @@ export function ImportDropzone({
     }
 
     const lower = file.name.toLowerCase();
-    const isPdf = lower.endsWith('.pdf') || file.type === 'application/pdf';
-    setSelectedFileIsPdf(isPdf);
-
-    if (isPdf && currentAccount.type !== 'credit_card') {
-      toast.error('Faturas em PDF só podem ser importadas em contas do tipo Cartão de crédito.');
+    if (lower.endsWith('.pdf') || file.type === 'application/pdf') {
+      toast.error('Importação de PDF ainda não disponível. Use OFX ou CSV.');
       return;
     }
 
     const buffer = await file.arrayBuffer();
-
-    if (isPdf) {
-      const pdfBase64 = arrayBufferToBase64(buffer);
-      startTransition(async () => {
-        const res = await safeSend(() =>
-          previewPdfInvoiceImportAction({
-            accountId: currentAccount.id,
-            filename: file.name,
-            pdfBase64,
-          }),
-        );
-
-        if (!res.ok) {
-          if (
-            res.error.code === 'PASSWORD_REQUIRED' ||
-            res.error.code === 'INVALID_PASSWORD' ||
-            /protegido por senha|senha do pdf/i.test(res.error.message)
-          ) {
-            setPendingPdf({ filename: file.name, pdfBase64 });
-            setPdfPassword('');
-            toast.warning(res.error.message);
-            return;
-          }
-          toast.error(res.error.message);
-          return;
-        }
-
-        setPendingPdf(null);
-        setPdfPassword('');
-        setPreview(res.data);
-      });
-      return;
-    }
-
     const content = decodeBufferText(buffer);
     startTransition(async () => {
       const res = await safeSend(() =>
@@ -166,40 +108,6 @@ export function ImportDropzone({
         return;
       }
 
-      setPendingPdf(null);
-      setPdfPassword('');
-      setPreview(res.data);
-    });
-  };
-
-  const handleUnlockPdf = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pendingPdf || !currentAccount) return;
-    if (!pdfPassword.trim()) {
-      toast.error('Informe a senha do PDF.');
-      return;
-    }
-
-    const passwordToSend = pdfPassword;
-    startTransition(async () => {
-      const res = await safeSend(() =>
-        previewPdfInvoiceImportAction({
-          accountId: currentAccount.id,
-          filename: pendingPdf.filename,
-          pdfBase64: pendingPdf.pdfBase64,
-          password: passwordToSend,
-        }),
-      );
-
-      // Limpa a senha do estado imediatamente após o envio
-      setPdfPassword('');
-
-      if (!res.ok) {
-        toast.error(res.error.message);
-        return;
-      }
-
-      setPendingPdf(null);
       setPreview(res.data);
     });
   };
@@ -244,8 +152,6 @@ export function ImportDropzone({
           value={currentAccount?.id ?? ''}
           onChange={(e) => {
             setSelectedAccountId(e.target.value);
-            setPendingPdf(null);
-            setPdfPassword('');
           }}
           disabled={isPending}
         >
@@ -264,13 +170,6 @@ export function ImportDropzone({
             Esta conta é sincronizada via Open Finance. Transações que já vieram pelo banco serão
             identificadas na pré-visualização para evitar duplicidade.
           </span>
-        </div>
-      )}
-
-      {selectedFileIsPdf && currentAccount && currentAccount.type !== 'credit_card' && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-          <AlertTriangleIcon className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>Faturas em PDF só podem ser importadas em contas do tipo Cartão de crédito.</span>
         </div>
       )}
 
@@ -306,15 +205,15 @@ export function ImportDropzone({
         <p className="text-sm font-medium text-foreground">
           {isPending
             ? 'Analisando arquivo...'
-            : 'Arraste um arquivo OFX, CSV (Nubank) ou PDF de fatura aqui, ou clique para selecionar'}
+            : 'Arraste um arquivo OFX ou CSV (Nubank) aqui, ou clique para selecionar'}
         </p>
         <p className="text-xs text-muted-foreground">
-          Formatos aceitos: .ofx, .csv, .pdf (máx. 5 MB)
+          Formatos aceitos: .ofx, .csv (máx. 5 MB)
         </p>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".ofx,.csv,.pdf"
+          accept=".ofx,.csv"
           data-testid="import-file-input"
           className="sr-only"
           disabled={isPending}
@@ -325,36 +224,6 @@ export function ImportDropzone({
           }}
         />
       </div>
-
-      {/* Campo de senha do PDF quando protegido */}
-      {pendingPdf && (
-        <form
-          onSubmit={handleUnlockPdf}
-          className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 space-y-3"
-        >
-          <div className="flex items-center gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200">
-            <KeyRoundIcon className="h-4 w-4 shrink-0" />
-            <span>O arquivo &ldquo;{pendingPdf.filename}&rdquo; é protegido por senha</span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-            <div className="flex-1 space-y-1">
-              <Label htmlFor="pdf-password-input">Senha do PDF</Label>
-              <Input
-                id="pdf-password-input"
-                type="password"
-                autoComplete="off"
-                placeholder="Ex.: primeiros dígitos do CPF"
-                value={pdfPassword}
-                onChange={(e) => setPdfPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" size="sm" disabled={isPending}>
-              {isPending ? 'Desbloqueando...' : 'Desbloquear e analisar'}
-            </Button>
-          </div>
-        </form>
-      )}
     </div>
   );
 }
