@@ -1,18 +1,15 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
-import {
-  accounts,
-  assetPrices,
-  assets,
-  benchmarkSeries,
-  holdings,
-} from '@/server/db/schema';
+import { accounts, assetPrices, assets, benchmarkSeries, holdings } from '@/server/db/schema';
 import { addDaysISO, today } from '@/server/domain/dates';
-import { BENCHMARK_CODES } from '@/server/domain/enums';
-import { normalizeForMatch } from '@/server/ingestion/normalize/text';
 import { multiplyQtyByPriceCents, toScaledQty } from './math';
-import { defaultMarketDataProviders } from './providers';
+import { BCB_SGS_BENCHMARKS, defaultMarketDataProviders, matchTreasuryQuote } from './providers';
 import type { MarketDataProviders, QuoteResult } from './providers/types';
+
+/** Preço que arredonda para 0 centavos (ex.: cripto de R$ 0,00002) zeraria a posição. */
+function isValidPriceCents(priceCents: number): boolean {
+  return Number.isSafeInteger(priceCents) && priceCents > 0;
+}
 
 export type PriceUpdateStats = {
   b3Updated: number;
@@ -69,10 +66,7 @@ export async function updateMarketPricesAndBenchmarks(
 
   // 2a. Ações / FIIs / ETFs (B3)
   const b3Assets = activeAssetList.filter(
-    (a) =>
-      ['stocks', 'fii', 'etf'].includes(a.assetClass) &&
-      a.ticker &&
-      a.ticker.trim().length > 0,
+    (a) => ['stocks', 'fii', 'etf'].includes(a.assetClass) && a.ticker && a.ticker.trim().length > 0,
   );
 
   if (b3Assets.length > 0) {
@@ -87,7 +81,7 @@ export async function updateMarketPricesAndBenchmarks(
 
       for (const asset of b3Assets) {
         const quote = quoteByTicker.get(asset.ticker!.trim().toUpperCase());
-        if (quote) {
+        if (quote && isValidPriceCents(quote.priceCents)) {
           await db
             .insert(assetPrices)
             .values({
@@ -109,9 +103,7 @@ export async function updateMarketPricesAndBenchmarks(
         }
       }
     } catch (err) {
-      stats.errors.push(
-        `Erro ao atualizar cotações B3: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      stats.errors.push(`Erro ao atualizar cotações B3: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -122,18 +114,9 @@ export async function updateMarketPricesAndBenchmarks(
       const quotes = await providers.fetchTreasuryQuotes();
 
       for (const asset of treasuryAssets) {
-        const maturity = asset.maturityDate;
-        const assetNormName = normalizeForMatch(asset.name);
+        const matchedQuote = matchTreasuryQuote(asset.name, asset.maturityDate, quotes);
 
-        const matchedQuote = quotes.find((q) => {
-          if (maturity && q.maturityDate !== maturity) {
-            return false;
-          }
-          const quoteNormType = normalizeForMatch(q.titleType);
-          return assetNormName.includes(quoteNormType) || quoteNormType.includes(assetNormName);
-        });
-
-        if (matchedQuote) {
+        if (matchedQuote && isValidPriceCents(matchedQuote.puBaseCents)) {
           await db
             .insert(assetPrices)
             .values({
@@ -185,7 +168,7 @@ export async function updateMarketPricesAndBenchmarks(
         const mappedId = CRYPTO_SYMBOL_MAP[lower] ?? lower;
         const quote = quoteByCoinId.get(mappedId) ?? quoteByCoinId.get(lower);
 
-        if (quote) {
+        if (quote && isValidPriceCents(quote.priceCents)) {
           await db
             .insert(assetPrices)
             .values({
@@ -220,9 +203,7 @@ export async function updateMarketPricesAndBenchmarks(
     const updated = updatedPricesByAssetId.get(holding.assetId);
     if (!updated) continue;
 
-    const userEdited = Array.isArray(holding.userEditedFields)
-      ? holding.userEditedFields
-      : [];
+    const userEdited = Array.isArray(holding.userEditedFields) ? holding.userEditedFields : [];
 
     if (userEdited.includes('currentValueCents')) {
       continue;
@@ -264,8 +245,8 @@ export async function updateMarketPricesAndBenchmarks(
       .where(eq(accounts.id, accountId));
   }
 
-  // 4. Índices e Benchmarks (BCB SGS)
-  for (const benchmark of BENCHMARK_CODES) {
+  // 4. Índices e Benchmarks (BCB SGS). Ibovespa fica de fora: a série SGS 7 parou em 2019.
+  for (const benchmark of BCB_SGS_BENCHMARKS) {
     try {
       const [latest] = await db
         .select({ maxDate: sql<string>`max(${benchmarkSeries.date})` })
