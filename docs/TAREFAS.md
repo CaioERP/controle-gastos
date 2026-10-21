@@ -4,7 +4,7 @@
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
 > **Última atualização por:** Coordenador / Revisor (2026-10-20 — integração dos PRs #30 a #44).
 
-**Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída
+**Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída · ⏸️ fora do escopo por enquanto
 
 **Regra para pegar tarefa:** status ⬜ **e** todas as dependências ✅ **e** é da sua trilha (A ou B). Tarefas `H-*` são do usuário. Sem antecipar tarefas (ver `AGENTS.md` §3). Prompts de cada rodada, em ordem: [`PROMPTS.md`](./PROMPTS.md).
 
@@ -37,7 +37,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 |---|---|---|---|
 | H-01 | Criar conta no Meu Pluggy e conectar Nubank, Itaú e Mercado Pago | F0-07 | ⬜ |
 | H-02 | Criar aplicação no dashboard da Pluggy; colocar `PLUGGY_CLIENT_ID`/`PLUGGY_CLIENT_SECRET` no `.env.local` | F0-07 | ⬜ |
-| H-03 | Criar chave da Claude API; colocar `ANTHROPIC_API_KEY` no `.env.local` | A1-07 | ⬜ |
+| H-03 | Criar chave da Claude API; colocar `ANTHROPIC_API_KEY` no `.env.local` | — | ⏸️ adiada: IA fora do escopo por enquanto (decisão do usuário, 2026-10-20) |
 | H-04 | Exportar 1 fatura e 1 extrato de cada banco (PDF/CSV/OFX) para `.data/samples/` | Fase 2 | ⬜ |
 | H-05 | Conectar Inter/PagBank no Meu Pluggy quando abrir as contas | — | ⬜ |
 | H-06 | Criar contas GitHub, Vercel e Neon | Fase 5 | ⬜ |
@@ -67,9 +67,10 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A1-04 | Faturas e parcelas futuras | A | A1-03 | ✅ (PR #36) |
 | A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ✅ (PR #37) |
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
-| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ✅ (teste com a API real pendente: H-03) |
+| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ⏸️ implementada e depois retirada pela A1-10 (IA fora do escopo por enquanto); ver MELHORIAS |
 | A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | ✅ (PRs #20, #38) |
 | A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ✅ (PR #39) |
+| A1-10 | Retirar a integração com a Claude API (categorização por IA e PDF via IA) | A | — | 🟡 Agente A |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
 
@@ -99,7 +100,9 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 ## Fase 3 — Patrimônio · specs: [`tarefas/fase-3-dados.md`](./tarefas/fase-3-dados.md) e [`tarefas/fase-3-interface.md`](./tarefas/fase-3-interface.md)
 
-## Fases 4 e 5 · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
+## Fase 4 — Inteligência · specs: [`tarefas/fase-4-dados.md`](./tarefas/fase-4-dados.md) e [`tarefas/fase-4-interface.md`](./tarefas/fase-4-interface.md)
+
+## Fase 5 — Deploy · spec resumida: [`tarefas/fases-2-a-5.md`](./tarefas/fases-2-a-5.md)
 
 > Antes de iniciar cada fase, a tarefa `Px-00` detalha as tarefas no mesmo formato das Fases 0 e 1.
 > **`Px-00` deve ser feita por um modelo forte** (ex.: Claude Opus), com base no que foi aprendido nas fases anteriores.
@@ -108,9 +111,10 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 |---|---|---|---|---|
 | P2-00 | Detalhar a Fase 2 | forte | M1 (antecipada) | ✅ |
 | A2-01 | Importação de OFX e CSV | A | P2-00, A1-03, A1-04 | ✅ (PR #40) |
-| A2-02 | Importação de fatura em PDF via IA | A | A2-01, H-03, H-04 | ⬜ |
+| P2-01 | Refazer a spec da A2-02 sem IA (leitura de PDF por parser de cada banco) | forte | H-04 | ⬜ |
+| A2-02 | Importação de fatura em PDF por parser de cada banco (sem IA) | A | A2-01, P2-01, H-04 | ⬜ |
 | A2-03 | Deduplicação entre fontes | A | A2-01 | ✅ (PR #42) |
-| A2-04 | Conferência de faturas (total do PDF × lançamentos) | A | A2-02, A2-03, H-03, H-04 | ⬜ |
+| A2-04 | Conferência de faturas (total oficial da fatura do Pluggy × lançamentos; itens do PDF quando a A2-02 existir) | A | A1-04, A2-03 (validação real: F0-07) | ⬜ |
 | A2-05 | Ciclo de vida das conexões (expiração, reconexão, erros) | A | P2-00, A1-01, A1-03, A1-09 | ✅ (PR #43) |
 | B2-01 | Tela de importação (arrastar, pré-visualizar, confirmar) | B | P2-00, A2-01 | ✅ (PR #44) |
 | B2-02 | Tela de saúde das conexões e histórico de sincronização | B | P2-00, B1-06, A2-05 | ✅ (PR #41) |
@@ -118,23 +122,23 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #31, #32) |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #29, #30) |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ✅ |
-| A3-01 | Schema de investimentos, aritmética de cotas e sincronização Pluggy | A | P3-00, A1-01, A1-03 (validação real: F0-07) | 🟡 Agente A |
-| A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) + job `prices-daily` | A | P3-00, A3-01 | ⬜ |
-| A3-03 | Rentabilidade (TWR mensal) e snapshots de patrimônio | A | P3-00, A3-01, A3-02 | ⬜ |
-| A3-04 | Posições manuais e proventos (backend + fixtures) | A | P3-00, A3-01 | ⬜ |
-| B3-01 | Tela de investimentos (`/investimentos`) | B | P3-00, A3-01 (curva TWR completa: A3-03) | ⬜ |
-| B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | ⬜ |
-| B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | ⬜ |
-| P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ⬜ |
-| A4-01 | Detecção de recorrências e assinaturas | A | P4-00 | ⬜ |
-| A4-02 | Orçamentos sugeridos e motor de alertas | A | P4-00 | ⬜ |
-| A4-03 | Projeção de fluxo de caixa | A | A4-01 | ⬜ |
-| A4-04 | Perguntas em linguagem natural (IA sobre as consultas) | A | P4-00 | ⬜ |
-| B4-01 | Tela de orçamentos | B | A4-02 | ⬜ |
-| B4-02 | Tela de assinaturas | B | A4-01 | ⬜ |
-| B4-03 | Tela de projeção | B | A4-03 | ⬜ |
-| B4-04 | Tela de perguntas (chat) | B | A4-04 | ⬜ |
-| B4-05 | Central de notificações | B | A4-02 | ⬜ |
+| A3-01 | Schema de investimentos, aritmética de cotas e sincronização Pluggy | A | P3-00, A1-01, A1-03 (validação real: F0-07) | 🟡 Agente A — PR #49 em revisão |
+| A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) + job `prices-daily` | A | P3-00, A3-01 | 🟡 Agente A — PR #51 em revisão |
+| A3-03 | Rentabilidade (TWR mensal) e snapshots de patrimônio | A | P3-00, A3-01, A3-02 | 🟡 Agente A — PR #52 em revisão |
+| A3-04 | Posições manuais e proventos (backend + fixtures) | A | P3-00, A3-01 | 🟡 Agente A — PR #50 em revisão |
+| B3-01 | Tela de investimentos (`/investimentos`) | B | P3-00, A3-01 (curva TWR completa: A3-03) | 🟡 Agente B — PR #53 em revisão |
+| B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | 🟡 Agente B — PR #55 em revisão |
+| B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | 🟡 Agente B — PR #54 em revisão |
+| P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ✅ |
+| A4-02 | Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas | A | P4-00 (iniciar primeiro; gera migration 0004) | ⬜ |
+| A4-01 | Detecção de recorrências e assinaturas | A | P4-00, A4-02 | ⬜ |
+| A4-03 | Projeção de fluxo de caixa | A | P4-00, A4-01 | ⬜ |
+| A4-04 | Perguntas em linguagem natural (Claude) | A | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
+| B4-01 | Tela de limites e orçamentos (`/limites`) | B | P4-00, A4-02 | ⬜ |
+| B4-05 | Central de notificações e preferências de alerta | B | P4-00, A4-02 | ⬜ |
+| B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | ⬜ |
+| B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | ⬜ |
+| B4-04 | Tela de perguntas / chat (`/perguntas`) | B | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
 | P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
 | A5-01 | Banco Neon, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
 | A5-02 | Vercel Cron, webhook Pluggy, segredos | A | A5-01 | ⬜ |
@@ -168,3 +172,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 - [Revisão pós-merge #30–#44] 🟠 corrigidos nos PRs #45–#48. 🟢 restantes (detalhes nos corpos dos PRs): datas do Pluggy em T00:00Z podem cair um dia antes (conferir na F0-07); item em LOGIN_ERROR/OUTDATED marca conexão como active; erro de fetchBills derruba a conexão; parcelas idênticas no mesmo grupo; dedupe automático com candidata única a ±2 dias; CSV genérico data,descricao,valor tratado como cartão; jobs sem backoff e trava só no processo; webhook sem await e segredo na query (F5); partes de divisão ficam pending quando a mãe é lançada; falta "ver a mãe" na divisão; histórico de sync com textos em inglês e dia em UTC; pré-visualização de CSV enorme lenta — Coordenador, 2026-10-20
 - [A3-01/F0-07] Normalizador de investimentos da A3-01 foi especificado sobre os tipos de `pluggy-sdk`; validar os subtipos e campos retornados pelas corretoras reais do usuário quando F0-07 rodar — Planejador (P3-00), 2026-10-20
 - [A3-02] `brapi.dev` sem `BRAPI_TOKEN` permite apenas `PETR4`, `VALE3`, `MGLU3` e `ITUB4` (plano gratuito com token dá 15.000 req/mês, 1 ativo por requisição). Configurar `BRAPI_TOKEN` (e opcionalmente `COINGECKO_API_KEY`) no `.env.local` para cotar demais tickers da B3 — Planejador (P3-00), 2026-10-20
+- [A3-04] Ajustado queries/accounts.ts para ignorar contas do tipo 'investment' no cálculo de totals.balanceCents (saldo em contas/caixa de getAccountsOverview e getDashboardKpis), preservando a compatibilidade com o oráculo do dashboard e separando saldo de caixa de ativos de custódia — Agente A, 2026-10-20
+
+- [A4-02/B4-01/B4-05] Nova feature pedida pelo usuário: limites e metas de gasto por categoria e/ou forma de pagamento, com avisos (80%/100%, ritmo) e notificações. Incluída no roadmap da Fase 4 (fases-2-a-5.md). Não depende do Pluggy: pode ser antecipada se o usuário decidir — Coordenador, 2026-10-20
+- [IA] Decisão do usuário: por enquanto o sistema não usa a Claude API. A categorização fica só em código (regras → memória → categoria da fonte → fila de revisão); a A1-10 retira a integração; A2-02 vira parser de PDF por banco (spec a refazer na P2-01); A2-04 usa o total da fatura do Pluggy; A4-04/B4-04 saem do escopo (ver MELHORIAS) — Coordenador, 2026-10-20

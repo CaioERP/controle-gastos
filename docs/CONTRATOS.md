@@ -112,6 +112,21 @@ export const INVESTMENT_INDEXERS = ['cdi', 'ipca', 'selic', 'prefixado', 'other'
 export const INVESTMENT_TX_TYPES = ['buy', 'sell', 'income', 'tax', 'fee', 'transfer'] as const;
 export const BENCHMARK_CODES = ['cdi', 'selic', 'ipca', 'ibov'] as const;
 export const PRICE_SOURCES = ['brapi', 'tesouro', 'coingecko', 'pluggy', 'manual'] as const;
+export const LIMIT_PERIODS = ['monthly', 'weekly', 'yearly'] as const;
+export const RECURRENCE_FREQUENCIES = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const;
+export const RECURRENCE_STATUSES = ['active', 'paused', 'cancelled'] as const;
+export const NOTIFICATION_TYPES = [
+  'threshold_80',
+  'threshold_100',
+  'pace_warning',
+  'unusual_expense',
+  'invoice_due_soon',
+  'consent_expiring',
+  'sync_error',
+  'price_hike',
+  'cancelled_subscription',
+] as const;
+export const NOTIFICATION_CHANNELS = ['in_app', 'telegram', 'push', 'email'] as const;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 export type TxKind = (typeof TX_KINDS)[number];
@@ -129,6 +144,11 @@ export type InvestmentIndexer = (typeof INVESTMENT_INDEXERS)[number];
 export type InvestmentTxType = (typeof INVESTMENT_TX_TYPES)[number];
 export type BenchmarkCode = (typeof BENCHMARK_CODES)[number];
 export type PriceSource = (typeof PRICE_SOURCES)[number];
+export type LimitPeriod = (typeof LIMIT_PERIODS)[number];
+export type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCIES)[number];
+export type RecurrenceStatus = (typeof RECURRENCE_STATUSES)[number];
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
 /** Natureza que entra nos relatórios de gasto/receita (regra R2). */
 export const REPORTABLE_KINDS: readonly TxKind[] = ['expense', 'income', 'refund'];
@@ -403,11 +423,83 @@ Seed completo na tarefa F0-03.
 | net_worth_cents | bigint not null | default 0; `assets_cents - liabilities_cents` |
 | breakdown | jsonb not null | default `{}`; decomposição por classe de ativo e por instituição na data |
 
+### `spending_limits` — limites e metas de gasto (Fase 4, gerado na A4-02)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| name | text not null | identificação amigável do limite (ex.: `"Delivery"`, `"Lazer no Cartão"`) |
+| category_id | fk null (set null) | categoria alvo; categoria pai inclui automaticamente todas as filhas na consulta via `buildTxWhere` |
+| payment_method | enum `PAYMENT_METHODS` null | forma de pagamento opcional (ex.: `credit_card_single`, `pix`) |
+| account_id | fk null (cascade) | conta ou cartão específico opcional |
+| period | enum `LIMIT_PERIODS` | `'monthly'`, `'weekly'`, `'yearly'`; default `'monthly'` |
+| amount_cents | bigint not null | teto/limite máximo em centavos |
+| thresholds | integer[] not null | percentuais de disparo; default `'{80, 100}'` |
+| notify_pace | boolean not null | alerta preditivo de ritmo acelerado; default `true` |
+| is_active | boolean not null | default `true` |
+
+Índices: `(category_id)`, `(payment_method)`, `(is_active)`.
+
+### `spending_limit_dispatches` — controle de disparos idempotentes de limites (Fase 4, gerado na A4-02)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| limit_id | fk not null (cascade) | referência ao limite em `spending_limits` |
+| period_key | text not null | chave do período no fuso SP (ex.: `'2026-10'`, `'2026-W42'`, `'2026'`) |
+| threshold | integer not null | limiar que disparou (`80`, `100`, ou `-1` para alerta de ritmo `pace_warning`) |
+| dispatched_at | timestamptz not null | data/hora do disparo; default `now()` |
+
+Índices: `unique(limit_id, period_key, threshold)` — impede repetição de notificações no mesmo período.
+
+### `recurrences` — despesas recorrentes e assinaturas detectadas ou manuais (Fase 4, gerado na A4-02)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| merchant_id | fk null (set null) | estabelecimento vinculado |
+| description | text not null | nome/descrição normalizada da assinatura (ex.: `"Netflix"`, `"Aluguel"`) |
+| category_id | fk null (set null) | categoria vinculada |
+| account_id | fk null (cascade) | conta/cartão onde ocorre a cobrança habitual |
+| payment_method | enum `PAYMENT_METHODS` null | forma de pagamento habitual |
+| frequency | enum `RECURRENCE_FREQUENCIES` | `'weekly'`, `'biweekly'`, `'monthly'`, `'quarterly'`, `'yearly'`; default `'monthly'` |
+| expected_day | smallint null | dia previsto do mês (1–31) ou dia da semana (1–7) |
+| amount_cents | bigint not null | valor nominal esperado em centavos |
+| tolerance_percent | integer not null | tolerância para agrupamento/variação; default `10` (±10%) |
+| status | enum `RECURRENCE_STATUSES` | `'active'`, `'paused'`, `'cancelled'`; default `'active'` |
+| is_subscription | boolean not null | `true` para serviços de streaming, SaaS e assinaturas recorrentes; default `false` |
+| first_date | date not null | data da primeira ocorrência detectada |
+| last_date | date not null | data da última ocorrência registrada |
+| last_amount_cents | bigint not null | valor da última cobrança em centavos |
+| auto_detected | boolean not null | `true` se detectado pelo motor estatístico; `false` se cadastrado manualmente; default `true` |
+
+Índices: `(status)`, `(category_id)`, `(merchant_id)`.
+
+### `notifications` — central de notificações e alertas do sistema (Fase 4, gerado na A4-02)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| type | enum `NOTIFICATION_TYPES` | `'threshold_80'`, `'threshold_100'`, `'pace_warning'`, `'unusual_expense'`, `'invoice_due_soon'`, `'consent_expiring'`, `'sync_error'`, `'price_hike'`, `'cancelled_subscription'` |
+| title | text not null | título curto do alerta (ex.: `"Limite atingido: Alimentação"`) |
+| message | text not null | corpo explicativo detalhado com valores formatados |
+| action_url | text null | link direto para tela filtrada (ex.: `"/transacoes?categoryIds=...&from=...&to=..."`) |
+| entity_type | text null | tipo da entidade de origem (`'spending_limit'`, `'recurrence'`, `'invoice'`, `'connection'`) |
+| entity_id | uuid null | ID da entidade relacionada |
+| channel | enum `NOTIFICATION_CHANNELS` | canal de destino (`'in_app'`, `'telegram'`, `'push'`, `'email'`); default `'in_app'` |
+| read_at | timestamptz null | data/hora em que foi marcada como lida; `null` = não lida |
+| fingerprint | text null | hash ou chave idempotente única (ex.: `"limit:<id>:2026-10:t:80"`); impede duplicações em reprocessamento |
+
+Índices: `unique(fingerprint) where fingerprint is not null`, `(read_at, created_at)`.
+
+### `notification_preferences` — preferências de alerta do usuário (Fase 4, gerado na A4-02)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| type | enum `NOTIFICATION_TYPES` | tipo de notificação; unique `(type)` |
+| enabled | boolean not null | ativação geral do tipo de alerta; default `true` |
+| in_app | boolean not null | exibir dentro da aplicação; default `true` |
+| email | boolean not null | envio por e-mail (futuro); default `false` |
+| push | boolean not null | notificação push PWA (Fase 5); default `false` |
+| telegram | boolean not null | bot Telegram (Melhorias #1); default `false` |
+
 ### Tabelas de fases futuras
 Definidas no início da fase, como mudança de contrato aditiva:
 - **F2:** `import_batches` e `transaction_sources.import_batch_id` (gerados na A2-01); coluna `parent_transaction_id` em `transactions` (B2-03b).
 - **F3:** `assets`, `holdings`, `investment_transactions`, `asset_prices`, `benchmark_series`, `net_worth_snapshots` (especificados acima, migration gerada na A3-01).
-- **F4:** `budgets`, `recurrences`, `notifications`.
+- **F4:** `spending_limits`, `spending_limit_dispatches`, `recurrences`, `notifications`, `notification_preferences` (especificados acima, migration gerada na A4-02).
+- **F5:** tabelas ou extensões para tokens de push web e sessões seguras.
 
 ---
 
@@ -519,6 +611,14 @@ listTags(): Promise<Tag[]>;
 getInvestmentsOverview(filters?: { institutionId?: string; assetClass?: AssetClass; today?: string }): Promise<InvestmentsOverview>;
 getDividendsOverview(opts?: { institutionId?: string; today?: string }): Promise<DividendsOverview>;
 getNetWorthOverview(opts?: { today?: string }): Promise<NetWorthOverview>;
+
+// Inteligência, limites e alertas (Fase 4 — B4-01, B4-02, B4-03, B4-05) — src/server/queries/
+getLimitsOverview(refDate?: string): Promise<LimitsOverview>;
+getSuggestedBudgets(): Promise<SuggestedBudgetRow[]>;
+getSubscriptionsSummary(opts?: { status?: RecurrenceStatus }): Promise<SubscriptionsSummary>;
+getCashFlowProjection(opts?: { monthsAhead?: number; today?: string }): Promise<CashFlowProjection>;
+listNotifications(opts?: { unreadOnly?: boolean; limit?: number }): Promise<{ items: NotificationRow[]; unreadCount: number }>;
+getNotificationPreferences(): Promise<NotificationPreferenceRow[]>;
 ```
 
 Valores de gasto retornados por consultas são **positivos** (ex.: gasto de R$ 50 → `5000`). O sinal negativo é detalhe de armazenamento.
@@ -566,6 +666,18 @@ deleteInvestmentTransaction(input: { investmentTransactionId: string }): Promise
 refreshMarketPrices(): Promise<PriceUpdateStats>;
 captureNetWorthSnapshot(refDate?: string): Promise<NetWorthComputation>;
 
+// Inteligência, limites e recorrências (Fase 4 — A4-01, A4-02, A4-04) — src/server/commands/
+upsertSpendingLimit(input: { id?: string; name: string; categoryId?: string | null; paymentMethod?: PaymentMethod | null; accountId?: string | null; period?: LimitPeriod; amountCents: number; thresholds?: number[]; notifyPace?: boolean; isActive?: boolean }): Promise<{ limitId: string }>;
+deleteSpendingLimit(input: { limitId: string }): Promise<void>;
+evaluateSpendingLimits(opts?: { transactionIds?: string[]; today?: string }): Promise<{ evaluatedLimits: number; newNotifications: number }>;
+upsertRecurrence(input: { id?: string; description: string; merchantId?: string | null; categoryId?: string | null; accountId?: string | null; paymentMethod?: PaymentMethod | null; frequency?: RecurrenceFrequency; expectedDay?: number | null; amountCents: number; status?: RecurrenceStatus; isSubscription?: boolean }): Promise<{ recurrenceId: string }>;
+deleteRecurrence(input: { recurrenceId: string }): Promise<void>;
+detectRecurrences(): Promise<{ detected: number; updated: number; priceHikes: number; cancelled: number }>;
+markNotificationRead(input: { notificationId: string }): Promise<void>;
+markAllNotificationsRead(): Promise<{ updated: number }>;
+updateNotificationPreferences(input: { preferences: Array<{ type: NotificationType; enabled: boolean; inApp?: boolean; telegram?: boolean }> }): Promise<void>;
+askNaturalLanguage(input: { question: string; history?: Array<{ role: 'user' | 'assistant'; content: string }> }): Promise<AskResult>;
+
 type RuleInput = {
   id?: string;
   priority: number;
@@ -593,13 +705,13 @@ type RuleInput = {
 | Arquivo | Exporta |
 |---|---|
 | `enums.ts` | enums e tipos (§3) |
-| `labels.ts` | `KIND_LABELS`, `PAYMENT_METHOD_LABELS`, `ACCOUNT_TYPE_LABELS`, `INVOICE_STATUS_LABELS`, `CONNECTION_STATUS_LABELS`, `ASSET_CLASS_LABELS`, `INVESTMENT_INDEXER_LABELS`, `INVESTMENT_TX_TYPE_LABELS`, `BENCHMARK_LABELS` (pt-BR) |
+| `labels.ts` | `KIND_LABELS`, `PAYMENT_METHOD_LABELS`, `ACCOUNT_TYPE_LABELS`, `INVOICE_STATUS_LABELS`, `CONNECTION_STATUS_LABELS`, `ASSET_CLASS_LABELS`, `INVESTMENT_INDEXER_LABELS`, `INVESTMENT_TX_TYPE_LABELS`, `BENCHMARK_LABELS`, `LIMIT_PERIOD_LABELS`, `RECURRENCE_FREQUENCY_LABELS`, `NOTIFICATION_TYPE_LABELS` (pt-BR) |
 | `money.ts` | `toCents(value)`, `formatBRL(cents)`, `sumCents(values)` |
 | `dates.ts` | `TZ`, `today()`, `monthStart(d)`, `monthEnd(d)`, `addMonthsISO(d, n)`, `addDaysISO(d, n)`, `formatDateBR(d)`, `formatMonthBR(d)` |
 | `invoice-cycle.ts` | `getInvoiceCycle(date, closingDay, dueDay)` → `{ referenceMonth, closingDate, dueDate }` |
 | `filters.ts` | `Dimension`, `TxFilters`, `txFiltersSchema`, `defaultFilters()` |
 | `errors.ts` | `CommandError`, `toCommandError(e)` |
-| `types.ts` | tipos das linhas do banco inferidos do schema (`Transaction`, `Account`, `Asset`, `Holding`, `InvestmentTransactionRow`, `AssetPrice`, `BenchmarkSeriesRow`, `NetWorthSnapshot`…) |
+| `types.ts` | tipos das linhas do banco inferidos do schema (`Transaction`, `Account`, `Asset`, `Holding`, `InvestmentTransactionRow`, `AssetPrice`, `BenchmarkSeriesRow`, `NetWorthSnapshot`, `SpendingLimit`, `SpendingLimitDispatch`, `Recurrence`, `Notification`, `NotificationPreference`…) |
 
 Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em erro de regra de negócio e registra o campo em `user_edited_fields` quando a edição vem do usuário (R9).
 
@@ -628,4 +740,5 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-20 | Planejador | P2-00 | Especificação da tabela `import_batches`, coluna `transaction_sources.import_batch_id`, enums `IMPORT_BATCH_STATUSES`/`IMPORT_FORMATS`, extensão de `createManualAccount` (`credit_card`) e comandos `previewFileImport`, `previewPdfInvoiceImport`, `confirmFileImport`, `discardFileImport` e `reconnectConnection` (aditivo; migration gerada na A2-01) |
 | 2026-10-20 | Planejador | P3-00 | Especificação da Fase 3 (Patrimônio): enums `ASSET_CLASSES`, `INVESTMENT_INDEXERS`, `INVESTMENT_TX_TYPES`, `BENCHMARK_CODES`, `PRICE_SOURCES`; tabelas `assets`, `holdings`, `investment_transactions`, `asset_prices`, `benchmark_series` e `net_worth_snapshots`; comandos `upsertManualHolding`, `deleteManualHolding`, `recordInvestmentTransaction`, `deleteInvestmentTransaction`, `refreshMarketPrices` e `captureNetWorthSnapshot` (aditivo; migration gerada na A3-01) |
 | 2026-10-20 | Agente A | A3-01 | Migration 0003 aplicada (assets, holdings, investment_transactions, asset_prices, benchmark_series, net_worth_snapshots) e stubs de comandos |
-
+| 2026-10-20 | Planejador | P4-00 | Especificação da Fase 4 (Inteligência): enums `LIMIT_PERIODS`, `RECURRENCE_FREQUENCIES`, `RECURRENCE_STATUSES`, `NOTIFICATION_TYPES`, `NOTIFICATION_CHANNELS`; tabelas `spending_limits`, `spending_limit_dispatches`, `recurrences`, `notifications`, `notification_preferences`; comandos `upsertSpendingLimit`, `deleteSpendingLimit`, `evaluateSpendingLimits`, `upsertRecurrence`, `deleteRecurrence`, `detectRecurrences`, `markNotificationRead`, `markAllNotificationsRead`, `updateNotificationPreferences` e `askNaturalLanguage` (aditivo; migration gerada na A4-02) |
+| 2026-10-20 | Coordenador | A1-10 | IA desligada por decisão do usuário: `ANTHROPIC_API_KEY` sai do env na A1-10; o valor `'llm'` de `CATEGORY_SOURCES` é mantido por compatibilidade (remover quebraria o contrato) |

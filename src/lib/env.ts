@@ -11,7 +11,6 @@ const envSchema = z.object({
   PLUGGY_CLIENT_ID: optional,
   PLUGGY_CLIENT_SECRET: optional,
   PLUGGY_ITEM_IDS: optional,
-  ANTHROPIC_API_KEY: optional,
   BRAPI_TOKEN: optional,
   COINGECKO_API_KEY: optional,
   SCHEDULER_ENABLED: z.string().optional().transform((v) => v !== 'false'),

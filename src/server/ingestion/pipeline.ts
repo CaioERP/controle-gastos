@@ -1,5 +1,4 @@
 import { categorizeTransactions } from '@/server/categorization/engine';
-import { categorizeWithLlm } from '@/server/categorization/llm';
 import type { Db } from '@/server/db/client';
 import { runClassifyKindPipelineStep } from './classify-kind';
 import { runInstallmentsPipelineStep } from './installments';
@@ -38,7 +37,7 @@ export const PIPELINE_STEPS: PipelineStep[] = [
   {
     name: 'categorize',
     run: async (ctx) => {
-      await categorizeTransactions(ctx.db, ctx.transactionIds, { llm: categorizeWithLlm });
+      await categorizeTransactions(ctx.db, ctx.transactionIds);
     },
   },
 ];
