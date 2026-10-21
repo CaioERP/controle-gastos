@@ -15,9 +15,10 @@ function verifySecretParam(provided: string | null, expected: string): boolean {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const secret = env.CRON_SECRET;
+  // Segredo próprio: vazar a URL do webhook (que leva o segredo na query) não abre os jobs.
+  const secret = env.PLUGGY_WEBHOOK_SECRET;
   if (!secret) {
-    return NextResponse.json({ error: 'CRON_SECRET não configurado' }, { status: 503 });
+    return NextResponse.json({ error: 'PLUGGY_WEBHOOK_SECRET não configurado' }, { status: 503 });
   }
 
   const url = new URL(request.url);

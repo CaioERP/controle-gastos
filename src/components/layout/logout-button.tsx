@@ -3,13 +3,12 @@ import { logout } from '@/app/login/actions';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { SESSION_COOKIE } from '@/server/auth/session';
+import { authDisabled } from '@/server/auth/guard';
 
 export async function LogoutButton() {
   const cookieStore = await cookies();
   const hasSession = cookieStore.has(SESSION_COOKIE);
-  const isAuthDisabled = process.env.AUTH_DISABLED === 'true' && process.env.NODE_ENV !== 'production';
-
-  if (isAuthDisabled && !hasSession) {
+  if (authDisabled() && !hasSession) {
     return null;
   }
 
