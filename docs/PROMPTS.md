@@ -18,7 +18,7 @@
 | 7 | Agente A | A3-01 a A3-04 | P3-00 ✅ | 8 |
 | 8 | Agente B | B3-01 a B3-03 | P3-00 ✅ e os PRs de dados correspondentes abertos | 7 |
 | 9 | Agente forte | P4-00 (detalhar a Fase 4) | Fase 3 na main | — |
-| 10 | Agente A | A4-02, A4-01, A4-03 (A4-04 fora do escopo) | P4-00 ✅ | 11 |
+| 10 | Agente A | A4-01, A4-03 (A4-02 ✅ no #57; A4-04 fora do escopo) | A4-02 ✅ | 11 |
 | 11 | Agente B | B4-01 a B4-05 | P4-00 ✅ | 10 |
 | 12 | Agente forte | P5-00 (detalhar o deploy) | Fase 4 na main (ou antes, se o usuário quiser publicar cedo) | — |
 | 13 | Agente A | A5-01, A5-02 | P5-00 ✅ e H-06 feito pelo usuário | 14 |
@@ -419,17 +419,17 @@ C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
 Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md,
 docs/tarefas/fase-4-interface.md e docs/tarefas/fase-4-dados.md (para referência do schema e dos comandos).
 
-Pré-requisito: P4-00 com ✅ no quadro, e a A4-02 aberta em PR (ou na main) para usar o schema e comandos
-de limites e notificações. Se a A4-02 ainda não tiver PR, espere e avise.
+Pré-requisito: P4-00 e A4-02 com ✅ no quadro (A4-02 entrou na main pelo PR #57: schema, comandos de
+limites e notificações e o motor de alertas já existem). Comece com git -C ../controle-gastos pull --ff-only
+e crie as branches a partir da main atualizada.
 
 Tarefas, um PR cada:
-1. B4-01 — Tela de limites e orçamentos (/limites e widget no dashboard). Vem primeiro junto com A4-02.
-   Se A4-02 estiver em PR, crie a branch a partir da branch da A4-02 e abra o PR com --base nela.
+1. B4-01 — Tela de limites e orçamentos (/limites e widget no dashboard).
 2. B4-05 — Central de notificações e preferências de alerta (sino no cabeçalho com badge, popover e página /notificacoes).
-   Pode ser feita logo após B4-01, usando as notificações geradas por limites e faturas.
-3. B4-02 — Tela de assinaturas e recorrências (/assinaturas). Depende de A4-01.
-4. B4-03 — Tela de projeção de fluxo de caixa (/projecao). Depende de A4-03.
-5. ~~B4-04 — Tela de perguntas / chat~~ — fora do escopo por enquanto (IA desligada, 2026-10-20). Não implemente.
+3. B4-02 — Tela de assinaturas e recorrências (/assinaturas). Depende de A4-01: se ela ainda estiver só em PR,
+   siga o "Dependência em revisão" do AGENTS.md §3; se nem tiver PR, pare depois do item 2 e avise.
+4. B4-03 — Tela de projeção de fluxo de caixa (/projecao). Depende de A4-03 (mesma regra do item 3).
+5. ~~B4-04 — Tela de perguntas / chat~~ — fora do escopo por enquanto (IA desligada). Não implemente.
 
 Regras:
 - Pegue só as tarefas listadas. Antes de cada uma, reserve no quadro: ⬜ → 🟡 Agente B.
