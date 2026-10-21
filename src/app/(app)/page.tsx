@@ -9,6 +9,7 @@ import { getMonthlySeries } from '@/server/queries/monthly';
 import { previousPeriodLabel } from '@/server/queries/period-label';
 import { categoryDimensionFor, trailingMonthsRange } from '@/server/queries/stats';
 import { getReviewCount } from '@/server/queries/transactions';
+import { getLimitsOverview } from '@/server/queries/limits';
 import { parseFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
@@ -24,6 +25,7 @@ import { MonthlyStacked } from '@/components/dashboard/monthly-stacked';
 import { TopMerchants, topMerchants } from '@/components/dashboard/top-merchants';
 import { UpcomingInvoices } from '@/components/dashboard/upcoming-invoices';
 import { ReviewCallout } from '@/components/dashboard/review-callout';
+import { DashboardLimitsWidget } from '@/components/limits/dashboard-limits-widget';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,18 +38,29 @@ export default async function DashboardPage({ searchParams }: Props) {
   const db = getDb();
 
   const overviewPromise = getAccountsOverview(db);
-  const [overview, kpis, categories, tags, byCategory, byPaymentMethod, byMerchant, monthly, reviewCount] =
-    await Promise.all([
-      overviewPromise,
-      overviewPromise.then((o) => getDashboardKpis(db, filters, { overview: o })),
-      listCategories(db),
-      listTags(db),
-      getBreakdown(db, filters, catDim),
-      getBreakdown(db, filters, 'paymentMethod'),
-      getBreakdown(db, filters, 'merchant'),
-      getMonthlySeries(db, { ...filters, ...trailingMonthsRange(filters, 6) }, 'parentCategory', { top: 6 }),
-      getReviewCount(db),
-    ]);
+  const [
+    overview,
+    kpis,
+    categories,
+    tags,
+    byCategory,
+    byPaymentMethod,
+    byMerchant,
+    monthly,
+    reviewCount,
+    limitsOverview,
+  ] = await Promise.all([
+    overviewPromise,
+    overviewPromise.then((o) => getDashboardKpis(db, filters, { overview: o })),
+    listCategories(db),
+    listTags(db),
+    getBreakdown(db, filters, catDim),
+    getBreakdown(db, filters, 'paymentMethod'),
+    getBreakdown(db, filters, 'merchant'),
+    getMonthlySeries(db, { ...filters, ...trailingMonthsRange(filters, 6) }, 'parentCategory', { top: 6 }),
+    getReviewCount(db),
+    getLimitsOverview(db),
+  ]);
 
   if (overview.length === 0) {
     return (
@@ -149,7 +162,8 @@ export default async function DashboardPage({ searchParams }: Props) {
         <MonthlyStacked series={monthly} />
       </SectionCard>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <DashboardLimitsWidget overview={limitsOverview} />
         <SectionCard title="Top 5 estabelecimentos">
           <TopMerchants items={topMerchants(byMerchant, 5)} />
         </SectionCard>

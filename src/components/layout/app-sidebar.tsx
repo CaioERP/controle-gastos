@@ -9,13 +9,24 @@ import { cn } from '@/lib/utils';
 import { Wallet } from 'lucide-react';
 import { ReviewCountBadge } from '@/components/review/review-count-badge';
 import { SearchTrigger } from './command-palette';
+import { NotificationBell } from '@/components/notifications/notification-bell';
+import type { NotificationPreferenceRow, NotificationRow } from '@/server/queries/notifications';
 
 export interface AppSidebarProps {
   footerSlot?: React.ReactNode;
   reviewCount?: number;
+  unreadNotificationsCount?: number;
+  recentNotifications?: NotificationRow[];
+  notificationPreferences?: NotificationPreferenceRow[];
 }
 
-export function AppSidebar({ footerSlot, reviewCount = 0 }: AppSidebarProps) {
+export function AppSidebar({
+  footerSlot,
+  reviewCount = 0,
+  unreadNotificationsCount = 0,
+  recentNotifications = [],
+  notificationPreferences = [],
+}: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -27,8 +38,15 @@ export function AppSidebar({ footerSlot, reviewCount = 0 }: AppSidebarProps) {
         <span className="font-semibold text-base tracking-tight">Controle de Gastos</span>
       </div>
 
-      <div className="px-3 pt-3">
-        <SearchTrigger />
+      <div className="px-3 pt-3 flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <SearchTrigger />
+        </div>
+        <NotificationBell
+          unreadCount={unreadNotificationsCount}
+          initialNotifications={recentNotifications}
+          preferences={notificationPreferences}
+        />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1">

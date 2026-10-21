@@ -1,6 +1,7 @@
 import { eq, ne } from 'drizzle-orm';
 import { triggerSync } from '@/server/commands/sync';
 import { evaluateSpendingLimits } from '@/server/commands/limits';
+import { detectRecurrences } from '@/server/commands/recurrences';
 import type { Db } from '@/server/db/client';
 import { invoices, syncRuns } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
@@ -15,7 +16,8 @@ export type JobName =
   | 'connection-health'
   | 'prices-daily'
   | 'net-worth-snapshot'
-  | 'evaluate-alerts';
+  | 'evaluate-alerts'
+  | 'detect-recurrences';
 
 export type JobDef = {
   name: JobName;
@@ -99,6 +101,14 @@ export const JOBS: JobDef[] = [
     run: async (db) => {
       const res = await evaluateSpendingLimits(db);
       return res as Record<string, unknown>;
+    },
+  },
+  {
+    name: 'detect-recurrences',
+    intervalMinutes: 1440,
+    run: async (db) => {
+      const res = await detectRecurrences(db);
+      return res as unknown as Record<string, unknown>;
     },
   },
 ];
