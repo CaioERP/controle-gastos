@@ -471,4 +471,45 @@ describe('limits engine (A4-02)', () => {
     expect(types).toContain('consent_expiring');
     expect(types).toContain('unusual_expense');
   });
+
+  it('não avisa gasto fora do padrão em transação antiga trazida por sincronização ou importação', async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    const [inst] = await db.select().from(institutions).limit(1);
+    const [acc] = await db
+      .insert(accounts)
+      .values({ institutionId: inst!.id, name: 'Conta', type: 'checking', balanceCents: 0 })
+      .returning();
+    const [cat] = await db
+      .insert(categories)
+      .values({ name: 'Padaria', slug: 'padaria-antiga', kind: 'expense', icon: 'coffee', color: '#773300' })
+      .returning();
+
+    const base = {
+      accountId: acc!.id,
+      currency: 'BRL',
+      kind: 'expense' as const,
+      paymentMethod: 'debit_card' as const,
+      status: 'posted' as const,
+      categoryId: cat!.id,
+    };
+    for (let i = 1; i <= 5; i++) {
+      await db.insert(transactions).values({
+        ...base,
+        date: `2026-07-0${i}`,
+        amountCents: -5000,
+        descriptionRaw: 'Padaria',
+        description: 'Padaria',
+      });
+    }
+    // Despesa anormal de dois meses atrás, vinda no lote do primeiro sync
+    const [oldTx] = await db
+      .insert(transactions)
+      .values({ ...base, date: '2026-08-10', amountCents: -50000, descriptionRaw: 'Banquete', description: 'Banquete' })
+      .returning();
+
+    const count = await evaluateSystemAlerts(db, { today: '2026-10-10', transactionIds: [oldTx!.id] });
+    expect(count).toBe(0);
+  });
 });

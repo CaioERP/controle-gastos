@@ -465,12 +465,13 @@ export async function evaluateSystemAlerts(
       sql`${transactions.categoryId} is not null`,
     ];
 
+    // A janela de 7 dias vale sempre: a primeira sincronização ou a importação de um extrato antigo
+    // trazem meses de histórico, e só despesa recente deve virar aviso.
+    const sinceDate = addDaysISO(todayDate, -7);
+    txConds.push(sql`${transactions.date} >= ${sinceDate}`);
+    txConds.push(sql`${transactions.date} <= ${todayDate}`);
     if (opts?.transactionIds && opts.transactionIds.length > 0) {
       txConds.push(inArray(transactions.id, opts.transactionIds));
-    } else {
-      const sinceDate = addDaysISO(todayDate, -7);
-      txConds.push(sql`${transactions.date} >= ${sinceDate}`);
-      txConds.push(sql`${transactions.date} <= ${todayDate}`);
     }
 
     const candidateTxs = await db
