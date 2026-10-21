@@ -368,6 +368,14 @@ export async function recordInvestmentTransaction(
   }
   const data = parsed.data;
 
+  // Movimentação e ajuste da posição numa transação só: um erro no meio não deixa registro órfão
+  return db.transaction((tx) => recordInvestmentTransactionInTx(tx, data));
+}
+
+async function recordInvestmentTransactionInTx(
+  db: Db,
+  data: z.infer<typeof recordInvestmentTransactionSchema>,
+): Promise<{ investmentTransactionId: string }> {
   const [holding] = await db
     .select()
     .from(holdings)
@@ -380,8 +388,7 @@ export async function recordInvestmentTransaction(
 
   const txScaledQty = data.quantity ? toScaledQty(data.quantity) : null;
 
-  // Valida antes de gravar: sem transação de banco aqui, um erro depois do insert deixaria a
-  // movimentação gravada sem o ajuste na posição.
+  // Valida antes de gravar
   if (
     holding.source === 'manual' &&
     data.type === 'sell' &&
