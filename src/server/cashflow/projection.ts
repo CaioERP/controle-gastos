@@ -3,18 +3,19 @@ import type { Db } from '@/server/db/client';
 import {
   accounts,
   categories,
+  invoices,
   recurrences,
   transactions,
 } from '@/server/db/schema';
-import type { AccountType } from '@/server/domain/enums';
+import type { AccountType, RecurrenceFrequency } from '@/server/domain/enums';
 import {
+  addDaysISO,
   addMonthsISO,
   monthEnd,
   monthStart,
   today as getToday,
 } from '@/server/domain/dates';
 import { normalizeForMatch } from '@/server/ingestion/strings';
-import { getFutureInstallments } from '@/server/queries/installments';
 import { notSplitParent } from '@/server/queries/split-filter';
 
 export type MonthlyCashFlowPoint = {
@@ -46,6 +47,48 @@ const LIQUID_ACCOUNT_TYPES: AccountType[] = [
 ];
 
 /**
+ * Datas futuras (estritamente depois de `after` e até `until`) em que uma recorrência
+ * deve ocorrer, contando a partir da última ocorrência real. Meses curtos são
+ * ajustados pelo date-fns (31/01 + 1 mês = 28/02); recorrências anuais e trimestrais
+ * caem só no mês certo, e a virada de ano é natural.
+ */
+export function recurrenceOccurrences(
+  lastDate: string,
+  frequency: RecurrenceFrequency,
+  after: string,
+  until: string,
+): string[] {
+  const out: string[] = [];
+  for (let k = 1; k <= 5000; k++) {
+    let d: string;
+    switch (frequency) {
+      case 'weekly':
+        d = addDaysISO(lastDate, 7 * k);
+        break;
+      case 'biweekly':
+        d = addDaysISO(lastDate, 14 * k);
+        break;
+      case 'quarterly':
+        d = addMonthsISO(lastDate, 3 * k);
+        break;
+      case 'yearly':
+        d = addMonthsISO(lastDate, 12 * k);
+        break;
+      default:
+        d = addMonthsISO(lastDate, k);
+        break;
+    }
+    if (d > until) break;
+    if (d > after) out.push(d);
+  }
+  return out;
+}
+
+function addTo(map: Map<string, number>, key: string, cents: number) {
+  map.set(key, (map.get(key) ?? 0) + cents);
+}
+
+/**
  * Calcula a projeção de fluxo de caixa para os próximos meses (padrão: 6 meses),
  * partindo do saldo líquido atual, considerando receitas recorrentes, despesas fixas,
  * parcelas futuras de cartão e média de gastos variáveis com faixa de incerteza estatística (+- 1.96 * sigma).
@@ -65,6 +108,7 @@ export async function getCashFlowProjection(
     .where(
       and(
         eq(accounts.includeInTotals, true),
+        eq(accounts.isHidden, false),
         inArray(accounts.type, LIQUID_ACCOUNT_TYPES),
       ),
     );
@@ -83,14 +127,24 @@ export async function getCashFlowProjection(
       amountCents: recurrences.amountCents,
       lastAmountCents: recurrences.lastAmountCents,
       frequency: recurrences.frequency,
+      lastDate: recurrences.lastDate,
       categoryKind: categories.kind,
     })
     .from(recurrences)
     .leftJoin(categories, eq(recurrences.categoryId, categories.id))
     .where(eq(recurrences.status, 'active'));
 
-  let projectedIncomeCents = 0;
-  let fixedExpensesCents = 0;
+  // Chaves dos meses projetados. Ocorrências que ainda caem no mês corrente (depois de hoje)
+  // são somadas ao primeiro mês projetado, para não perder saídas já previstas.
+  const firstKey = addMonthsISO(currentMonth, 1).slice(0, 7);
+  const horizonEnd = monthEnd(addMonthsISO(currentMonth, horizonMonths));
+  const bucketKey = (date: string) => {
+    const key = date.slice(0, 7);
+    return key <= currentMonth.slice(0, 7) ? firstKey : key;
+  };
+
+  const incomeByMonth = new Map<string, number>();
+  const fixedByMonth = new Map<string, number>();
 
   const recMerchantIds = new Set<string>();
   const recDescriptions = new Set<string>();
@@ -101,46 +155,58 @@ export async function getCashFlowProjection(
     }
     recDescriptions.add(normalizeForMatch(rec.description));
 
-    const nominalAmount = rec.lastAmountCents || rec.amountCents;
-    let monthlyAmount = 0;
-
-    switch (rec.frequency) {
-      case 'weekly':
-        monthlyAmount = Math.round((nominalAmount * 52) / 12);
-        break;
-      case 'biweekly':
-        monthlyAmount = nominalAmount * 2;
-        break;
-      case 'monthly':
-        monthlyAmount = nominalAmount;
-        break;
-      case 'quarterly':
-        monthlyAmount = Math.round(nominalAmount / 3);
-        break;
-      case 'yearly':
-        monthlyAmount = Math.round(nominalAmount / 12);
-        break;
-      default:
-        monthlyAmount = nominalAmount;
-        break;
-    }
-
-    if (rec.categoryKind === 'income') {
-      projectedIncomeCents += monthlyAmount;
-    } else {
-      fixedExpensesCents += monthlyAmount;
+    const nominalAmount = Math.abs(rec.lastAmountCents || rec.amountCents);
+    const target = rec.categoryKind === 'income' ? incomeByMonth : fixedByMonth;
+    for (const d of recurrenceOccurrences(
+      rec.lastDate,
+      rec.frequency,
+      todayDate,
+      horizonEnd,
+    )) {
+      addTo(target, bucketKey(d), nominalAmount);
     }
   }
 
-  // 3. Parcelas de cartão de crédito e faturas já abertas via getFutureInstallments
-  const futureInstallments = await getFutureInstallments(
-    db,
-    {},
-    { today: todayDate },
-  );
+  // 3. Saídas de cartão em regime de caixa: a fatura entra na data de vencimento.
+  //    - Faturas não pagas: valor da fatura (ou, se maior, a soma das parcelas projetadas ligadas a ela).
+  //    - Parcelas projetadas sem fatura: na data da parcela.
+  const unpaidInvoices = await db
+    .select({ id: invoices.id, dueDate: invoices.dueDate, totalCents: invoices.totalCents })
+    .from(invoices)
+    .where(and(ne(invoices.status, 'paid'), sql`${invoices.dueDate} <= ${horizonEnd}`));
+
+  const projectedTxs = await db
+    .select({
+      invoiceId: transactions.invoiceId,
+      date: transactions.date,
+      amountCents: transactions.amountCents,
+    })
+    .from(transactions)
+    .where(
+      and(
+        isNull(transactions.deletedAt),
+        notSplitParent,
+        eq(transactions.status, 'projected'),
+        sql`${transactions.date} <= ${horizonEnd}`,
+      ),
+    );
+
+  const projectedByInvoice = new Map<string, number>();
   const installmentsByMonth = new Map<string, number>();
-  for (const item of futureInstallments) {
-    installmentsByMonth.set(item.month.slice(0, 7), item.totalCents);
+  for (const tx of projectedTxs) {
+    const cents = Math.abs(tx.amountCents);
+    if (tx.invoiceId) {
+      addTo(projectedByInvoice, tx.invoiceId, cents);
+    } else if (tx.date >= currentMonth) {
+      addTo(installmentsByMonth, bucketKey(tx.date), cents);
+    }
+  }
+  for (const inv of unpaidInvoices) {
+    const cents = Math.max(
+      Math.max(0, inv.totalCents ?? 0),
+      projectedByInvoice.get(inv.id) ?? 0,
+    );
+    addTo(installmentsByMonth, bucketKey(inv.dueDate), cents);
   }
 
   // 4. Componente Variável (D_var) e Incerteza (sigma_var) nos últimos 3 meses cheios
@@ -165,8 +231,11 @@ export async function getCashFlowProjection(
       installmentTotal: transactions.installmentTotal,
     })
     .from(transactions)
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
     .where(
       and(
+        eq(accounts.includeInTotals, true),
+        eq(accounts.isHidden, false),
         inArray(transactions.kind, ['expense', 'refund']),
         ne(transactions.status, 'projected'),
         isNull(transactions.deletedAt),
@@ -230,6 +299,8 @@ export async function getCashFlowProjection(
     const monthKey = targetDate.slice(0, 7);
     const startingBalanceCents = runningBalance;
 
+    const projectedIncomeCents = incomeByMonth.get(monthKey) ?? 0;
+    const fixedExpensesCents = fixedByMonth.get(monthKey) ?? 0;
     const cardInstallmentsCents = installmentsByMonth.get(monthKey) ?? 0;
     const variableExpensesCents = Math.round(avgVar);
 
