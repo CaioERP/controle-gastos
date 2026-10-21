@@ -13,7 +13,8 @@ type PerformanceComparisonChartProps = {
 const chartConfig: ChartConfig = {
   portfolio: {
     label: 'Carteira',
-    color: 'var(--color-portfolio, hsl(var(--primary)))',
+    // O tema usa cores lab()/oklch: hsl(var(--primary)) é inválido e a linha sumia
+    color: 'var(--primary)',
   },
   cdi: {
     label: 'CDI',
@@ -51,11 +52,18 @@ export function PerformanceComparisonChart({ series }: PerformanceComparisonChar
     ibov: Number((pt.cumulativeIbovBps / 100).toFixed(2)),
   }));
 
-  const hasData = chartData.length > 0;
+  // A série sempre tem 12 meses; sem snapshots nem índices ela vem zerada e não deve virar linha reta no zero.
+  const hasData = series.some(
+    (pt) =>
+      pt.cumulativePortfolioBps !== 0 ||
+      pt.cumulativeCdiBps !== 0 ||
+      pt.cumulativeIpcaBps !== 0 ||
+      pt.cumulativeIbovBps !== 0,
+  );
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-col gap-2 space-y-0 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base font-semibold">
           Rentabilidade acumulada vs Índices (12 meses)
         </CardTitle>
@@ -101,7 +109,7 @@ export function PerformanceComparisonChart({ series }: PerformanceComparisonChar
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v) => `${v >= 0 ? '+' : ''}${v}%`}
+                    tickFormatter={(v: number) => `${v > 0 ? '+' : ''}${String(v).replace('.', ',')}%`}
                   />
                   <ChartTooltip
                     content={({ active, payload, label }) => {
@@ -141,7 +149,7 @@ export function PerformanceComparisonChart({ series }: PerformanceComparisonChar
                     type="monotone"
                     dataKey="portfolio"
                     name="Carteira"
-                    stroke="var(--color-portfolio, hsl(var(--primary)))"
+                    stroke="var(--color-portfolio)"
                     strokeWidth={2.5}
                     dot={false}
                     isAnimationActive={false}

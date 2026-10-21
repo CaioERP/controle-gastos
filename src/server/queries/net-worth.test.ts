@@ -16,7 +16,7 @@ describe('queries / net-worth (B3-02)', () => {
     await loadFixtures(db, { referenceDate: TODAY, months: 6, seed: 42 });
   });
 
-  it('retorna current.netWorthCents === assets - liabilities e série mensal ordenada de 12 meses', async () => {
+  it('retorna current.netWorthCents === assets - liabilities e série mensal ordenada', async () => {
     const overview = await getNetWorthOverview(db, { today: TODAY });
 
     // 1. Equação fundamental do patrimônio líquido
@@ -30,8 +30,11 @@ describe('queries / net-worth (B3-02)', () => {
       overview.current.assetsCents - overview.current.liabilitiesCents,
     );
 
-    // 2. Série mensal de 12 meses ordenada cronologicamente
-    expect(overview.monthlySeries.length).toBe(12);
+    // 2. Série mensal ordenada, começando no primeiro mês com snapshot (fixtures: 6 meses), sem meses zerados
+    expect(overview.monthlySeries.length).toBe(6);
+    expect(overview.monthlySeries.every((pt) => pt.netWorthCents !== 0)).toBe(true);
+    // Sem dezembro anterior no histórico, a variação no ano usa o primeiro ponto do ano
+    expect(overview.changes.yearDeltaCents).not.toBeNull();
     for (let i = 0; i < overview.monthlySeries.length - 1; i++) {
       const a = overview.monthlySeries[i]!;
       const b = overview.monthlySeries[i + 1]!;
