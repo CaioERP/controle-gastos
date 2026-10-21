@@ -1,4 +1,5 @@
 import { categorizeTransactions } from '@/server/categorization/engine';
+import { evaluateSpendingLimits } from '@/server/commands/limits';
 import type { Db } from '@/server/db/client';
 import { runClassifyKindPipelineStep } from './classify-kind';
 import { runInstallmentsPipelineStep } from './installments';
@@ -38,6 +39,15 @@ export const PIPELINE_STEPS: PipelineStep[] = [
     name: 'categorize',
     run: async (ctx) => {
       await categorizeTransactions(ctx.db, ctx.transactionIds);
+    },
+  },
+  {
+    name: 'limits',
+    run: async (ctx) => {
+      await evaluateSpendingLimits(ctx.db, {
+        transactionIds: ctx.transactionIds,
+        today: ctx.today,
+      });
     },
   },
 ];

@@ -19,5 +19,11 @@ export type InvestmentTransactionRow = typeof s.investmentTransactions.$inferSel
 export type AssetPrice = typeof s.assetPrices.$inferSelect;
 export type BenchmarkSeriesRow = typeof s.benchmarkSeries.$inferSelect;
 export type NetWorthSnapshot = typeof s.netWorthSnapshots.$inferSelect;
+export type SpendingLimit = typeof s.spendingLimits.$inferSelect;
+export type SpendingLimitDispatch = typeof s.spendingLimitDispatches.$inferSelect;
+export type Recurrence = typeof s.recurrences.$inferSelect;
+export type Notification = typeof s.notifications.$inferSelect;
+export type NotificationPreference = typeof s.notificationPreferences.$inferSelect;
+
 
 

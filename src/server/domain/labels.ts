@@ -6,7 +6,12 @@ import type {
   InvestmentIndexer,
   InvestmentTxType,
   InvoiceStatus,
+  LimitPeriod,
+  NotificationChannel,
+  NotificationType,
   PaymentMethod,
+  RecurrenceFrequency,
+  RecurrenceStatus,
   TxKind,
 } from './enums';
 
@@ -93,4 +98,44 @@ export const BENCHMARK_LABELS: Record<BenchmarkCode, string> = {
   ipca: 'IPCA',
   ibov: 'Ibovespa',
 };
+
+export const LIMIT_PERIOD_LABELS: Record<LimitPeriod, string> = {
+  monthly: 'Mensal',
+  weekly: 'Semanal',
+  yearly: 'Anual',
+};
+
+export const RECURRENCE_FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
+  weekly: 'Semanal',
+  biweekly: 'Quinzenal',
+  monthly: 'Mensal',
+  quarterly: 'Trimestral',
+  yearly: 'Anual',
+};
+
+export const RECURRENCE_STATUS_LABELS: Record<RecurrenceStatus, string> = {
+  active: 'Ativa',
+  paused: 'Pausada',
+  cancelled: 'Cancelada',
+};
+
+export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  threshold_80: '80% do limite atingido',
+  threshold_100: 'Limite estourado (100%)',
+  pace_warning: 'Ritmo acelerado',
+  unusual_expense: 'Gasto fora do padrão',
+  invoice_due_soon: 'Fatura vencendo em breve',
+  consent_expiring: 'Consentimento expirando',
+  sync_error: 'Erro de sincronização',
+  price_hike: 'Aumento em assinatura',
+  cancelled_subscription: 'Assinatura cancelada ou ausente',
+};
+
+export const NOTIFICATION_CHANNEL_LABELS: Record<NotificationChannel, string> = {
+  in_app: 'No aplicativo',
+  telegram: 'Telegram',
+  push: 'Notificação push',
+  email: 'E-mail',
+};
+
 

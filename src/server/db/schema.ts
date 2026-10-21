@@ -29,8 +29,13 @@ import {
   INVESTMENT_INDEXERS,
   INVESTMENT_TX_TYPES,
   INVOICE_STATUSES,
+  LIMIT_PERIODS,
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_TYPES,
   PAYMENT_METHODS,
   PRICE_SOURCES,
+  RECURRENCE_FREQUENCIES,
+  RECURRENCE_STATUSES,
   SOURCES,
   TX_KINDS,
   TX_STATUSES,
@@ -52,6 +57,11 @@ export const investmentIndexerEnum = pgEnum('investment_indexer', INVESTMENT_IND
 export const investmentTxTypeEnum = pgEnum('investment_tx_type', INVESTMENT_TX_TYPES);
 export const benchmarkCodeEnum = pgEnum('benchmark_code', BENCHMARK_CODES);
 export const priceSourceEnum = pgEnum('price_source', PRICE_SOURCES);
+export const limitPeriodEnum = pgEnum('limit_period', LIMIT_PERIODS);
+export const recurrenceFrequencyEnum = pgEnum('recurrence_frequency', RECURRENCE_FREQUENCIES);
+export const recurrenceStatusEnum = pgEnum('recurrence_status', RECURRENCE_STATUSES);
+export const notificationTypeEnum = pgEnum('notification_type', NOTIFICATION_TYPES);
+export const notificationChannelEnum = pgEnum('notification_channel', NOTIFICATION_CHANNELS);
 
 // ---------- helpers ----------
 const id = () => uuid('id').primaryKey().defaultRandom();
@@ -423,4 +433,101 @@ export const netWorthSnapshots = pgTable(
     ...timestamps,
   },
 );
+
+export const spendingLimits = pgTable(
+  'spending_limits',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
+    paymentMethod: paymentMethodEnum('payment_method'),
+    accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }),
+    period: limitPeriodEnum('period').notNull().default('monthly'),
+    amountCents: money('amount_cents').notNull(),
+    thresholds: integer('thresholds').array().notNull().default(sql`'{80, 100}'`),
+    notifyPace: boolean('notify_pace').notNull().default(true),
+    isActive: boolean('is_active').notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [
+    index('spending_limits_category_idx').on(t.categoryId),
+    index('spending_limits_payment_method_idx').on(t.paymentMethod),
+    index('spending_limits_active_idx').on(t.isActive),
+  ],
+);
+
+export const spendingLimitDispatches = pgTable(
+  'spending_limit_dispatches',
+  {
+    id: id(),
+    limitId: uuid('limit_id').notNull().references(() => spendingLimits.id, { onDelete: 'cascade' }),
+    periodKey: text('period_key').notNull(),
+    threshold: integer('threshold').notNull(),
+    dispatchedAt: tstz('dispatched_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('limit_dispatch_uniq_idx').on(t.limitId, t.periodKey, t.threshold),
+  ],
+);
+
+export const recurrences = pgTable(
+  'recurrences',
+  {
+    id: id(),
+    merchantId: uuid('merchant_id').references(() => merchants.id, { onDelete: 'set null' }),
+    description: text('description').notNull(),
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
+    accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }),
+    paymentMethod: paymentMethodEnum('payment_method'),
+    frequency: recurrenceFrequencyEnum('frequency').notNull().default('monthly'),
+    expectedDay: smallint('expected_day'),
+    amountCents: money('amount_cents').notNull(),
+    tolerancePercent: integer('tolerance_percent').notNull().default(10),
+    status: recurrenceStatusEnum('status').notNull().default('active'),
+    isSubscription: boolean('is_subscription').notNull().default(false),
+    firstDate: isoDate('first_date').notNull(),
+    lastDate: isoDate('last_date').notNull(),
+    lastAmountCents: money('last_amount_cents').notNull(),
+    autoDetected: boolean('auto_detected').notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [
+    index('recurrences_status_idx').on(t.status),
+    index('recurrences_category_idx').on(t.categoryId),
+    index('recurrences_merchant_idx').on(t.merchantId),
+  ],
+);
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: id(),
+    type: notificationTypeEnum('type').notNull(),
+    title: text('title').notNull(),
+    message: text('message').notNull(),
+    actionUrl: text('action_url'),
+    entityType: text('entity_type'),
+    entityId: uuid('entity_id'),
+    channel: notificationChannelEnum('channel').notNull().default('in_app'),
+    readAt: tstz('read_at'),
+    fingerprint: text('fingerprint'),
+    createdAt: tstz('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('notifications_fingerprint_idx').on(t.fingerprint),
+    index('notifications_read_created_idx').on(t.readAt, t.createdAt),
+  ],
+);
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: id(),
+  type: notificationTypeEnum('type').notNull().unique(),
+  enabled: boolean('enabled').notNull().default(true),
+  inApp: boolean('in_app').notNull().default(true),
+  email: boolean('email').notNull().default(false),
+  push: boolean('push').notNull().default(false),
+  telegram: boolean('telegram').notNull().default(false),
+  updatedAt: tstz('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
 

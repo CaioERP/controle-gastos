@@ -87,4 +87,30 @@ export type InvestmentTxType = (typeof INVESTMENT_TX_TYPES)[number];
 export type BenchmarkCode = (typeof BENCHMARK_CODES)[number];
 export type PriceSource = (typeof PRICE_SOURCES)[number];
 
+export const LIMIT_PERIODS = ['monthly', 'weekly', 'yearly'] as const;
+export type LimitPeriod = (typeof LIMIT_PERIODS)[number];
+
+export const RECURRENCE_FREQUENCIES = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const;
+export type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCIES)[number];
+
+export const RECURRENCE_STATUSES = ['active', 'paused', 'cancelled'] as const;
+export type RecurrenceStatus = (typeof RECURRENCE_STATUSES)[number];
+
+export const NOTIFICATION_TYPES = [
+  'threshold_80',
+  'threshold_100',
+  'pace_warning',
+  'unusual_expense',
+  'invoice_due_soon',
+  'consent_expiring',
+  'sync_error',
+  'price_hike',
+  'cancelled_subscription',
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export const NOTIFICATION_CHANNELS = ['in_app', 'telegram', 'push', 'email'] as const;
+export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
+
+
 
