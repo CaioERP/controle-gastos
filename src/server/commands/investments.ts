@@ -19,7 +19,7 @@ import {
 } from '@/server/domain/enums';
 import { CommandError } from '@/server/domain/errors';
 import { slugify } from '@/server/ingestion/institutions';
-import { fromScaledQty, toScaledQty } from '@/server/investments/math';
+import { fromScaledQty, multiplyQtyByPriceCents, toScaledQty } from '@/server/investments/math';
 import { linkInvestmentTransactionsToChecking } from '@/server/investments/sync';
 import {
   captureNetWorthSnapshot as captureNetWorthSnapshotImpl,
@@ -380,6 +380,17 @@ export async function recordInvestmentTransaction(
 
   const txScaledQty = data.quantity ? toScaledQty(data.quantity) : null;
 
+  // Valida antes de gravar: sem transação de banco aqui, um erro depois do insert deixaria a
+  // movimentação gravada sem o ajuste na posição.
+  if (
+    holding.source === 'manual' &&
+    data.type === 'sell' &&
+    txScaledQty !== null &&
+    toScaledQty(holding.quantity) < txScaledQty
+  ) {
+    throw new CommandError('VALIDATION', 'Quantidade a resgatar maior que a custodiada');
+  }
+
   const [insertedTx] = await db
     .insert(investmentTransactions)
     .values({
@@ -539,7 +550,15 @@ export async function deleteInvestmentTransaction(
     } else if (tx.type === 'sell') {
       const newQty = currentQty + txQty;
       const newCurrentValue = holding.currentValueCents + tx.amountCents;
-      const newInvested = holding.investedCents + tx.amountCents;
+      // A venda baixou o custo pelo preço médio, não pelo valor recebido: devolve o mesmo custo.
+      let restoredCost = tx.amountCents;
+      if (txQty > ZERO) {
+        restoredCost =
+          currentQty > ZERO
+            ? Math.round((holding.investedCents * Number(txQty)) / Number(currentQty))
+            : multiplyQtyByPriceCents(txQty, holding.averagePriceCents ?? 0);
+      }
+      const newInvested = holding.investedCents + restoredCost;
 
       await db
         .update(holdings)
