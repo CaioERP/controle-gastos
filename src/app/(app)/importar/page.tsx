@@ -40,7 +40,7 @@ export default async function ImportarPage({ searchParams }: Props) {
     <div className="space-y-6">
       <PageHeader
         title="Importar arquivos"
-        description="Importe extratos OFX, CSV do Nubank ou faturas em PDF com detecção de duplicatas."
+        description="Importe extratos OFX ou CSV (Nubank) com detecção de duplicatas."
       />
 
       <ImportDropzone
