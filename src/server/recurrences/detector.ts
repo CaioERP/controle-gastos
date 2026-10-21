@@ -1,7 +1,8 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { and, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, isNull, ne, or, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
+  accounts,
   merchants,
   notificationPreferences,
   notifications,
@@ -338,6 +339,7 @@ export async function runRecurrenceDetection(
 ): Promise<DetectionResult> {
   const todayDate = opts?.today ?? getToday();
   const twelveMonthsAgo = addMonthsISO(todayDate, -12);
+  const historyStart = addMonthsISO(todayDate, -37); // anuais precisam de cerca de 2 anos de histórico
 
   // 1. Carrega preferências de notificação
   const prefs = await db.select().from(notificationPreferences);
@@ -362,12 +364,15 @@ export async function runRecurrenceDetection(
     })
     .from(transactions)
     .leftJoin(merchants, eq(transactions.merchantId, merchants.id))
+    .leftJoin(accounts, eq(transactions.accountId, accounts.id))
     .where(
       and(
         eq(transactions.kind, 'expense'),
+        or(isNull(accounts.id), eq(accounts.includeInTotals, true)), // R11
+        isNull(transactions.installmentGroupId), // parcelas não são assinatura
         ne(transactions.status, 'projected'),
         isNull(transactions.deletedAt),
-        sql`${transactions.date} >= ${twelveMonthsAgo}`,
+        sql`${transactions.date} >= ${historyStart}`,
         sql`${transactions.date} <= ${todayDate}`,
         notSplitParent,
       ),
@@ -405,7 +410,9 @@ export async function runRecurrenceDetection(
   for (const group of groups.values()) {
     if (group.length < 3) continue;
 
-    const candidate = evaluateCandidateGroup(group);
+    const recent = evaluateCandidateGroup(group.filter((t) => t.date >= twelveMonthsAgo));
+    const full = recent ? null : evaluateCandidateGroup(group);
+    const candidate = recent ?? (full?.frequency === 'yearly' ? full : null);
     if (!candidate) continue;
 
     // Procura recorrência já cadastrada
