@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { NavList } from './nav-list';
 import { ThemeToggle } from './theme-toggle';
+import { PrivacyToggle } from './privacy-toggle';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Wallet } from 'lucide-react';
@@ -43,6 +44,7 @@ export function MobileNav({
           initialNotifications={recentNotifications}
           preferences={notificationPreferences}
         />
+        <PrivacyToggle />
         <ThemeToggle />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger

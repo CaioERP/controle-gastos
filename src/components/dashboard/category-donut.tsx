@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Cell, Pie, PieChart } from 'recharts';
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart';
-import { Money } from '@/components/format/money';
+import { Money, Sensitive } from '@/components/format/money';
 import { formatShare } from '@/components/charts/format';
 import { formatBRL } from '@/server/domain/money';
 
@@ -45,7 +45,7 @@ export function CategoryDonut({ slices, totalCents }: CategoryDonutProps) {
                   <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
                     <div className="font-medium">{item.label}</div>
                     <div className="tabular-nums">
-                      {formatBRL(item.totalCents)} · {formatShare(item.totalCents, totalCents)}
+                      <Sensitive>{formatBRL(item.totalCents)}</Sensitive> · {formatShare(item.totalCents, totalCents)}
                     </div>
                   </div>
                 );

@@ -81,7 +81,7 @@ function PreviewResult({ result, stale }: { result: ActionResult<RulePreviewResu
                 {s.description}
                 {s.userCategorized && <span className="text-muted-foreground"> · sua categoria</span>}
               </span>
-              <Money cents={s.amountCents} className="shrink-0" />
+              <Money sensitive={false} cents={s.amountCents} className="shrink-0" />
             </li>
           ))}
         </ul>

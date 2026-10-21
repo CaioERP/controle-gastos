@@ -172,7 +172,7 @@ export default async function HoldingDetailPage({ params }: HoldingDetailPagePro
             <div>
               <dt className="text-xs text-muted-foreground">Preço médio de aquisição</dt>
               <dd className="mt-1 font-medium">
-                {holding.averagePriceCents ? <Money cents={holding.averagePriceCents} /> : '—'}
+                {holding.averagePriceCents ? <Money sensitive={false} cents={holding.averagePriceCents} /> : '—'}
               </dd>
             </div>
 
@@ -224,7 +224,7 @@ export default async function HoldingDetailPage({ params }: HoldingDetailPagePro
                         {tx.quantity ? formatQtyBR(tx.quantity) : '—'}
                       </TableCell>
                       <TableCell className="text-right text-xs font-semibold">
-                        <Money cents={tx.amountCents} />
+                        <Money sensitive={false} cents={tx.amountCents} />
                       </TableCell>
                     </TableRow>
                   ))}

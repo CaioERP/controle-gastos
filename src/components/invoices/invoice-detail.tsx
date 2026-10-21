@@ -164,7 +164,7 @@ export function InvoiceDetail({ invoice, extras, items, rootColors }: InvoiceDet
                               )}
                             </div>
                           </div>
-                          <Money
+                          <Money sensitive={false}
                             cents={invoiceItemValue(t)}
                             className={cn('shrink-0 text-sm', invoiceItemValue(t) < 0 && 'text-emerald-600 dark:text-emerald-400')}
                           />

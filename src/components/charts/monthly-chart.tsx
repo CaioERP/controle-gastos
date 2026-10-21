@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'rec
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart';
 import { formatBRL } from '@/server/domain/money';
 import { formatBRLCompact } from './format';
+import { Sensitive } from '@/components/format/money';
 
 export type MonthlySeries = { key: string; label: string; color: string };
 export type MonthlyPoint = { label: string; values: Record<string, number> };
@@ -45,12 +46,12 @@ export function MonthlyChart({ points, series, mode = 'stacked', className }: Mo
                   <span className="size-2.5 rounded-[2px]" style={{ backgroundColor: p.color }} />
                   {config[String(p.dataKey)]?.label}
                 </span>
-                <span className="font-medium tabular-nums">{formatBRL(p.value as number)}</span>
+                <span className="font-medium tabular-nums"><Sensitive>{formatBRL(p.value as number)}</Sensitive></span>
               </div>
             ))}
             <div className="flex items-center justify-between gap-3 border-t pt-1.5 font-semibold">
               <span>Total</span>
-              <span className="tabular-nums">{formatBRL(total)}</span>
+              <span className="tabular-nums"><Sensitive>{formatBRL(total)}</Sensitive></span>
             </div>
           </div>
         );
@@ -68,7 +69,7 @@ export function MonthlyChart({ points, series, mode = 'stacked', className }: Mo
 
   return (
     <div className={className}>
-      <ChartContainer config={config} className="aspect-auto h-64 w-full sm:h-72">
+      <ChartContainer data-sensitive-axis config={config} className="aspect-auto h-64 w-full sm:h-72">
         {mode === 'stacked' ? (
           <BarChart data={data} accessibilityLayer>
             {axes}

@@ -330,7 +330,7 @@ export function ImportPreviewCard({ preview, accountName, onDone }: ImportPrevie
                     {PAYMENT_METHOD_LABELS[item.paymentMethod]}
                   </td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                    <Money cents={item.amountCents} signed colored />
+                    <Money sensitive={false} cents={item.amountCents} signed colored />
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">{renderStatusBadge(item)}</td>
                   <td className="px-3 py-2.5 whitespace-nowrap">{renderActionControl(item)}</td>

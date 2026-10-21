@@ -296,7 +296,7 @@ export function CommandPalette() {
                     </span>
                   </div>
                   <div className="shrink-0 text-right">
-                    <Money cents={tx.amountCents} signed />
+                    <Money sensitive={false} cents={tx.amountCents} signed />
                   </div>
                 </CommandItem>
               ))}

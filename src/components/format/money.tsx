@@ -6,9 +6,27 @@ export interface MoneyProps extends React.HTMLAttributes<HTMLSpanElement> {
   cents: number;
   signed?: boolean;
   colored?: boolean;
+  /**
+   * Trocado por "R$ •••••" no modo "esconder valores" (padrão). Use `false` só em valores
+   * soltos, como o de um lançamento individual; totais, saldos e limites ficam sensíveis.
+   */
+  sensitive?: boolean;
 }
 
-export function Money({ cents, signed = false, colored = false, className, ...props }: MoneyProps) {
+/**
+ * Valor formatado fora do <Money> (cards, tooltips) que some no modo "esconder valores".
+ * O texto fica no span interno; o CSS esconde esse span e põe a máscara no externo, que mantém
+ * fonte e tamanho do lugar onde está.
+ */
+export function Sensitive({ children }: { children: React.ReactNode }) {
+  return (
+    <span data-sensitive>
+      <span data-sensitive-value>{children}</span>
+    </span>
+  );
+}
+
+export function Money({ cents, signed = false, colored = false, sensitive = true, className, ...props }: MoneyProps) {
   const formatted = formatBRL(Math.abs(cents));
   const isPositive = cents > 0;
   const isNegative = cents < 0;
@@ -30,8 +48,12 @@ export function Money({ cents, signed = false, colored = false, className, ...pr
     : '';
 
   return (
-    <span className={cn('tabular-nums font-medium', colorClass, className)} {...props}>
-      {display}
+    <span
+      className={cn('tabular-nums font-medium', colorClass, className)}
+      data-sensitive={sensitive || undefined}
+      {...props}
+    >
+      {sensitive ? <span data-sensitive-value>{display}</span> : display}
     </span>
   );
 }

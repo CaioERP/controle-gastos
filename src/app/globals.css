@@ -134,4 +134,20 @@
     background-color: var(--popover);
     color: var(--popover-foreground);
   }
+
+  /* Modo "esconder valores" (botão do olho): troca totais e saldos marcados com data-sensitive
+     por "R$ •••••" e some com o eixo de valor (Y) dos gráficos com data-sensitive-axis.
+     Lançamentos individuais não são marcados e seguem visíveis. */
+  html[data-privacy='on'] [data-sensitive-value] {
+    display: none;
+  }
+  html[data-privacy='on'] [data-sensitive]::after {
+    content: 'R$ •••••';
+    color: var(--muted-foreground);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  html[data-privacy='on'] [data-sensitive-axis] .recharts-yAxis-tick-labels {
+    visibility: hidden;
+  }
 }

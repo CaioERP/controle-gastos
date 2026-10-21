@@ -16,6 +16,7 @@ import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/
 import { formatBRL } from '@/server/domain/money';
 import { formatBRLCompact } from '@/components/charts/format';
 import type { CashFlowProjection } from '@/server/queries/cashflow';
+import { Sensitive } from '@/components/format/money';
 
 type CashFlowProjectionChartProps = {
   projection: CashFlowProjection;
@@ -145,7 +146,7 @@ export function CashFlowProjectionChart({ projection }: CashFlowProjectionChartP
       </CardHeader>
 
       <CardContent className="flex-1 pt-4">
-        <ChartContainer config={chartConfig} className="h-80 w-full">
+        <ChartContainer data-sensitive-axis config={chartConfig} className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={chartData}
@@ -202,7 +203,7 @@ export function CashFlowProjectionChart({ projection }: CashFlowProjectionChartP
                             Saldo esperado
                           </span>
                           <span className="tabular-nums font-bold">
-                            {formatBRL(item.projectedBalanceCents)}
+                            <Sensitive>{formatBRL(item.projectedBalanceCents)}</Sensitive>
                           </span>
                         </div>
 
@@ -214,7 +215,7 @@ export function CashFlowProjectionChart({ projection }: CashFlowProjectionChartP
                                 Faixa de incerteza (95%)
                               </span>
                               <span className="tabular-nums font-mono text-[11px]">
-                                {formatBRL(item.lowerBandCents)} a {formatBRL(item.upperBandCents)}
+                                <Sensitive>{formatBRL(item.lowerBandCents)}</Sensitive> a <Sensitive>{formatBRL(item.upperBandCents)}</Sensitive>
                               </span>
                             </div>
 

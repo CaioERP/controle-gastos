@@ -240,13 +240,13 @@ export function SubscriptionsTable({ items, onEdit }: SubscriptionsTableProps) {
                     {/* Valor e Badge de Aumento */}
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex flex-col items-end">
-                        <Money
+                        <Money sensitive={false}
                           cents={item.hasPriceHike ? item.lastAmountCents : item.amountCents}
                           className="font-semibold text-sm"
                         />
                         {item.frequency !== 'monthly' && (
                           <span className="text-[11px] text-muted-foreground">
-                            (~<Money cents={item.monthlyAmountCents} />/mês)
+                            (~<Money sensitive={false} cents={item.monthlyAmountCents} />/mês)
                           </span>
                         )}
                         {item.hasPriceHike && hikeAmount > 0 && (
@@ -255,7 +255,7 @@ export function SubscriptionsTable({ items, onEdit }: SubscriptionsTableProps) {
                             title={`Valor anterior: ${item.amountCents}`}
                           >
                             <TrendingUp className="h-2.5 w-2.5 shrink-0" />
-                            <span>Subiu +<Money cents={hikeAmount} /></span>
+                            <span>Subiu +<Money sensitive={false} cents={hikeAmount} /></span>
                           </span>
                         )}
                       </div>
