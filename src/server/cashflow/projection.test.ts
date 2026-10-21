@@ -10,7 +10,7 @@ import {
   transactions,
 } from '../db/schema';
 import { seedBase } from '../db/seed';
-import { getCashFlowProjection } from './projection';
+import { getCashFlowProjection, recurrenceOccurrences } from './projection';
 
 describe('cashflow projection (A4-03)', () => {
   it('retorna 6 pontos mensais consistentes partindo do saldo real e alarga a incerteza', async () => {
@@ -378,5 +378,25 @@ describe('cashflow projection (A4-03)', () => {
     const p1 = projection.points[0]!;
     expect(p1.variableExpensesCents).toBe(8333);
     expect(p1.fixedExpensesCents).toBe(150000);
+  });
+});
+
+describe('recurrenceOccurrences', () => {
+  it('recorrência anual cai só no mês certo, inclusive na virada de ano', () => {
+    expect(recurrenceOccurrences('2025-12-20', 'yearly', '2026-10-21', '2026-11-30')).toEqual([]);
+    expect(recurrenceOccurrences('2025-12-20', 'yearly', '2026-10-21', '2027-06-30')).toEqual(['2026-12-20']);
+  });
+
+  it('mensal respeita meses curtos e ignora datas já passadas', () => {
+    expect(recurrenceOccurrences('2026-01-31', 'monthly', '2026-02-01', '2026-04-30')).toEqual([
+      '2026-02-28',
+      '2026-03-31',
+      '2026-04-30',
+    ]);
+  });
+
+  it('quinzenal gera 2 ou 3 ocorrências por mês conforme o calendário', () => {
+    const dates = recurrenceOccurrences('2026-10-02', 'biweekly', '2026-10-21', '2026-12-31');
+    expect(dates.slice(0, 3)).toEqual(['2026-10-30', '2026-11-13', '2026-11-27']);
   });
 });
