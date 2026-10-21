@@ -1,9 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { loginIfNeeded } from './helpers/auth';
 
 test.beforeEach(async ({ page }) => {
   await loginIfNeeded(page);
 });
+
+/** Abre os grupos recolhidos do menu (ex.: "Configurar") antes de procurar o link. */
+async function expandNavGroups(page: Page, scope: string) {
+  const collapsed = page.locator(`${scope} nav button[aria-expanded="false"]`);
+  while ((await collapsed.count()) > 0) {
+    await collapsed.first().click();
+  }
+}
 
 const routes = [
   { href: '/', title: 'Dashboard' },
@@ -24,6 +32,7 @@ test.describe('Navegação Desktop', () => {
     await expect(page.locator('h1')).toHaveText('Dashboard');
 
     for (const route of routes.slice(1)) {
+      await expandNavGroups(page, 'aside');
       await page.click(`aside a[href="${route.href}"]`);
       await expect(page).toHaveURL(route.href);
       await expect(page.locator('h1')).toHaveText(route.title);
@@ -46,6 +55,7 @@ test.describe('Navegação Mobile', () => {
     // Navega pelo menu mobile
     for (const route of routes.slice(1)) {
       await page.click('button[aria-label="Abrir menu de navegação"]');
+      await expandNavGroups(page, 'div[role="dialog"]');
       await page.click(`div[role="dialog"] a[href="${route.href}"]`);
       await expect(page).toHaveURL(route.href);
       await expect(page.locator('h1')).toHaveText(route.title);
