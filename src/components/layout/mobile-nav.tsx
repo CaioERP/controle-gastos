@@ -11,13 +11,24 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Menu, Wallet } from 'lucide-react';
 import { ReviewCountBadge } from '@/components/review/review-count-badge';
 import { SearchTrigger } from './command-palette';
+import { NotificationBell } from '@/components/notifications/notification-bell';
+import type { NotificationPreferenceRow, NotificationRow } from '@/server/queries/notifications';
 
 export interface MobileNavProps {
   footerSlot?: React.ReactNode;
   reviewCount?: number;
+  unreadNotificationsCount?: number;
+  recentNotifications?: NotificationRow[];
+  notificationPreferences?: NotificationPreferenceRow[];
 }
 
-export function MobileNav({ footerSlot, reviewCount = 0 }: MobileNavProps) {
+export function MobileNav({
+  footerSlot,
+  reviewCount = 0,
+  unreadNotificationsCount = 0,
+  recentNotifications = [],
+  notificationPreferences = [],
+}: MobileNavProps) {
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
@@ -30,8 +41,13 @@ export function MobileNav({ footerSlot, reviewCount = 0 }: MobileNavProps) {
         <span className="font-semibold text-base">Controle de Gastos</span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <SearchTrigger iconOnly />
+        <NotificationBell
+          unreadCount={unreadNotificationsCount}
+          initialNotifications={recentNotifications}
+          preferences={notificationPreferences}
+        />
         <ThemeToggle />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
