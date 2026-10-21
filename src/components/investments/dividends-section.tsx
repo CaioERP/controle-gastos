@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart';
-import { Money } from '@/components/format/money';
+import { Money, Sensitive } from '@/components/format/money';
 import { DateBR } from '@/components/format/date-br';
 import { formatBRL } from '@/server/domain/money';
 import { formatBRLCompact } from '@/components/charts/format';
@@ -162,7 +162,7 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
                         <div className="rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs shadow-xl">
                           <div className="font-semibold">{String(label)}</div>
                           <div className="text-emerald-600 dark:text-emerald-400 font-medium tabular-nums">
-                            <span data-sensitive>{formatBRL(item.totalCents)}</span>
+                            <Sensitive>{formatBRL(item.totalCents)}</Sensitive>
                           </div>
                         </div>
                       );

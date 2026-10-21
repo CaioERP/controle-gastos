@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Cell, Pie, PieChart } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart';
-import { Money } from '@/components/format/money';
+import { Money, Sensitive } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
 import type { AllocationSlice } from '@/server/queries/investments';
 import { splitPercentTenths } from './input-format';
@@ -50,7 +50,7 @@ export function AllocationDonutChart({ allocation, totalCents }: AllocationDonut
                         <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
                           <div className="font-medium">{item.label}</div>
                           <div className="tabular-nums">
-                            <span data-sensitive>{formatBRL(item.totalCents)}</span> · {shareText(item.assetClass)}
+                            <Sensitive>{formatBRL(item.totalCents)}</Sensitive> · {shareText(item.assetClass)}
                           </div>
                         </div>
                       );

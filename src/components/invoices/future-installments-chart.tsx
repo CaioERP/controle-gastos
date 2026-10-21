@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { Money } from '@/components/format/money';
+import { Money, Sensitive } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
 import type { FutureInstallmentMonth } from '@/server/queries/installments';
 import { cn } from '@/lib/utils';
@@ -82,7 +82,7 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
                 content={
                   <ChartTooltipContent
                     formatter={(value) => (
-                      <span className="tabular-nums font-medium"><span data-sensitive>{formatBRL(Number(value))}</span></span>
+                      <span className="tabular-nums font-medium"><Sensitive>{formatBRL(Number(value))}</Sensitive></span>
                     )}
                   />
                 }

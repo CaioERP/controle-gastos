@@ -16,6 +16,7 @@ import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/
 import { formatBRL } from '@/server/domain/money';
 import { formatBRLCompact } from '@/components/charts/format';
 import type { NetWorthMonthlyPoint } from '@/server/queries/net-worth';
+import { Sensitive } from '@/components/format/money';
 
 type NetWorthEvolutionChartProps = {
   series: NetWorthMonthlyPoint[];
@@ -129,7 +130,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Patrimônio líquido
                               </span>
                               <span className="tabular-nums font-bold">
-                                <span data-sensitive>{formatBRL(item.netWorthCents)}</span>
+                                <Sensitive>{formatBRL(item.netWorthCents)}</Sensitive>
                               </span>
                             </div>
 
@@ -139,7 +140,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Contas
                               </span>
                               <span className="tabular-nums">
-                                <span data-sensitive>{formatBRL(item.cashAccountsCents)}</span>
+                                <Sensitive>{formatBRL(item.cashAccountsCents)}</Sensitive>
                               </span>
                             </div>
 
@@ -149,7 +150,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Investimentos
                               </span>
                               <span className="tabular-nums">
-                                <span data-sensitive>{formatBRL(item.investmentsCents)}</span>
+                                <Sensitive>{formatBRL(item.investmentsCents)}</Sensitive>
                               </span>
                             </div>
 
@@ -159,7 +160,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Dívidas / faturas
                               </span>
                               <span className="tabular-nums">
-                                <span data-sensitive>{formatBRL(item.liabilitiesCents)}</span>
+                                <Sensitive>{formatBRL(item.liabilitiesCents)}</Sensitive>
                               </span>
                             </div>
                           </div>

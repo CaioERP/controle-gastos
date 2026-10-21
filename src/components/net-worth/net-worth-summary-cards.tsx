@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Money } from '@/components/format/money';
+import { Money, Sensitive } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
 import type { NetWorthOverview } from '@/server/queries/net-worth';
 
@@ -51,8 +51,8 @@ export function NetWorthSummaryCards({ current, changes }: NetWorthSummaryCardsP
         <CardContent className="space-y-1">
           <Money cents={current.assetsCents} className="block text-xl font-semibold sm:text-2xl" />
           <p className="text-xs text-muted-foreground">
-            Contas: <span data-sensitive>{formatBRL(current.cashAccountsCents)}</span> · Investimentos:{' '}
-            <span data-sensitive>{formatBRL(current.investmentsCents)}</span>
+            Contas: <Sensitive>{formatBRL(current.cashAccountsCents)}</Sensitive> · Investimentos:{' '}
+            <Sensitive>{formatBRL(current.investmentsCents)}</Sensitive>
           </p>
         </CardContent>
       </Card>
@@ -70,8 +70,8 @@ export function NetWorthSummaryCards({ current, changes }: NetWorthSummaryCardsP
             className="block text-xl font-semibold sm:text-2xl text-amber-600 dark:text-amber-400"
           />
           <p className="text-xs text-muted-foreground">
-            Faturas abertas: <span data-sensitive>{formatBRL(current.openInvoicesCents)}</span> · Parcelas futuras:{' '}
-            <span data-sensitive>{formatBRL(current.futureInstallmentsCents)}</span>
+            Faturas abertas: <Sensitive>{formatBRL(current.openInvoicesCents)}</Sensitive> · Parcelas futuras:{' '}
+            <Sensitive>{formatBRL(current.futureInstallmentsCents)}</Sensitive>
           </p>
         </CardContent>
       </Card>
@@ -108,7 +108,7 @@ export function NetWorthSummaryCards({ current, changes }: NetWorthSummaryCardsP
           <p className="text-xs text-muted-foreground tabular-nums">
             {changes.yearDeltaCents !== null && yearPercent !== null ? (
               <span>
-                No ano: <span data-sensitive>{formatBRL(changes.yearDeltaCents)}</span> ({yearPercent})
+                No ano: <Sensitive>{formatBRL(changes.yearDeltaCents)}</Sensitive> ({yearPercent})
               </span>
             ) : (
               <span>Sem histórico anterior</span>

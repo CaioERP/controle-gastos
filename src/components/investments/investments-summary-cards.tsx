@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Money } from '@/components/format/money';
+import { Money, Sensitive } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
 import type { InvestmentsOverview } from '@/server/queries/investments';
 
@@ -34,8 +34,8 @@ export function InvestmentsSummaryCards({ totals }: InvestmentsSummaryCardsProps
             className="block text-xl font-semibold sm:text-2xl"
           />
           <p className="text-xs text-muted-foreground">
-            Aplicado: <span data-sensitive>{formatBRL(totals.investedCents)}</span> · Líquido est.:{' '}
-            <span data-sensitive>{formatBRL(totals.netValueCents)}</span>
+            Aplicado: <Sensitive>{formatBRL(totals.investedCents)}</Sensitive> · Líquido est.:{' '}
+            <Sensitive>{formatBRL(totals.netValueCents)}</Sensitive>
           </p>
         </CardContent>
       </Card>
