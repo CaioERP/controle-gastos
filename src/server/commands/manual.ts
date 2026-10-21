@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { categorizeTransactions, categoryKindFor } from '@/server/categorization/engine';
+import { evaluateSpendingLimits } from './limits';
 import type { Db } from '@/server/db/client';
 import { accounts, categories, institutions, transactions, transactionSources, transactionTags } from '@/server/db/schema';
 import { PAYMENT_METHODS, TX_KINDS, type TxKind } from '@/server/domain/enums';
@@ -174,6 +175,8 @@ export async function createManualTransaction(
     if (!data.categoryId && categoryKindFor(data.kind) !== null) {
       await categorizeTransactions(db, [txRow.id]);
     }
+
+    await evaluateSpendingLimits(db, { transactionIds: [txRow.id] });
 
     return { transactionId: txRow.id };
   } catch (err) {

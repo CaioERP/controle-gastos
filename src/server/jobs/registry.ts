@@ -1,5 +1,6 @@
 import { eq, ne } from 'drizzle-orm';
 import { triggerSync } from '@/server/commands/sync';
+import { evaluateSpendingLimits } from '@/server/commands/limits';
 import type { Db } from '@/server/db/client';
 import { invoices, syncRuns } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
@@ -13,7 +14,8 @@ export type JobName =
   | 'invoice-status'
   | 'connection-health'
   | 'prices-daily'
-  | 'net-worth-snapshot';
+  | 'net-worth-snapshot'
+  | 'evaluate-alerts';
 
 export type JobDef = {
   name: JobName;
@@ -89,6 +91,14 @@ export const JOBS: JobDef[] = [
     run: async (db) => {
       const nw = await captureNetWorthSnapshot(db);
       return nw as unknown as Record<string, unknown>;
+    },
+  },
+  {
+    name: 'evaluate-alerts',
+    intervalMinutes: 720,
+    run: async (db) => {
+      const res = await evaluateSpendingLimits(db);
+      return res as Record<string, unknown>;
     },
   },
 ];

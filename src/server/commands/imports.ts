@@ -22,6 +22,7 @@ import { sha256Hex } from '@/server/ingestion/file/hash';
 import { upsertTransaction } from '@/server/ingestion/persist';
 import { runPipeline } from '@/server/ingestion/pipeline';
 import type { NormalizedTransaction } from '@/server/ingestion/types';
+import { evaluateSpendingLimits } from './limits';
 
 export type PreviewItemStatus =
   | 'new'
@@ -277,6 +278,8 @@ export async function confirmFileImport(
         connectionId: null,
         stats: { created, linked, skippedDuplicates },
       });
+    } else {
+      await evaluateSpendingLimits(db);
     }
 
     return outcome.result;
