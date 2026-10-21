@@ -18,6 +18,10 @@ export default async function ProjecaoPage() {
   const projection = await getCashFlowProjection(db);
 
   const hasDeficit = projection.lowestProjectedBalanceCents < 0;
+  const bandBreachMonth = projection.points.find((p) => p.lowerBandCents < 0)?.month;
+  const bandBreachLabel = bandBreachMonth
+    ? formatMonthBR(`${bandBreachMonth}-01`)
+    : 'no período';
   const lowestMonthLabel = projection.lowestBalanceMonth
     ? formatMonthBR(`${projection.lowestBalanceMonth}-01`)
     : 'no período';
@@ -56,7 +60,7 @@ export default async function ProjecaoPage() {
             ) : (
               <>
                 Embora o saldo médio esperado se mantenha positivo, a faixa inferior de incerteza (± 1,96σ)
-                cruza o limite de zero em <strong>{lowestMonthLabel}</strong>. Acompanhe os gastos
+                cruza o limite de zero já em <strong>{bandBreachLabel}</strong>. Acompanhe os gastos
                 variáveis de perto.
               </>
             )}
@@ -86,10 +90,10 @@ export default async function ProjecaoPage() {
             • <strong>Saldo inicial:</strong> Soma dos saldos de contas de caixa líquidas (corrente, poupança, carteira e benefícios) marcadas para inclusão nos totais.
           </p>
           <p>
-            • <strong>Receitas e despesas fixas:</strong> Contratos ativos cadastrados na central de assinaturas e recorrências (mensalizados de acordo com a frequência).
+            • <strong>Receitas e despesas fixas:</strong> Contratos ativos cadastrados na central de assinaturas e recorrências (cada ocorrência entra na data prevista, a partir da última cobrança; as anuais e trimestrais caem só no mês certo).
           </p>
           <p>
-            • <strong>Cartão de crédito e parcelas:</strong> Faturas abertas e parcelas futuras já compromissadas nos cartões de crédito.
+            • <strong>Cartão de crédito e parcelas:</strong> Faturas não pagas entram no mês do vencimento (regime de caixa), junto com as parcelas futuras já compromissadas. O que ainda vence neste mês entra no primeiro mês projetado.
           </p>
           <p>
             • <strong>Gastos variáveis e incerteza:</strong> Média móvel dos últimos 3 meses cheios (excluindo fixos e compras parceladas para evitar duplicidade). A faixa sombreada reflete 95% de confiança estatística com dispersão proporcional ao tempo (&plusmn; 1,96&sigma; &times; &radic;m).
