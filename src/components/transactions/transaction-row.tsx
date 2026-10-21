@@ -86,7 +86,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </div>
 
       <div className="text-right md:order-4">
-        <Money
+        <Money sensitive={false}
           cents={tx.amountCents}
           colored={reportable}
           className={cn('text-sm', !reportable && 'text-muted-foreground')}

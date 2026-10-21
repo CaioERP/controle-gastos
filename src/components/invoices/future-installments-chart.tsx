@@ -68,7 +68,7 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
         {total === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma parcela futura prevista.</p>
         ) : (
-          <ChartContainer config={chartConfig} className="aspect-auto h-56 w-full">
+          <ChartContainer data-sensitive-axis config={chartConfig} className="aspect-auto h-56 w-full">
             <BarChart data={data} margin={{ left: 0, right: 8, top: 8 }}>
               <CartesianGrid vertical={false} />
               <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" />
@@ -82,7 +82,7 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
                 content={
                   <ChartTooltipContent
                     formatter={(value) => (
-                      <span className="tabular-nums font-medium">{formatBRL(Number(value))}</span>
+                      <span className="tabular-nums font-medium"><span data-sensitive>{formatBRL(Number(value))}</span></span>
                     )}
                   />
                 }

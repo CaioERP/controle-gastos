@@ -113,7 +113,7 @@ export function TransactionDetailInfo({ tx, onReload }: { tx: Tx; onReload?: () 
                     <CategoryBadgeContent category={part.category} />
                   </div>
                 </div>
-                <Money cents={part.amountCents} className="font-semibold" />
+                <Money sensitive={false} cents={part.amountCents} className="font-semibold" />
               </li>
             ))}
           </ul>
@@ -196,7 +196,7 @@ export function TransactionDetailInfo({ tx, onReload }: { tx: Tx; onReload?: () 
                   </span>
                   <DateBR date={p.date} />
                   <Badge variant="outline">{TX_STATUS_LABELS[p.status]}</Badge>
-                  <Money cents={p.amountCents} />
+                  <Money sensitive={false} cents={p.amountCents} />
                 </li>
               ))}
             </ul>

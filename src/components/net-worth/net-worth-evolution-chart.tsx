@@ -95,7 +95,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
           </div>
         ) : (
           <div className="w-full">
-            <ChartContainer config={chartConfig} className="h-72 w-full">
+            <ChartContainer data-sensitive-axis config={chartConfig} className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 12, right: 12, bottom: 0, left: -4 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted/40" />
@@ -129,7 +129,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Patrimônio líquido
                               </span>
                               <span className="tabular-nums font-bold">
-                                {formatBRL(item.netWorthCents)}
+                                <span data-sensitive>{formatBRL(item.netWorthCents)}</span>
                               </span>
                             </div>
 
@@ -139,7 +139,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Contas
                               </span>
                               <span className="tabular-nums">
-                                {formatBRL(item.cashAccountsCents)}
+                                <span data-sensitive>{formatBRL(item.cashAccountsCents)}</span>
                               </span>
                             </div>
 
@@ -149,7 +149,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Investimentos
                               </span>
                               <span className="tabular-nums">
-                                {formatBRL(item.investmentsCents)}
+                                <span data-sensitive>{formatBRL(item.investmentsCents)}</span>
                               </span>
                             </div>
 
@@ -159,7 +159,7 @@ export function NetWorthEvolutionChart({ series }: NetWorthEvolutionChartProps) 
                                 Dívidas / faturas
                               </span>
                               <span className="tabular-nums">
-                                {formatBRL(item.liabilitiesCents)}
+                                <span data-sensitive>{formatBRL(item.liabilitiesCents)}</span>
                               </span>
                             </div>
                           </div>

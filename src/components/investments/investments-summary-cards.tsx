@@ -34,8 +34,8 @@ export function InvestmentsSummaryCards({ totals }: InvestmentsSummaryCardsProps
             className="block text-xl font-semibold sm:text-2xl"
           />
           <p className="text-xs text-muted-foreground">
-            Aplicado: {formatBRL(totals.investedCents)} · Líquido est.:{' '}
-            {formatBRL(totals.netValueCents)}
+            Aplicado: <span data-sensitive>{formatBRL(totals.investedCents)}</span> · Líquido est.:{' '}
+            <span data-sensitive>{formatBRL(totals.netValueCents)}</span>
           </p>
         </CardContent>
       </Card>

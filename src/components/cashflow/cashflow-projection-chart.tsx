@@ -145,7 +145,7 @@ export function CashFlowProjectionChart({ projection }: CashFlowProjectionChartP
       </CardHeader>
 
       <CardContent className="flex-1 pt-4">
-        <ChartContainer config={chartConfig} className="h-80 w-full">
+        <ChartContainer data-sensitive-axis config={chartConfig} className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={chartData}
@@ -202,7 +202,7 @@ export function CashFlowProjectionChart({ projection }: CashFlowProjectionChartP
                             Saldo esperado
                           </span>
                           <span className="tabular-nums font-bold">
-                            {formatBRL(item.projectedBalanceCents)}
+                            <span data-sensitive>{formatBRL(item.projectedBalanceCents)}</span>
                           </span>
                         </div>
 
@@ -214,7 +214,7 @@ export function CashFlowProjectionChart({ projection }: CashFlowProjectionChartP
                                 Faixa de incerteza (95%)
                               </span>
                               <span className="tabular-nums font-mono text-[11px]">
-                                {formatBRL(item.lowerBandCents)} a {formatBRL(item.upperBandCents)}
+                                <span data-sensitive>{formatBRL(item.lowerBandCents)}</span> a <span data-sensitive>{formatBRL(item.upperBandCents)}</span>
                               </span>
                             </div>
 

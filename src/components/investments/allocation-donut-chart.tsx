@@ -50,7 +50,7 @@ export function AllocationDonutChart({ allocation, totalCents }: AllocationDonut
                         <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
                           <div className="font-medium">{item.label}</div>
                           <div className="tabular-nums">
-                            {formatBRL(item.totalCents)} · {shareText(item.assetClass)}
+                            <span data-sensitive>{formatBRL(item.totalCents)}</span> · {shareText(item.assetClass)}
                           </div>
                         </div>
                       );

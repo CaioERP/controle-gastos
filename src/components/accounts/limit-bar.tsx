@@ -18,8 +18,8 @@ export function LimitBar({ limitCents, availableCents }: LimitBarProps) {
   return (
     <div className="flex flex-col gap-1 w-full text-xs">
       <div className="flex items-center justify-between text-muted-foreground text-[11px]">
-        <span>Limite usado: {formatBRL(used)}</span>
-        <span>{pct}% de {formatBRL(limitCents)}</span>
+        <span>Limite usado: <span data-sensitive>{formatBRL(used)}</span></span>
+        <span>{pct}% de <span data-sensitive>{formatBRL(limitCents)}</span></span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div

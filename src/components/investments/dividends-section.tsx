@@ -134,7 +134,7 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
             </div>
           ) : (
           <div className="w-full">
-            <ChartContainer config={chartConfig} className="h-56 w-full">
+            <ChartContainer data-sensitive-axis config={chartConfig} className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 12, right: 12, bottom: 0, left: -16 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted/40" />
@@ -162,7 +162,7 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
                         <div className="rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs shadow-xl">
                           <div className="font-semibold">{String(label)}</div>
                           <div className="text-emerald-600 dark:text-emerald-400 font-medium tabular-nums">
-                            {formatBRL(item.totalCents)}
+                            <span data-sensitive>{formatBRL(item.totalCents)}</span>
                           </div>
                         </div>
                       );
@@ -238,7 +238,7 @@ export function DividendsSection({ overview, holdings }: DividendsSectionProps) 
                       </TableCell>
                       <TableCell className="text-right text-xs">
                         <div className="flex flex-col items-end">
-                          <Money
+                          <Money sensitive={false}
                             cents={item.netAmountCents}
                             className="font-semibold text-emerald-600 dark:text-emerald-400"
                           />

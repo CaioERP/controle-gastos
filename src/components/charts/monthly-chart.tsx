@@ -45,12 +45,12 @@ export function MonthlyChart({ points, series, mode = 'stacked', className }: Mo
                   <span className="size-2.5 rounded-[2px]" style={{ backgroundColor: p.color }} />
                   {config[String(p.dataKey)]?.label}
                 </span>
-                <span className="font-medium tabular-nums">{formatBRL(p.value as number)}</span>
+                <span className="font-medium tabular-nums"><span data-sensitive>{formatBRL(p.value as number)}</span></span>
               </div>
             ))}
             <div className="flex items-center justify-between gap-3 border-t pt-1.5 font-semibold">
               <span>Total</span>
-              <span className="tabular-nums">{formatBRL(total)}</span>
+              <span className="tabular-nums"><span data-sensitive>{formatBRL(total)}</span></span>
             </div>
           </div>
         );
@@ -68,7 +68,7 @@ export function MonthlyChart({ points, series, mode = 'stacked', className }: Mo
 
   return (
     <div className={className}>
-      <ChartContainer config={config} className="aspect-auto h-64 w-full sm:h-72">
+      <ChartContainer data-sensitive-axis config={config} className="aspect-auto h-64 w-full sm:h-72">
         {mode === 'stacked' ? (
           <BarChart data={data} accessibilityLayer>
             {axes}

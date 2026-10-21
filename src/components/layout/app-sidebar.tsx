@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { NavList } from './nav-list';
 import { ThemeToggle } from './theme-toggle';
+import { PrivacyToggle } from './privacy-toggle';
 import { Wallet } from 'lucide-react';
 import { SearchTrigger } from './command-palette';
 import { NotificationBell } from '@/components/notifications/notification-bell';
@@ -49,7 +50,10 @@ export function AppSidebar({
 
       <div className="p-4 border-t border-border flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 overflow-hidden">{footerSlot}</div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <PrivacyToggle />
+          <ThemeToggle />
+        </div>
       </div>
     </aside>
   );

@@ -199,7 +199,7 @@ function SheetBody({
         <SheetDescription className="flex items-center gap-2">
           <DateBR date={tx.date} />
           <span aria-hidden="true">·</span>
-          <Money cents={tx.amountCents} />
+          <Money sensitive={false} cents={tx.amountCents} />
         </SheetDescription>
       </SheetHeader>
 
