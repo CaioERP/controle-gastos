@@ -1,8 +1,14 @@
 import { toCents } from '@/server/domain/money';
+import { normalizeForMatch } from '@/server/ingestion/normalize/text';
 import type { TreasuryQuoteResult } from './types';
 
+// Recurso "Taxas dos Títulos Ofertados pelo Tesouro Direto" no CKAN do Tesouro Transparente
+// (conferido via /ckan/api/3/action/package_show?id=df56aa42-484a-4a59-8184-7676580c81e3).
 export const TESOURO_TRANSPARENTE_CSV_URL =
-  'https://www.tesourotransparente.gov.br/ckan/dataset/df56aa42-484a-4a59-8184-7676580c81e3/resource/796d2059-14e9-44e3-80c9-2d6e30b405c3/download/PrecoTaxaTesouroDireto.csv';
+  'https://www.tesourotransparente.gov.br/ckan/dataset/df56aa42-484a-4a59-8184-7676580c81e3/resource/796d2059-14e9-44e3-80c9-2d9e30b405c1/download/precotaxatesourodireto.csv';
+
+// O CSV histórico tem ~15 MB; 60 s cobre conexões lentas sem travar o job.
+const TESOURO_TIMEOUT_MS = 60_000;
 
 function brDateToISO(d: string): string | null {
   const trimmed = d.trim();
@@ -21,10 +27,7 @@ function normalizeHeader(h: string): string {
     .replace(/\s+/g, ' ');
 }
 
-export function parseTesouroCsv(
-  csvText: string,
-  filterLatestOnly = true,
-): TreasuryQuoteResult[] {
+export function parseTesouroCsv(csvText: string, filterLatestOnly = true): TreasuryQuoteResult[] {
   const cleanText = csvText.replace(/^\uFEFF/, '').trim();
   if (!cleanText) return [];
 
@@ -99,6 +102,38 @@ export function parseTesouroCsv(
   return Array.from(latestMap.values());
 }
 
+/**
+ * Escolhe a cotação do título pelo vencimento e pelo nome. Exige vencimento: sem ele, qualquer
+ * vencimento do mesmo tipo casaria. Entre os tipos contidos no nome, fica o mais específico
+ * (mais longo), porque "Tesouro IPCA+" e "Tesouro IPCA+ com Juros Semestrais" (e Prefixado)
+ * têm vencimentos iguais e PUs muito diferentes.
+ */
+export function matchTreasuryQuote(
+  assetName: string,
+  maturityDate: string | null,
+  quotes: TreasuryQuoteResult[],
+): TreasuryQuoteResult | null {
+  if (!maturityDate) return null;
+  const assetNorm = normalizeForMatch(assetName);
+
+  let best: TreasuryQuoteResult | null = null;
+  let bestLen = -1;
+  for (const q of quotes) {
+    if (q.maturityDate !== maturityDate) continue;
+    const typeNorm = normalizeForMatch(q.titleType);
+    if (!assetNorm.includes(typeNorm) && !typeNorm.includes(assetNorm)) continue;
+    // Nome igual ao tipo vence; senão, o tipo mais longo contido no nome.
+    let score = 0;
+    if (typeNorm === assetNorm) score = Number.MAX_SAFE_INTEGER;
+    else if (assetNorm.includes(typeNorm)) score = typeNorm.length;
+    if (score > bestLen) {
+      best = q;
+      bestLen = score;
+    }
+  }
+  return best;
+}
+
 export type TesouroClientOptions = {
   fetchFn?: typeof fetch;
   url?: string;
@@ -112,7 +147,7 @@ export async function fetchTreasuryQuotes(
   const url = options.url ?? TESOURO_TRANSPARENTE_CSV_URL;
   const filterLatestOnly = options.filterLatestOnly ?? true;
 
-  const res = await fetchFn(url);
+  const res = await fetchFn(url, { signal: AbortSignal.timeout(TESOURO_TIMEOUT_MS) });
   if (!res.ok) {
     throw new Error(`Falha ao baixar cotações do Tesouro Transparente (HTTP ${res.status})`);
   }

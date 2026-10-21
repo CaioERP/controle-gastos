@@ -1,5 +1,7 @@
+import { TZDate } from '@date-fns/tz';
+import { format } from 'date-fns';
 import { z } from 'zod';
-import { today } from '@/server/domain/dates';
+import { TZ, today } from '@/server/domain/dates';
 import { toCents } from '@/server/domain/money';
 import type { QuoteResult } from './types';
 
@@ -7,6 +9,8 @@ export const FREE_BRAPI_TICKERS = ['PETR4', 'VALE3', 'MGLU3', 'ITUB4'] as const;
 const FREE_TICKERS_SET = new Set<string>(FREE_BRAPI_TICKERS);
 
 let hasWarnedBrapiToken = false;
+
+const BRAPI_TIMEOUT_MS = 15_000;
 
 const brapiItemSchema = z.object({
   symbol: z.string().optional(),
@@ -18,25 +22,23 @@ const brapiResponseSchema = z.object({
   results: z.array(brapiItemSchema).optional(),
 });
 
+/** Data do pregão no fuso de São Paulo. A brapi manda `regularMarketTime` em UTC
+ * (ex.: "2026-10-21T01:15:26.000Z" = 20/10 às 22h15 em Brasília). */
+function toSaoPauloDate(d: Date): string | null {
+  if (Number.isNaN(d.getTime())) return null;
+  return format(new TZDate(d.getTime(), TZ), 'yyyy-MM-dd');
+}
+
 function parseDate(raw: string | number | null | undefined, fallbackDate: string): string {
   if (!raw) return fallbackDate;
   if (typeof raw === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-      return raw.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      return raw;
     }
-    const d = new Date(raw);
-    if (!Number.isNaN(d.getTime())) {
-      return d.toISOString().slice(0, 10);
-    }
+    return toSaoPauloDate(new Date(raw)) ?? fallbackDate;
   }
-  if (typeof raw === 'number') {
-    const ms = raw > 1e11 ? raw : raw * 1000;
-    const d = new Date(ms);
-    if (!Number.isNaN(d.getTime())) {
-      return d.toISOString().slice(0, 10);
-    }
-  }
-  return fallbackDate;
+  const ms = raw > 1e11 ? raw : raw * 1000;
+  return toSaoPauloDate(new Date(ms)) ?? fallbackDate;
 }
 
 export function parseBrapiResponse(
@@ -96,8 +98,10 @@ export async function fetchB3Quotes(
   }
 
   const results: QuoteResult[] = [];
+  const failures: string[] = [];
 
   for (const ticker of targetTickers) {
+    let res: Response;
     try {
       const url = `https://brapi.dev/api/quote/${encodeURIComponent(ticker)}`;
       const headers: Record<string, string> = {
@@ -106,20 +110,34 @@ export async function fetchB3Quotes(
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
-
-      const res = await fetchFn(url, { headers });
-      if (!res.ok) {
-        continue;
-      }
-
-      const json = await res.json();
-      const quote = parseBrapiResponse(ticker, json, todayStr);
-      if (quote) {
-        results.push(quote);
-      }
-    } catch {
-      // Falha individual não interrompe os outros tickers
+      res = await fetchFn(url, { headers, signal: AbortSignal.timeout(BRAPI_TIMEOUT_MS) });
+    } catch (err) {
+      // Timeout/rede fora: os próximos tickers falhariam igual, um a um.
+      failures.push(`${ticker}: ${err instanceof Error ? err.name : 'erro de rede'}`);
+      break;
     }
+
+    if (!res.ok) {
+      failures.push(`${ticker}: HTTP ${res.status}`);
+      // Token inválido ou limite do plano: continuar só queima a cota.
+      if (res.status === 401 || res.status === 403 || res.status === 429) break;
+      continue;
+    }
+
+    try {
+      const quote = parseBrapiResponse(ticker, await res.json(), todayStr);
+      if (quote) results.push(quote);
+      else failures.push(`${ticker}: resposta sem preço`);
+    } catch {
+      failures.push(`${ticker}: resposta inválida`);
+    }
+  }
+
+  if (failures.length > 0) {
+    const summary = `brapi: ${failures.join('; ')}`;
+    // Sem nenhuma cotação, a falha precisa chegar a stats.errors (ex.: 401/429 em todos).
+    if (results.length === 0) throw new Error(summary);
+    console.warn(`[brapi] cotações parciais (${results.length} ok). ${summary}`);
   }
 
   return results;

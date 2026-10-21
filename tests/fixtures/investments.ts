@@ -256,28 +256,32 @@ export async function loadInvestmentFixtures(
   }
 
   // 4. Séries históricas de benchmarks (CDI, Selic, IPCA, Ibov)
+  // Unidade do contrato (BenchmarkPoint): CDI/Selic/IPCA = taxa % x 1_000_000; Ibov = pontos x 100.
+  // CDI e Selic são diários (dias úteis): pontos esparsos subestimariam o acumulado.
   const benchmarkRows = [];
   // Últimos 6 meses
-  for (let i = 180; i >= 0; i -= 5) {
+  for (let i = 180; i >= 0; i--) {
     const dt = addDaysISO(refDate, -i);
+    const weekDay = new Date(`${dt}T12:00:00Z`).getUTCDay();
+    if (weekDay === 0 || weekDay === 6) continue;
     benchmarkRows.push(
       {
         id: randomUUID(),
         benchmark: 'cdi' as const,
         date: dt,
-        valueMicros: 410, // ~0.041% ao dia
+        valueMicros: 41000, // ~0,041% ao dia
       },
       {
         id: randomUUID(),
         benchmark: 'selic' as const,
         date: dt,
-        valueMicros: 410,
+        valueMicros: 41000,
       },
       {
         id: randomUUID(),
         benchmark: 'ibov' as const,
         date: dt,
-        valueMicros: 12850000 + (180 - i) * 1500, // pontos x 100
+        valueMicros: 12850000 + (180 - i) * 300, // pontos x 100
       },
     );
   }
@@ -289,27 +293,23 @@ export async function loadInvestmentFixtures(
       id: randomUUID(),
       benchmark: 'ipca' as const,
       date: mDate,
-      valueMicros: 3800, // 0.38% ao mês
+      valueMicros: 380000, // 0,38% ao mês
     });
   }
 
-  for (const b of benchmarkRows) {
-    await tx
-      .insert(benchmarkSeries)
-      .values(b)
-      .onConflictDoUpdate({
-        target: [benchmarkSeries.benchmark, benchmarkSeries.date],
-        set: { valueMicros: b.valueMicros },
-      });
-  }
+  await tx.insert(benchmarkSeries).values(benchmarkRows).onConflictDoNothing();
 
   // 5. 6 snapshots mensais em net_worth_snapshots
-  const baseAssets = 6500000;
+  // Investimentos crescem ~0,8% ao mês até o valor atual das posições, para a
+  // rentabilidade mensal calculada a partir dos snapshots ficar plausível.
   const baseLiab = 800000;
 
   for (let m = 5; m >= 0; m--) {
-    const snapDate = addDaysISO(monthStart(addMonthsISO(refDate, -m)), 14); // meio do mês
-    const assetsCents = baseAssets + (5 - m) * 250000;
+    const midMonth = addDaysISO(monthStart(addMonthsISO(refDate, -m)), 14); // meio do mês
+    const snapDate = midMonth > refDate ? refDate : midMonth;
+    const cashCents = 1500000 + (5 - m) * 50000;
+    const investmentsCents = Math.round(totalInvestmentsBalanceCents / 1.008 ** (m + 1));
+    const assetsCents = cashCents + investmentsCents;
     const liabilitiesCents = baseLiab + (5 - m) * 40000;
     const netWorthCents = assetsCents - liabilitiesCents;
 
@@ -318,8 +318,8 @@ export async function loadInvestmentFixtures(
       .values({
         id: randomUUID(),
         date: snapDate,
-        cashAccountsCents: 1500000 + (5 - m) * 50000,
-        investmentsCents: assetsCents - (1500000 + (5 - m) * 50000),
+        cashAccountsCents: cashCents,
+        investmentsCents,
         openInvoicesCents: 500000,
         futureInstallmentsCents: liabilitiesCents - 500000,
         assetsCents,

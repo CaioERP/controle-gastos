@@ -16,6 +16,15 @@ describe('coingecko provider', () => {
     ]);
   });
 
+  it('ignora moeda cujo preço arredonda para 0 centavos', () => {
+    // Formato real do /simple/price para moedas baratas (notação científica).
+    const res = parseCoinGeckoResponse(
+      { bitcoin: { brl: 415514 }, 'shiba-inu': { brl: 2.569e-5 } },
+      '2026-10-20',
+    );
+    expect(res).toEqual([{ ticker: 'bitcoin', priceCents: 41551400, date: '2026-10-20' }]);
+  });
+
   it('retorna array vazio para resposta vazia ou inválida', () => {
     expect(parseCoinGeckoResponse({})).toEqual([]);
     expect(parseCoinGeckoResponse(null)).toEqual([]);

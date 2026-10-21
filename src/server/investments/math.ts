@@ -19,7 +19,14 @@ export function toScaledQty(value: string | number | bigint): bigint {
     return toScaledQty(value.toFixed(8));
   }
 
-  const raw = value.trim().replace(',', '.');
+  // Mesma convenção de toCents: com vírgula = formato BR (ponto é separador de milhar),
+  // senão o "1.234,5" de formatQtyBR vira 1,234. Vários pontos sem vírgula também são milhar.
+  let raw = value.trim().replace(/\s/g, '');
+  if (raw.includes(',')) {
+    raw = raw.replace(/\./g, '').replace(',', '.');
+  } else if ((raw.match(/\./g) ?? []).length > 1) {
+    raw = raw.replace(/\./g, '');
+  }
   if (!raw || raw === '.' || raw === '-') return ZERO;
 
   const isNegative = raw.startsWith('-');

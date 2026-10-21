@@ -3,12 +3,17 @@ import type { BenchmarkCode } from '@/server/domain/enums';
 import { toCents } from '@/server/domain/money';
 import type { BenchmarkPoint } from './types';
 
-export const BCB_SGS_SERIES: Record<BenchmarkCode, number> = {
+// Ibovespa não entra: a série SGS 7 ("Bovespa - índice") parou em 30/09/2019 e responde 404
+// para datas recentes. Precisa de outra fonte (ver pendências da revisão da Fase 3).
+export const BCB_SGS_SERIES: Partial<Record<BenchmarkCode, number>> = {
   cdi: 12, // Taxa de juros - CDI (% ao dia)
   selic: 11, // Taxa de juros - Selic (% ao dia)
   ipca: 433, // IPCA - variação mensal (% ao mês)
-  ibov: 7, // Índice Bovespa - fechamento diário (pontos)
 };
+
+export const BCB_SGS_BENCHMARKS = ['cdi', 'selic', 'ipca'] as const satisfies readonly BenchmarkCode[];
+
+const BCB_TIMEOUT_MS = 20_000;
 
 export function formatDateBR(isoDate: string): string {
   const parts = isoDate.split('-');
@@ -31,10 +36,7 @@ const bcbSgsRowSchema = z.object({
   valor: z.string(),
 });
 
-export function parseBcbSgsResponse(
-  benchmark: BenchmarkCode,
-  rows: unknown,
-): BenchmarkPoint[] {
+export function parseBcbSgsResponse(benchmark: BenchmarkCode, rows: unknown): BenchmarkPoint[] {
   if (!Array.isArray(rows)) return [];
 
   const results: BenchmarkPoint[] = [];
@@ -94,7 +96,15 @@ export async function fetchBenchmarkSeries(
     headers: {
       Accept: 'application/json',
     },
+    signal: AbortSignal.timeout(BCB_TIMEOUT_MS),
   });
+
+  // O SGS responde 404 com {"erro":{"detail":"...Value(s) not found"}} quando o intervalo não tem
+  // dados (fim de semana, feriado, IPCA ainda não divulgado). Isso é "sem pontos", não falha.
+  if (res.status === 404) {
+    const body = await res.text().catch(() => '');
+    if (body.includes('Value(s) not found')) return [];
+  }
 
   if (!res.ok) {
     throw new Error(`Falha ao consultar BCB SGS série ${seriesId} (${benchmark}): HTTP ${res.status}`);

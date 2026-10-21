@@ -67,10 +67,10 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | A1-04 | Faturas e parcelas futuras | A | A1-03 | ✅ (PR #36) |
 | A1-05 | Natureza: transferências internas e pagamento de fatura | A | A1-03 | ✅ (PR #37) |
 | A1-06 | Categorização determinística (regras, memória, mapa da fonte) | A | F0-03 | ✅ |
-| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ⏸️ implementada e depois retirada pela A1-10 (IA fora do escopo por enquanto); ver MELHORIAS |
+| A1-07 | Categorização por IA (Claude) | A | A1-06, H-03 | ⏸️ retirada pela A1-10 (PR #56); para restaurar, ver MELHORIAS #16 |
 | A1-08 | Comandos completos (recategorizar com aprendizado etc.) | A | A1-06 | ✅ (PRs #20, #38) |
 | A1-09 | Jobs e agendamento | A | A1-03, A1-07 | ✅ (PR #39) |
-| A1-10 | Retirar a integração com a Claude API (categorização por IA e PDF via IA) | A | — | 🟡 Agente A |
+| A1-10 | Retirar a integração com a Claude API (categorização por IA e PDF via IA) | A | — | ✅ (PR #56) |
 
 ## Fase 1 — MVP · Trilha Interface · spec: [`tarefas/fase-1-interface.md`](./tarefas/fase-1-interface.md)
 
@@ -122,15 +122,15 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | B2-03b | Divisão de transação (`parent_transaction_id`) | B | B1-05, B2-03a (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #31, #32) |
 | B2-04 | Exportar CSV e busca global | B | B1-05 (**antecipada**, spec em [`tarefas/fase-2-interface.md`](./tarefas/fase-2-interface.md)) | ✅ (PRs #29, #30) |
 | P3-00 | Detalhar a Fase 3 | forte | Fase 2 | ✅ |
-| A3-01 | Schema de investimentos, aritmética de cotas e sincronização Pluggy | A | P3-00, A1-01, A1-03 (validação real: F0-07) | 🟡 Agente A — PR #49 em revisão |
-| A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) + job `prices-daily` | A | P3-00, A3-01 | 🟡 Agente A — PR #51 em revisão |
-| A3-03 | Rentabilidade (TWR mensal) e snapshots de patrimônio | A | P3-00, A3-01, A3-02 | 🟡 Agente A — PR #52 em revisão |
-| A3-04 | Posições manuais e proventos (backend + fixtures) | A | P3-00, A3-01 | 🟡 Agente A — PR #50 em revisão |
-| B3-01 | Tela de investimentos (`/investimentos`) | B | P3-00, A3-01 (curva TWR completa: A3-03) | 🟡 Agente B — PR #53 em revisão |
-| B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | 🟡 Agente B — PR #55 em revisão |
-| B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | 🟡 Agente B — PR #54 em revisão |
+| A3-01 | Schema de investimentos, aritmética de cotas e sincronização Pluggy | A | P3-00, A1-01, A1-03 (validação real: F0-07) | ✅ (PR #58) |
+| A3-02 | Cotações e índices (brapi, Tesouro, BCB, CoinGecko) + job `prices-daily` | A | P3-00, A3-01 | ✅ (PR #58) |
+| A3-03 | Rentabilidade (TWR mensal) e snapshots de patrimônio | A | P3-00, A3-01, A3-02 | ✅ (PR #58) |
+| A3-04 | Posições manuais e proventos (backend + fixtures) | A | P3-00, A3-01 | ✅ (PR #58) |
+| B3-01 | Tela de investimentos (`/investimentos`) | B | P3-00, A3-01 (curva TWR completa: A3-03) | ✅ (PR #58) |
+| B3-02 | Tela de patrimônio líquido (`/patrimonio`) | B | P3-00, A3-01, A3-03 | ✅ (PR #58) |
+| B3-03 | Telas de posições manuais e proventos | B | P3-00, B3-01, A3-04 | ✅ (PR #58) |
 | P4-00 | Detalhar a Fase 4 | forte | Fase 3 | ✅ |
-| A4-02 | Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas | A | P4-00 (iniciar primeiro; gera migration 0004) | ⬜ |
+| A4-02 | Limites de gasto por categoria e/ou forma de pagamento, orçamentos sugeridos e motor de alertas | A | P4-00 (iniciar primeiro; gera migration 0004) | 🟡 Agente A — PR #57 em revisão |
 | A4-01 | Detecção de recorrências e assinaturas | A | P4-00, A4-02 | ⬜ |
 | A4-03 | Projeção de fluxo de caixa | A | P4-00, A4-01 | ⬜ |
 | A4-04 | Perguntas em linguagem natural (Claude) | A | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
@@ -176,3 +176,4 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 
 - [A4-02/B4-01/B4-05] Nova feature pedida pelo usuário: limites e metas de gasto por categoria e/ou forma de pagamento, com avisos (80%/100%, ritmo) e notificações. Incluída no roadmap da Fase 4 (fases-2-a-5.md). Não depende do Pluggy: pode ser antecipada se o usuário decidir — Coordenador, 2026-10-20
 - [IA] Decisão do usuário: por enquanto o sistema não usa a Claude API. A categorização fica só em código (regras → memória → categoria da fonte → fila de revisão); a A1-10 retira a integração; A2-02 vira parser de PDF por banco (spec a refazer na P2-01); A2-04 usa o total da fatura do Pluggy; A4-04/B4-04 saem do escopo (ver MELHORIAS) — Coordenador, 2026-10-20
+- [Revisão Fase 3 #58] 🔴/🟠 corrigidos nos PRs #59 (cotações), #60 (telas), #61 (dados) e no commit 66ba635 (TWR). 🟢 restantes (detalhes nos PRs): Ibovespa sem fonte (SGS 7 encerrada; avaliar ^BVSP na brapi); cripto < R$ 1 perde precisão (contrato em centavos); reavaliação pelo Tesouro pode regredir a data de posições do Pluggy; falha parcial da brapi só em console.warn; CoinGecko Pro não suportado; datas de investimento cortadas em UTC; todas as posições do Meu Pluggy numa conta Investimentos; edição de posição manual altera ativo compartilhado; /investimentos ignora fora-dos-totais que /patrimonio respeita; filtro por instituição no TWR compara com totais globais — Coordenador, 2026-10-20
