@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { formatDateBR, parseBcbSgsResponse } from './bcb-sgs';
+import { fetchBenchmarkSeries, formatDateBR, parseBcbSgsResponse } from './bcb-sgs';
 
 describe('bcb-sgs provider', () => {
+  it('trata 404 "Value(s) not found" do SGS como intervalo sem pontos', async () => {
+    const body =
+      '{"erro":{"statusCode":404,"detail":"br.gov.bcb.pec.sgs.comum.excecoes.SGSNegocioException: Value(s) not found"}}';
+    const fetchFn = (async () => new Response(body, { status: 404 })) as unknown as typeof fetch;
+    await expect(fetchBenchmarkSeries('selic', '2026-10-17', '2026-10-18', { fetchFn })).resolves.toEqual([]);
+  });
+
   it('converte datas ISO para DD/MM/YYYY', () => {
     expect(formatDateBR('2026-10-20')).toBe('20/10/2026');
   });
