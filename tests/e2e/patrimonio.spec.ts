@@ -14,7 +14,7 @@ test.describe('Patrimônio líquido (B3-02)', () => {
 
     // Cards de resumo
     await expect(page.getByText('Patrimônio líquido', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('Total de ativos')).toBeVisible();
+    await expect(page.getByText('Total de ativos', { exact: true })).toBeVisible();
     await expect(page.getByText('Total de compromissos (dívidas)')).toBeVisible();
     await expect(page.getByText('Variação no mês / no ano')).toBeVisible();
 
