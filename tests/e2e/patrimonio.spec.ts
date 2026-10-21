@@ -8,7 +8,9 @@ test.beforeEach(async ({ page }) => {
 test.describe('Patrimônio líquido (B3-02)', () => {
   test.describe.configure({ timeout: 120_000 });
 
-  test('abre /patrimonio, exibe card de patrimônio líquido, gráfico de evolução e decomposição', async ({ page }) => {
+  test('abre /patrimonio, exibe card de patrimônio líquido, gráfico de evolução e decomposição', async ({
+    page,
+  }) => {
     await page.goto('/patrimonio');
     await expect(page.getByRole('heading', { name: 'Patrimônio líquido', level: 1 })).toBeVisible();
 

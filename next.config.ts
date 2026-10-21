@@ -9,7 +9,7 @@ const securityHeaders = [
     value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
   },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'Referrer-Policy', value: 'same-origin' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
   // HSTS só vale sobre HTTPS; em produção força o navegador a nunca usar HTTP.
   ...(process.env.NODE_ENV === 'production'
