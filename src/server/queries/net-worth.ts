@@ -221,7 +221,7 @@ export async function getNetWorthOverview(
 
   const currentMonthStart = monthStart(todayStr);
 
-  const monthlySeries: NetWorthMonthlyPoint[] = months.map((m) => {
+  const fullSeries: Array<NetWorthMonthlyPoint | null> = months.map((m) => {
     if (m === currentMonthStart) {
       return {
         month: m,
@@ -259,14 +259,14 @@ export async function getNetWorthOverview(
       };
     }
 
-    return {
-      month: m,
-      cashAccountsCents: 0,
-      investmentsCents: 0,
-      liabilitiesCents: 0,
-      netWorthCents: 0,
-    };
+    // Antes do primeiro snapshot não há histórico: o mês fica fora da série (não é patrimônio R$ 0)
+    return null;
   });
+
+  const firstWithData = fullSeries.findIndex((pt) => pt !== null);
+  const monthlySeries: NetWorthMonthlyPoint[] = fullSeries
+    .slice(firstWithData === -1 ? fullSeries.length : firstWithData)
+    .filter((pt): pt is NetWorthMonthlyPoint => pt !== null);
 
   // 4. Variação no mês e no ano
   // Mês anterior: penúltimo elemento de monthlySeries

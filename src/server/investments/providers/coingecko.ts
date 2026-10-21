@@ -3,6 +3,8 @@ import { today } from '@/server/domain/dates';
 import { toCents } from '@/server/domain/money';
 import type { QuoteResult } from './types';
 
+const COINGECKO_TIMEOUT_MS = 15_000;
+
 const coinGeckoResponseSchema = z.record(
   z.string(),
   z.object({
@@ -10,10 +12,7 @@ const coinGeckoResponseSchema = z.record(
   }),
 );
 
-export function parseCoinGeckoResponse(
-  data: unknown,
-  fallbackDate: string = today(),
-): QuoteResult[] {
+export function parseCoinGeckoResponse(data: unknown, fallbackDate: string = today()): QuoteResult[] {
   const parsed = coinGeckoResponseSchema.safeParse(data);
   if (!parsed.success) return [];
 
@@ -23,6 +22,9 @@ export function parseCoinGeckoResponse(
     if (val.brl == null || val.brl <= 0) continue;
     try {
       const priceCents = toCents(val.brl);
+      // Moedas abaixo de R$ 0,005 (ex.: shiba-inu ~2.5e-05) arredondam para 0 centavos e zerariam a
+      // posição; sem precisão no contrato (centavos), melhor não atualizar.
+      if (priceCents <= 0) continue;
       results.push({
         ticker: id,
         priceCents,
@@ -46,9 +48,9 @@ export async function fetchCryptoQuotes(
   coinIds: string[],
   options: CoinGeckoClientOptions = {},
 ): Promise<QuoteResult[]> {
-  const uniqueIds = Array.from(
-    new Set(coinIds.map((id) => id.trim().toLowerCase())),
-  ).filter((id) => id.length > 0);
+  const uniqueIds = Array.from(new Set(coinIds.map((id) => id.trim().toLowerCase()))).filter(
+    (id) => id.length > 0,
+  );
 
   if (uniqueIds.length === 0) return [];
 
@@ -65,7 +67,7 @@ export async function fetchCryptoQuotes(
     headers['x-cg-demo-api-key'] = apiKey;
   }
 
-  const res = await fetchFn(url, { headers });
+  const res = await fetchFn(url, { headers, signal: AbortSignal.timeout(COINGECKO_TIMEOUT_MS) });
   if (!res.ok) {
     throw new Error(`Falha ao consultar CoinGecko: HTTP ${res.status}`);
   }
