@@ -9,13 +9,8 @@ import { Money, Sensitive } from '@/components/format/money';
 import { formatShare } from '@/components/charts/format';
 import { formatBRL } from '@/server/domain/money';
 
-export type DonutSlice = {
-  key: string;
-  label: string;
-  color: string;
-  totalCents: number;
-  href: string | null;
-};
+import { type DonutSlice } from '@/components/charts/breakdown-donut';
+export type { DonutSlice };
 
 type CategoryDonutProps = {
   slices: DonutSlice[];
