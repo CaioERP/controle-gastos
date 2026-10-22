@@ -482,6 +482,7 @@ Seed completo na tarefa F0-03.
 | entity_id | uuid null | ID da entidade relacionada |
 | channel | enum `NOTIFICATION_CHANNELS` | canal de destino (`'in_app'`, `'telegram'`, `'push'`, `'email'`); default `'in_app'` |
 | read_at | timestamptz null | data/hora em que foi marcada como lida; `null` = não lida |
+| push_sent_at | timestamptz null | data/hora em que a notificação foi enviada via push; `null` = pendente de envio |
 | fingerprint | text null | hash ou chave idempotente única (ex.: `"limit:<id>:2026-10:t:80"`); impede duplicações em reprocessamento |
 
 Índices: `unique(fingerprint) where fingerprint is not null`, `(read_at, created_at)`.
@@ -495,6 +496,17 @@ Seed completo na tarefa F0-03.
 | email | boolean not null | envio por e-mail (futuro); default `false` |
 | push | boolean not null | notificação push PWA (Fase 5); default `false` |
 | telegram | boolean not null | bot Telegram (Melhorias #1); default `false` |
+
+### `push_subscriptions` — inscrições de push dos aparelhos (Fase 6, gerado na A6-04)
+| Coluna | Tipo | Observação |
+|---|---|---|
+| id | uuid PK | `defaultRandom()` |
+| endpoint | text not null | URL única da inscrição retornada pelo PushManager; unique `(endpoint)` |
+| p256dh | text not null | chave pública do cliente Web Push |
+| auth | text not null | segredo de autenticação do cliente Web Push |
+| device_label | text null | identificador amigável informado pelo navegador (ex.: "iPhone", "Chrome no Windows") |
+| last_success_at | timestamptz null | data/hora do último envio de push com sucesso |
+| created_at / updated_at | timestamptz not null | timestamps |
 
 ### Tabelas de fases futuras
 Definidas no início da fase, como mudança de contrato aditiva:
@@ -680,6 +692,11 @@ markAllNotificationsRead(): Promise<{ updated: number }>;
 updateNotificationPreferences(input: { preferences: Array<{ type: NotificationType; enabled: boolean; inApp?: boolean; telegram?: boolean }> }): Promise<void>;
 askNaturalLanguage(input: { question: string; history?: Array<{ role: 'user' | 'assistant'; content: string }> }): Promise<AskResult>;
 
+// Notificações push (Fase 6 — A6-04) — src/server/commands/
+savePushSubscription(input: { endpoint: string; keys: { p256dh: string; auth: string }; deviceLabel?: string }): Promise<void>;
+deletePushSubscription(input: { endpoint: string } | string): Promise<void>;
+sendTestPush(): Promise<{ sent: number }>;
+
 type RuleInput = {
   id?: string;
   priority: number;
@@ -746,3 +763,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-20 | Coordenador | A1-10 | IA desligada por decisão do usuário: `ANTHROPIC_API_KEY` sai do env na A1-10; o valor `'llm'` de `CATEGORY_SOURCES` é mantido por compatibilidade (remover quebraria o contrato) |
 | 2026-10-21 | Agente A | A4-02 | Migration 0004 gerada e aplicada (`spending_limits`, `spending_limit_dispatches`, `recurrences`, `notifications`, `notification_preferences`) e implementação do motor de limites e alertas |
 | 2026-10-21 | Coordenador | Fase 6 | Pastas novas do Agente A: `src/server/home/` (leituras do Início com regra de negócio) e `src/server/push/`. Especificação da tabela `push_subscriptions` e da coluna `notifications.push_sent_at` (aditivo; migration gerada na A6-04) |
+| 2026-10-21 | Agente A | A6-04 | Migration 0005 gerada e aplicada (`push_subscriptions` e `notifications.push_sent_at`) |
