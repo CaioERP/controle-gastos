@@ -70,7 +70,7 @@ Onda 4                                            │  B6-08 push (interface)
 | B6-01 | Estrutura do Início: abas na URL, faixa "Precisa de você", filtros enxutos, título "Início" | B | A6-01 | 🟡 Agente B — PR #84 em revisão |
 | B6-02 | Rosca e barras com toggle Categoria / Forma de pagamento; detalhe de "Outras"; legenda curta no celular | B | — | 🟡 Agente B — PR #78 em revisão |
 | B6-03 | Aba Conta (passa a ser a aba padrão) | B | A6-02, A6-03, B6-01, B6-02 | ⬜ |
-| B6-04 | Aba Cartões | B | B6-01, B6-02 | 🟡 Agente B |
+| B6-04 | Aba Cartões | B | B6-01, B6-02 | 🟡 Agente B — PR #85 em revisão |
 | B6-05 | Aba Visão geral: gráfico de ritmo, card de metas, versão do celular, metas nas fixtures | B | A6-01, A6-02, B6-01, B6-02 | ⬜ |
 | B6-06 | Barra de navegação inferior no celular (substitui o ☰) | B | — | 🟡 Agente B — PR #79 em revisão |
 | B6-07 | PWA: manifest, ícones, service worker só com a tela "Sem conexão" | B | — | 🟡 Agente B — PR #82 em revisão |
