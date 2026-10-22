@@ -692,6 +692,11 @@ markAllNotificationsRead(): Promise<{ updated: number }>;
 updateNotificationPreferences(input: { preferences: Array<{ type: NotificationType; enabled: boolean; inApp?: boolean; telegram?: boolean }> }): Promise<void>;
 askNaturalLanguage(input: { question: string; history?: Array<{ role: 'user' | 'assistant'; content: string }> }): Promise<AskResult>;
 
+// Notificações push (Fase 6 — A6-04) — src/server/commands/
+savePushSubscription(input: { endpoint: string; keys: { p256dh: string; auth: string }; deviceLabel?: string }): Promise<void>;
+deletePushSubscription(input: { endpoint: string } | string): Promise<void>;
+sendTestPush(): Promise<{ sent: number }>;
+
 type RuleInput = {
   id?: string;
   priority: number;
