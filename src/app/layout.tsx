@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import { PRIVACY_INIT_SCRIPT } from '@/components/layout/privacy-script';
+import { SwRegister } from '@/components/layout/sw-register';
 import './globals.css';
 
 const geistSans = Geist({
@@ -19,6 +20,14 @@ export const metadata: Metadata = {
   description: 'Controle pessoal de gastos, contas, faturas e investimentos',
 };
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#18181b' },
+  ],
+  viewportFit: 'cover',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,7 +39,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: PRIVACY_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <SwRegister />
+        </Providers>
       </body>
     </html>
   );
