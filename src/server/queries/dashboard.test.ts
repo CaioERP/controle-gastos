@@ -263,5 +263,12 @@ describe('queries / dashboard', () => {
     it('sem sobra → sem "Outras"', () => {
       expect(topWithOthers([item('a', 1), item('b', 2)], 7).map((t) => t.key)).toEqual(['b', 'a']);
     });
+
+    it('outras devolve itens agrupados em grouped, ordenados de forma decrescente', () => {
+      const items = [item('a', 500), item('b', 400), item('c', 100), item('d', 300), item('e', -50)];
+      const top = topWithOthers(items, 2);
+      expect(top[2]!.isOthers).toBe(true);
+      expect(top[2]!.grouped).toEqual([item('d', 300), item('c', 100), item('e', -50)]);
+    });
   });
 });
