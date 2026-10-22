@@ -2,76 +2,43 @@ import Link from 'next/link';
 import { PlugZap } from 'lucide-react';
 import { getDb } from '@/server/db/client';
 import { getAccountsOverview } from '@/server/queries/accounts';
-import { getBreakdown } from '@/server/queries/breakdown';
-import { listCategories, listTags } from '@/server/queries/catalog';
-import { getDashboardKpis, topWithOthers } from '@/server/queries/dashboard';
-import { getMonthlySeries } from '@/server/queries/monthly';
-import { previousPeriodLabel } from '@/server/queries/period-label';
-import { categoryDimensionFor, trailingMonthsRange } from '@/server/queries/stats';
-import { getReviewCount } from '@/server/queries/transactions';
-import { getLimitsOverview } from '@/server/queries/limits';
-import { parseFilters } from '@/server/queries/url-filters';
-import { FilterBar } from '@/components/filters';
+import { getAttentionItems } from '@/server/home/attention';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
 import { buttonVariants } from '@/components/ui/button';
-import { accountsTotals, categoryTransactionsHref, parentCategoryIds, paymentMethodTransactionsHref } from '@/components/charts/links';
-import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
-import { SectionCard } from '@/components/charts/section-card';
-import { KpiCard } from '@/components/dashboard/kpi-card';
-import { BreakdownDonut } from '@/components/charts/breakdown-donut';
-import { PaymentMethodBars } from '@/components/dashboard/payment-method-bars';
-import { MonthlyStacked } from '@/components/dashboard/monthly-stacked';
-import { TopMerchants, topMerchants } from '@/components/dashboard/top-merchants';
-import { UpcomingInvoices } from '@/components/dashboard/upcoming-invoices';
-import { ReviewCallout } from '@/components/dashboard/review-callout';
-import { DashboardLimitsWidget } from '@/components/limits/dashboard-limits-widget';
+import { AttentionStrip } from '@/components/home/attention-strip';
+import { HomeTabs, type HomeTab } from '@/components/home/home-tabs';
+import { OverviewTab } from '@/components/home/tabs/overview-tab';
+import { AccountTab } from '@/components/home/tabs/account-tab';
+import { CardsTab } from '@/components/home/tabs/cards-tab';
 
 export const dynamic = 'force-dynamic';
 
+const DEFAULT_TAB: HomeTab = 'geral';
+
+const VALID_TABS = new Set<HomeTab>(['conta', 'cartoes', 'geral']);
+
+function isValidTab(tab: unknown): tab is HomeTab {
+  return typeof tab === 'string' && VALID_TABS.has(tab as HomeTab);
+}
+
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-export default async function DashboardPage({ searchParams }: Props) {
+export default async function HomePage({ searchParams }: Props) {
   const sp = await searchParams;
-  const filters = parseFilters(sp);
-  const rawRosca = Array.isArray(sp.rosca) ? sp.rosca[0] : sp.rosca;
-  const roscaMode = rawRosca === 'forma' ? 'forma' : 'categoria';
-  const rawBarras = Array.isArray(sp.barras) ? sp.barras[0] : sp.barras;
-  const barrasMode = rawBarras === 'categoria' ? 'categoria' : 'forma';
+  const rawTab = typeof sp.aba === 'string' ? sp.aba : undefined;
+  const tab: HomeTab = isValidTab(rawTab) ? rawTab : DEFAULT_TAB;
 
-  // Com `cat` na URL, a rosca quebra por categoria exata para o link não ampliar o filtro.
-  const catDim = categoryDimensionFor(filters);
   const db = getDb();
-
-  const overviewPromise = getAccountsOverview(db);
-  const [
-    overview,
-    kpis,
-    categories,
-    tags,
-    byCategory,
-    byPaymentMethod,
-    byMerchant,
-    monthly,
-    reviewCount,
-    limitsOverview,
-  ] = await Promise.all([
-    overviewPromise,
-    overviewPromise.then((o) => getDashboardKpis(db, filters, { overview: o })),
-    listCategories(db),
-    listTags(db),
-    getBreakdown(db, filters, catDim),
-    getBreakdown(db, filters, 'paymentMethod'),
-    getBreakdown(db, filters, 'merchant'),
-    getMonthlySeries(db, { ...filters, ...trailingMonthsRange(filters, 6) }, 'parentCategory', { top: 6 }),
-    getReviewCount(db),
-    getLimitsOverview(db),
+  const [overview, attention] = await Promise.all([
+    getAccountsOverview(db),
+    getAttentionItems(db),
   ]);
 
   if (overview.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Dashboard" description="Visão consolidada dos seus gastos." />
+        <PageHeader title="Início" description="Visão consolidada das suas finanças." />
         <EmptyState
           icon={PlugZap}
           title="Conecte seu primeiro banco"
@@ -86,143 +53,18 @@ export default async function DashboardPage({ searchParams }: Props) {
     );
   }
 
-  const prevLabel = previousPeriodLabel(filters);
-  const totalCents = kpis.expenseCents;
-  const { totalsAccountIds, hasExcluded } = accountsTotals(overview);
-  const linkOpts = {
-    ...(catDim === 'category' ? { parentIds: parentCategoryIds(categories) } : {}),
-    ...(hasExcluded ? { totalsAccountIds } : {}),
-  };
-
-  const categorySlicesDesktop = topWithOthers(byCategory, 7).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.key === 'outras' ? null : categoryTransactionsHref(filters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
-  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.key === 'outras' ? null : categoryTransactionsHref(filters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
-  const paymentMethodLinkOpts = hasExcluded ? { totalsAccountIds } : undefined;
-
-  const paymentMethodSlicesDesktop = topWithOthers(byPaymentMethod, 7).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.key === 'outras' ? null : paymentMethodTransactionsHref(filters, item.key, paymentMethodLinkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
-  const paymentMethodSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.key === 'outras' ? null : paymentMethodTransactionsHref(filters, item.key, paymentMethodLinkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
   return (
-    <div className="space-y-6">
-      <FilterBar accounts={overview} categories={categories} tags={tags} />
-      <PageHeader title="Dashboard" description="Visão consolidada do período, por categoria e forma de pagamento." />
-
-      <section aria-label="Indicadores" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard
-          title="Gastos"
-          cents={kpis.expenseCents}
-          variation={{
-            current: kpis.expenseCents,
-            previous: kpis.previousExpenseCents,
-            previousLabel: prevLabel,
-            increaseIsBad: true,
-          }}
-        />
-        <KpiCard
-          title="Receitas"
-          cents={kpis.incomeCents}
-          variation={{
-            current: kpis.incomeCents,
-            previous: kpis.previousIncomeCents,
-            previousLabel: prevLabel,
-            increaseIsBad: false,
-          }}
-        />
-        <KpiCard title="Saldo do período" cents={kpis.netCents} colored hint="Receitas − gastos" />
-        <KpiCard
-          title="Saldo em contas"
-          cents={kpis.balanceCents}
-          hint={`${kpis.institutionCount} ${kpis.institutionCount === 1 ? 'instituição' : 'instituições'} · situação atual`}
-        />
-        <KpiCard
-          title="Faturas abertas"
-          cents={kpis.openInvoicesCents}
-          hint={`${kpis.cardCount} ${kpis.cardCount === 1 ? 'cartão' : 'cartões'} · situação atual`}
-        />
-        <KpiCard
-          title="Parcelas futuras"
-          cents={kpis.futureInstallmentsCents}
-          hint="Próximos 12 meses · independe do período"
-        />
-      </section>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BreakdownDonut
-          title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
-          description="Clique para ver as transações."
-          mode={roscaMode}
-          byCategory={categorySlicesDesktop}
-          byCategoryMobile={categorySlicesMobile}
-          byPaymentMethod={paymentMethodSlicesDesktop}
-          byPaymentMethodMobile={paymentMethodSlicesMobile}
-          totalCents={totalCents}
-        />
-        <PaymentMethodBars
-          mode={barrasMode}
-          byPaymentMethod={byPaymentMethod}
-          byCategory={byCategory}
-          totalCents={totalCents}
-          filters={filters}
-          totalsAccountIds={hasExcluded ? totalsAccountIds : undefined}
-          parentIds={catDim === 'category' ? parentCategoryIds(categories) : undefined}
-        />
-      </div>
-
-      <SectionCard title="Evolução mensal" description="Últimos 6 meses, empilhado por categoria.">
-        <MonthlyStacked series={monthly} />
-      </SectionCard>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <DashboardLimitsWidget overview={limitsOverview} />
-        <SectionCard title="Top 5 estabelecimentos">
-          <TopMerchants items={topMerchants(byMerchant, 5)} />
-        </SectionCard>
-        <SectionCard
-          title="Próximas faturas"
-          action={
-            <Link href="/faturas" className="text-xs text-muted-foreground underline-offset-4 hover:underline">
-              Ver faturas
-            </Link>
-          }
-        >
-          <UpcomingInvoices invoices={kpis.upcomingInvoices} />
-        </SectionCard>
-        <ReviewCallout count={reviewCount} />
-      </div>
+    <div className="space-y-4 md:space-y-6">
+      <PageHeader
+        title="Início"
+        description="Visão consolidada do período, por categoria e forma de pagamento."
+        className="hidden md:block"
+      />
+      <AttentionStrip items={attention} />
+      <HomeTabs active={tab} />
+      {tab === 'geral' && <OverviewTab searchParams={sp} />}
+      {tab === 'conta' && <AccountTab searchParams={sp} />}
+      {tab === 'cartoes' && <CardsTab searchParams={sp} />}
     </div>
   );
 }

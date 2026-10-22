@@ -14,7 +14,7 @@ async function expandNavGroups(page: Page, scope: string) {
 }
 
 const routes = [
-  { href: '/', title: 'Dashboard' },
+  { href: '/', title: 'Início' },
   { href: '/transacoes', title: 'Transações' },
   { href: '/analise', title: 'Análise' },
   { href: '/contas', title: 'Contas e cartões' },
@@ -29,7 +29,7 @@ test.describe('Navegação Desktop', () => {
 
   test('abre dashboard e navega por todas as rotas pelo menu lateral', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toHaveText('Dashboard');
+    await expect(page.locator('h1')).toHaveText('Início');
 
     for (const route of routes.slice(1)) {
       await expandNavGroups(page, 'aside');
@@ -45,7 +45,7 @@ test.describe('Navegação Mobile', () => {
 
   test('abre menu deslizante e navega pelas rotas sem overflow horizontal', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toHaveText('Dashboard');
+    await expect(page.locator('h1')).toHaveText('Início');
 
     // Verifica que não há rolagem horizontal
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -71,7 +71,7 @@ test('aplica a fonte Geist (e não a fonte padrão do navegador)', async ({ page
 
 test('busca global (Ctrl+K) abre a busca e navega para tela ao pressionar Enter', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('h1')).toHaveText('Dashboard');
+  await expect(page.locator('h1')).toHaveText('Início');
 
   // Abre com Ctrl+K
   await page.keyboard.press('Control+k');

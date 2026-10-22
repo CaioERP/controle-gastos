@@ -40,7 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: null,
     defaultOpen: true,
     items: [
-      { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/', label: 'Início', icon: LayoutDashboard },
       { href: '/transacoes', label: 'Transações', icon: ListOrdered },
       { href: '/revisao', label: 'Revisão', icon: Inbox },
       { href: '/analise', label: 'Análise', icon: PieChart },

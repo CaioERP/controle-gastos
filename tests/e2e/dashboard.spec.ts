@@ -11,7 +11,10 @@ test.describe('Dashboard', () => {
 
   test('carrega com os dados fictícios e mostra os KPIs em R$', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
+
+    // Passo de fumaça da estrutura de abas: clicar em "Visão geral" e ver o card "Gastos"
+    await page.getByRole('link', { name: /Visão geral/i }).click();
 
     const gastos = page.getByTestId('kpi-gastos');
     await expect(gastos).toBeVisible();
