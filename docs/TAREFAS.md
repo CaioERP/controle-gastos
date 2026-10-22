@@ -64,11 +64,11 @@ Onda 4                                            │  B6-08 push (interface)
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
 | A6-01 | Resumo das metas mensais (card de metas) e itens de "Precisa de você" (`src/server/home/`) | A | — | 🟡 Agente A — PR #77 em revisão |
-| A6-02 | Ritmo de gastos do mês e "Livre para gastar" | A | — | ⬜ |
+| A6-02 | Ritmo de gastos do mês e "Livre para gastar" | A | — | 🟡 Agente A |
 | A6-03 | Dados da aba Conta: saldo diário reconstruído (90 dias), previsão até o fim do mês, entradas e saídas | A | A6-02 | ⬜ |
 | A6-04 | Notificações push, dados: `push_subscriptions`, chaves VAPID, envio com `web-push` depois dos jobs | A | — | ⬜ |
 | B6-01 | Estrutura do Início: abas na URL, faixa "Precisa de você", filtros enxutos, título "Início" | B | A6-01 | ⬜ |
-| B6-02 | Rosca e barras com toggle Categoria / Forma de pagamento; detalhe de "Outras"; legenda curta no celular | B | — | 🟡 Agente B (em andamento) |
+| B6-02 | Rosca e barras com toggle Categoria / Forma de pagamento; detalhe de "Outras"; legenda curta no celular | B | — | 🟡 Agente B — PR #78 em revisão |
 | B6-03 | Aba Conta (passa a ser a aba padrão) | B | A6-02, A6-03, B6-01, B6-02 | ⬜ |
 | B6-04 | Aba Cartões | B | B6-01, B6-02 | ⬜ |
 | B6-05 | Aba Visão geral: gráfico de ritmo, card de metas, versão do celular, metas nas fixtures | B | A6-01, A6-02, B6-01, B6-02 | ⬜ |
