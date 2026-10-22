@@ -76,5 +76,13 @@ describe('notifications queries', () => {
     const t80 = prefs.find((p) => p.type === 'threshold_80');
     expect(t80).toBeDefined();
     expect(t80?.enabled).toBe(true);
+    expect(t80?.push).toBe(false);
+
+    // Critério de aceite: Push ligado por padrão em sync_error e consent_expiring
+    const syncErr = prefs.find((p) => p.type === 'sync_error');
+    expect(syncErr?.push).toBe(true);
+
+    const consentExp = prefs.find((p) => p.type === 'consent_expiring');
+    expect(consentExp?.push).toBe(true);
   });
 });
