@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import { PRIVACY_INIT_SCRIPT } from '@/components/layout/privacy-script';
@@ -17,6 +17,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Controle de Gastos',
   description: 'Controle pessoal de gastos, contas, faturas e investimentos',
+};
+
+export const viewport: Viewport = {
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
