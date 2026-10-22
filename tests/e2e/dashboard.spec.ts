@@ -59,6 +59,13 @@ test.describe('Dashboard', () => {
     await expect(page).toHaveURL(/\/transacoes\?.*forma=/);
   });
 
+  test('aba Cartões mostra faturas abertas, cartões e parcelas futuras', async ({ page }) => {
+    await page.goto('/?aba=cartoes');
+    await expect(page.getByText('Faturas abertas')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Cartões de crédito' })).toBeVisible();
+    await expect(page.getByText('Gastos no cartão')).toBeVisible();
+  });
+
   test('legível em 390 px: os cards empilham sem rolagem horizontal', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');

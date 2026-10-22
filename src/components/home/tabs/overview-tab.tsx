@@ -172,13 +172,13 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
           totalCents={totalCents}
         />
         <PaymentMethodBars
-          items={byPaymentMethod}
-          byCategoryItems={byCategory}
+          byPaymentMethod={byPaymentMethod}
+          byCategory={byCategory}
           mode={barrasMode}
           totalCents={totalCents}
           filters={filters}
           totalsAccountIds={hasExcluded ? totalsAccountIds : undefined}
-          categories={categories}
+          parentIds={catDim === 'category' ? parentCategoryIds(categories) : undefined}
         />
       </div>
 

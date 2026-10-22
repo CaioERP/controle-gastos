@@ -1,21 +1,166 @@
 import * as React from 'react';
 import { CreditCard } from 'lucide-react';
+import { getDb } from '@/server/db/client';
+import { getAccountsOverview } from '@/server/queries/accounts';
+import { creditCardAccountIds } from '@/server/home/accounts';
+import { summarizeAccounts, topWithOthers } from '@/server/queries/dashboard';
+import { getFutureInstallments } from '@/server/queries/installments';
+import { getBreakdown } from '@/server/queries/breakdown';
+import { listCategories } from '@/server/queries/catalog';
+import { categoryDimensionFor } from '@/server/queries/stats';
+import { parseFilters } from '@/server/queries/url-filters';
+import { today } from '@/server/domain/dates';
+import {
+  accountsTotals,
+  categoryTransactionsHref,
+  parentCategoryIds,
+  paymentMethodTransactionsHref,
+} from '@/components/charts/links';
+import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
 import { PeriodOnlyBar } from '@/components/home/period-only-bar';
+import { InvoicesHero } from '@/components/home/cards/invoices-hero';
+import { CardTile, type CardTileAccount } from '@/components/home/cards/card-tile';
+import { FutureInstallmentsChart } from '@/components/invoices/future-installments-chart';
+import { fillInstallmentMonths } from '@/components/invoices/invoice-summary';
+import { BreakdownDonut } from '@/components/charts/breakdown-donut';
 import { EmptyState } from '@/components/states/empty-state';
 
 export type CardsTabProps = {
   searchParams?: Record<string, string | string[] | undefined>;
 };
 
-export async function CardsTab(props: CardsTabProps = {}) {
-  void props;
+export async function CardsTab({ searchParams = {} }: CardsTabProps) {
+  const filters = parseFilters(searchParams);
+  const rawRosca = Array.isArray(searchParams.rosca) ? searchParams.rosca[0] : searchParams.rosca;
+  const roscaMode = rawRosca === 'forma' ? 'forma' : 'categoria';
+  const catDim = categoryDimensionFor(filters);
+
+  const db = getDb();
+  const overview = await getAccountsOverview(db);
+
+  const cardAccountIds = creditCardAccountIds(overview);
+  const cardAccounts: CardTileAccount[] = [];
+
+  for (const inst of overview) {
+    for (const acc of inst.accounts) {
+      if (acc.type === 'credit_card' && acc.includeInTotals && !acc.isHidden) {
+        cardAccounts.push({
+          id: acc.id,
+          name: acc.name,
+          displayName: acc.displayName,
+          institution: {
+            id: inst.institution.id,
+            name: inst.institution.name,
+            color: inst.institution.color,
+          },
+          credit: acc.credit,
+        });
+      }
+    }
+  }
+
+  if (cardAccounts.length === 0) {
+    return (
+      <div className="space-y-4">
+        <PeriodOnlyBar />
+        <EmptyState
+          icon={CreditCard}
+          title="Nenhum cartão conectado"
+          description="Assim que houver um cartão de crédito conectado, suas faturas, limites e parcelas aparecem aqui."
+        />
+      </div>
+    );
+  }
+
+  const [categories, futureInstallmentsRaw, byCategory, byPaymentMethod] = await Promise.all([
+    listCategories(db),
+    getFutureInstallments(db, { accountIds: cardAccountIds }),
+    getBreakdown(db, { ...filters, accountIds: cardAccountIds }, catDim),
+    getBreakdown(db, { ...filters, accountIds: cardAccountIds }, 'paymentMethod'),
+  ]);
+
+  const snapshot = summarizeAccounts(overview);
+  const filledInstallments = fillInstallmentMonths(futureInstallmentsRaw, today());
+
+  const { totalsAccountIds, hasExcluded } = accountsTotals(overview);
+  const linkOpts = {
+    ...(catDim === 'category' ? { parentIds: parentCategoryIds(categories) } : {}),
+    ...(hasExcluded ? { totalsAccountIds } : {}),
+  };
+
+  const totalCents = byCategory.reduce((acc, c) => acc + c.totalCents, 0);
+
+  const categorySlices = topWithOthers(byCategory, 7).map((item, i) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
+    totalCents: item.totalCents,
+    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
+    totalCents: item.totalCents,
+    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+
+  const pmSlices = topWithOthers(byPaymentMethod, 7).map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
+    totalCents: item.totalCents,
+    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+  const pmSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
+    totalCents: item.totalCents,
+    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PeriodOnlyBar />
-      <EmptyState
-        icon={CreditCard}
-        title="Em breve"
-        description="A visão detalhada de cartões e faturas estará disponível em breve."
+
+      <InvoicesHero
+        openInvoicesCents={snapshot.openInvoicesCents}
+        upcomingInvoices={snapshot.upcomingInvoices}
+      />
+
+      <section aria-label="Cartões de crédito">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {cardAccounts.map((account) => (
+            <CardTile key={account.id} account={account} />
+          ))}
+        </div>
+      </section>
+
+      <FutureInstallmentsChart
+        card={filledInstallments}
+        all={filledInstallments}
+        cardName="Todos os cartões"
+        cardColor="#3B82F6"
+      />
+
+      <BreakdownDonut
+        title="Gastos no cartão"
+        description="Clique para ver os lançamentos no período."
+        mode={roscaMode}
+        byCategory={categorySlices}
+        byPaymentMethod={pmSlices}
+        byCategoryMobile={categorySlicesMobile}
+        byPaymentMethodMobile={pmSlicesMobile}
+        totalCents={totalCents}
       />
     </div>
   );
