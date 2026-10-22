@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
+import { monthEnd, monthStart } from '@/server/domain/dates';
 import {
   accounts,
   assetPrices,
@@ -285,8 +286,8 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
     });
 
     // 9. Metas de exemplo por categoria para o card de metas (B6-05)
-    const monthStartStr = `${opts.referenceDate.slice(0, 7)}-01`;
-    const monthEndStr = `${opts.referenceDate.slice(0, 7)}-31`;
+    const monthStartStr = monthStart(opts.referenceDate);
+    const monthEndStr = monthEnd(opts.referenceDate);
 
     const catSlugs = [
       { slug: 'alimentacao', name: 'Alimentação', ratio: 0.85 }, // > 100% (estourada)

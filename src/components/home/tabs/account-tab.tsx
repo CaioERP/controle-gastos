@@ -52,14 +52,16 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
     );
   }
 
+  // Lista, rosca e links só com as contas de caixa, para a lista de transações bater com a fatia.
+  const accountFilters = { ...filters, accountIds: tab.accountIds };
   const [freeToSpend, txList, categories, tags, byCategory, byPaymentMethod, overview] =
     await Promise.all([
       getFreeToSpend(db),
-      listTransactions(db, { ...filters, accountIds: tab.accountIds }, { limit: 5 }),
+      listTransactions(db, accountFilters, { limit: 5 }),
       listCategories(db),
       listTags(db),
-      getBreakdown(db, { ...filters, accountIds: tab.accountIds }, catDim),
-      getBreakdown(db, { ...filters, accountIds: tab.accountIds }, 'paymentMethod'),
+      getBreakdown(db, accountFilters, catDim),
+      getBreakdown(db, accountFilters, 'paymentMethod'),
       getAccountsOverview(db),
     ]);
 
@@ -76,7 +78,7 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : categoryTransactionsHref(accountFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));
@@ -85,7 +87,7 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : categoryTransactionsHref(accountFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));
@@ -95,7 +97,7 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : paymentMethodTransactionsHref(accountFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));
@@ -104,7 +106,7 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : paymentMethodTransactionsHref(accountFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));

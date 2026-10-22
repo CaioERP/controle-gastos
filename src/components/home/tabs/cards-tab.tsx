@@ -72,11 +72,13 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
     );
   }
 
+  // Rosca e links só com os cartões, para a lista de transações bater com a fatia.
+  const cardFilters = { ...filters, accountIds: cardAccountIds };
   const [categories, futureInstallmentsRaw, byCategory, byPaymentMethod] = await Promise.all([
     listCategories(db),
     getFutureInstallments(db, { accountIds: cardAccountIds }),
-    getBreakdown(db, { ...filters, accountIds: cardAccountIds }, catDim),
-    getBreakdown(db, { ...filters, accountIds: cardAccountIds }, 'paymentMethod'),
+    getBreakdown(db, cardFilters, catDim),
+    getBreakdown(db, cardFilters, 'paymentMethod'),
   ]);
 
   const snapshot = summarizeAccounts(overview);
@@ -95,7 +97,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : categoryTransactionsHref(cardFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));
@@ -104,7 +106,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : categoryTransactionsHref(cardFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));
@@ -114,7 +116,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : paymentMethodTransactionsHref(cardFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));
@@ -123,7 +125,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
     totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : paymentMethodTransactionsHref(cardFilters, item.key, linkOpts),
     isOthers: item.isOthers,
     grouped: item.grouped,
   }));

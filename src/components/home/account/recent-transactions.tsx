@@ -7,6 +7,10 @@ import { ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TransactionRow } from '@/components/transactions/transaction-row';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
+import type { RecategorizeHandler } from '@/components/transactions/category-cell';
+import { pluralTransactions } from '@/components/transactions/tx-utils';
+import { recategorizeAction } from '@/app/(app)/transacoes/actions';
+import { toast } from 'sonner';
 import type { CategoryTree, TagWithCount } from '@/server/queries/catalog';
 import type { TransactionRow as Tx } from '@/server/queries/transaction-row';
 import { withFilters } from '@/server/queries/url-filters';
@@ -45,6 +49,20 @@ export function RecentTransactions({
     setSelectedTx(null);
   }, [router]);
 
+  const handleRecategorize = React.useCallback<RecategorizeHandler>(
+    (tx, cat, scope) => {
+      void recategorizeAction({ transactionId: tx.id, categoryId: cat.id, scope }).then((res) => {
+        if (!res.ok) {
+          toast.error(res.error.message);
+          return;
+        }
+        toast.success(`Categoria atualizada em ${pluralTransactions(res.data.updated)}`);
+        router.refresh();
+      });
+    },
+    [router],
+  );
+
   const viewAllHref = withFilters('/transacoes', { accountIds }, filters);
 
   return (
@@ -69,7 +87,7 @@ export function RecentTransactions({
                   tx={tx}
                   categories={categories}
                   onOpen={handleOpen}
-                  onRecategorize={() => {}}
+                  onRecategorize={handleRecategorize}
                 />
               ))}
             </ul>
