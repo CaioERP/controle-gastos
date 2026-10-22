@@ -17,6 +17,9 @@ const envSchema = z.object({
   SCHEDULER_ENABLED: z.string().optional().transform((v) => v !== 'false'),
   CRON_SECRET: optional,
   PLUGGY_WEBHOOK_SECRET: optional,
+  VAPID_PUBLIC_KEY: optional,
+  VAPID_PRIVATE_KEY: optional,
+  VAPID_SUBJECT: optional,
 });
 
 export type Env = z.infer<typeof envSchema>;

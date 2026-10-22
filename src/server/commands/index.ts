@@ -13,5 +13,6 @@ export * from './investments';
 export * from './limits';
 export * from './notifications';
 export * from './recurrences';
+export * from './push';
 
 
