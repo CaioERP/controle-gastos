@@ -66,7 +66,7 @@ Onda 4                                            │  B6-08 push (interface)
 | A6-01 | Resumo das metas mensais (card de metas) e itens de "Precisa de você" (`src/server/home/`) | A | — | 🟡 Agente A — PR #77 em revisão |
 | A6-02 | Ritmo de gastos do mês e "Livre para gastar" | A | — | 🟡 Agente A — PR #80 em revisão |
 | A6-03 | Dados da aba Conta: saldo diário reconstruído (90 dias), previsão até o fim do mês, entradas e saídas | A | A6-02 | 🟡 Agente A — PR #81 em revisão |
-| A6-04 | Notificações push, dados: `push_subscriptions`, chaves VAPID, envio com `web-push` depois dos jobs | A | — | ⬜ |
+| A6-04 | Notificações push, dados: `push_subscriptions`, chaves VAPID, envio com `web-push` depois dos jobs | A | — | 🟡 Agente A |
 | B6-01 | Estrutura do Início: abas na URL, faixa "Precisa de você", filtros enxutos, título "Início" | B | A6-01 | ⬜ |
 | B6-02 | Rosca e barras com toggle Categoria / Forma de pagamento; detalhe de "Outras"; legenda curta no celular | B | — | 🟡 Agente B — PR #78 em revisão |
 | B6-03 | Aba Conta (passa a ser a aba padrão) | B | A6-02, A6-03, B6-01, B6-02 | ⬜ |
