@@ -159,8 +159,8 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
 
         {/* 5. Rosca no fim */}
         <BreakdownDonut
-          title="Gastos por categoria"
-          description="Clique numa categoria para ver as transações."
+          title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
+          description="Clique para ver as transações."
           mode={roscaMode}
           byCategory={categorySlices}
           byPaymentMethod={pmSlices}
@@ -223,8 +223,8 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <BreakdownDonut
-            title="Gastos por categoria"
-            description="Clique numa categoria para ver as transações."
+            title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
+            description="Clique para ver as transações."
             mode={roscaMode}
             byCategory={categorySlices}
             byPaymentMethod={pmSlices}
