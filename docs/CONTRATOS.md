@@ -33,6 +33,8 @@ controle-gastos/
 │       ├── categorization/    regras, memória, IA               (A)
 │       ├── jobs/              lógica dos jobs                   (A)
 │       ├── investments/       cotações, rentabilidade (F3)      (A)
+│       ├── home/              leituras do Início com regra (F6) (A)
+│       ├── push/              notificações push (F6)            (A)
 │       └── queries/           leituras agregadas para a UI      (B)
 └── tests/
     ├── helpers/               banco de teste                    (A, criado em F0-02)
@@ -743,3 +745,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-20 | Planejador | P4-00 | Especificação da Fase 4 (Inteligência): enums `LIMIT_PERIODS`, `RECURRENCE_FREQUENCIES`, `RECURRENCE_STATUSES`, `NOTIFICATION_TYPES`, `NOTIFICATION_CHANNELS`; tabelas `spending_limits`, `spending_limit_dispatches`, `recurrences`, `notifications`, `notification_preferences`; comandos `upsertSpendingLimit`, `deleteSpendingLimit`, `evaluateSpendingLimits`, `upsertRecurrence`, `deleteRecurrence`, `detectRecurrences`, `markNotificationRead`, `markAllNotificationsRead`, `updateNotificationPreferences` e `askNaturalLanguage` (aditivo; migration gerada na A4-02) |
 | 2026-10-20 | Coordenador | A1-10 | IA desligada por decisão do usuário: `ANTHROPIC_API_KEY` sai do env na A1-10; o valor `'llm'` de `CATEGORY_SOURCES` é mantido por compatibilidade (remover quebraria o contrato) |
 | 2026-10-21 | Agente A | A4-02 | Migration 0004 gerada e aplicada (`spending_limits`, `spending_limit_dispatches`, `recurrences`, `notifications`, `notification_preferences`) e implementação do motor de limites e alertas |
+| 2026-10-21 | Coordenador | Fase 6 | Pastas novas do Agente A: `src/server/home/` (leituras do Início com regra de negócio) e `src/server/push/`. Especificação da tabela `push_subscriptions` e da coluna `notifications.push_sent_at` (aditivo; migration gerada na A6-04) |
