@@ -62,6 +62,7 @@ export function BreakdownToggle({
       <button
         type="button"
         aria-pressed={active === 'forma'}
+        aria-label="Forma de pagamento"
         onClick={() => setMode('forma')}
         className={cn(
           'rounded-md px-2.5 py-1 transition-all',
@@ -70,7 +71,8 @@ export function BreakdownToggle({
             : 'hover:text-foreground'
         )}
       >
-        Forma de pagamento
+        <span className="md:hidden">Forma</span>
+        <span className="hidden md:inline">Forma de pagamento</span>
       </button>
     </div>
   );
