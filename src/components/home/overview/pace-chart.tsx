@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart';
 import { Money, Sensitive } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
-import { formatBRLCompact } from '@/components/charts/format';
+import { formatBRLCompact, formatPercentInt } from '@/components/charts/format';
 import type { SpendingPace } from '@/server/home/pace';
 import { parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -38,7 +38,7 @@ export function PaceChart({ pace, from, className }: PaceChartProps) {
 
     variationEl = (
       <span className={cn('text-xs font-semibold tabular-nums', colorClass)}>
-        {arrow} {Math.abs(pace.variationPercent)}% vs mesmo dia de {prevMonthName}
+        {arrow} {formatPercentInt(Math.abs(pace.variationPercent))} vs mesmo dia de {prevMonthName}
       </span>
     );
   }
@@ -57,7 +57,7 @@ export function PaceChart({ pace, from, className }: PaceChartProps) {
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground capitalize">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
           Gastos em {currentMonthName}
         </CardTitle>
         <div className="flex items-baseline gap-3 flex-wrap">
