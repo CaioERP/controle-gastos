@@ -3,7 +3,7 @@ import { generateFixtures } from './generate';
 import { createTestDb } from '../helpers/db';
 import { seedBase } from '@/server/db/seed';
 import { loadFixtures } from './load';
-import { accounts, invoices, merchants, transactions } from '@/server/db/schema';
+import { accounts, invoices, merchants, spendingLimits, transactions } from '@/server/db/schema';
 import { PAYMENT_METHODS, TX_KINDS } from '@/server/domain/enums';
 
 describe('fixtures generator', () => {
@@ -158,6 +158,14 @@ describe('fixtures generator', () => {
     // Contas correntes com saldo positivo na data de referência
     for (const acc of accRows.filter((a) => a.type === 'checking')) {
       expect(acc.balanceCents).toBeGreaterThan(0);
+    }
+
+    // Metas de exemplo criadas nas fixtures (B6-05)
+    const limitRows = await db.select().from(spendingLimits);
+    expect(limitRows.length).toBe(4);
+    for (const l of limitRows) {
+      expect(l.period).toBe('monthly');
+      expect(l.categoryId).toBeTruthy();
     }
   });
 });

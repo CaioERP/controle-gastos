@@ -23,7 +23,7 @@ test.describe('Dashboard', () => {
       await expect(page.getByTestId(id)).toContainText('R$');
     }
 
-    await expect(page.getByText('Gastos por categoria')).toBeVisible();
+    await expect(page.locator('.hidden.md\\:block').getByText('Gastos por categoria')).toBeVisible();
     await expect(page.getByText('Gastos por forma de pagamento')).toBeVisible();
     await expect(page.getByText('Evolução mensal')).toBeVisible();
     await expect(page.getByText('Próximas faturas')).toBeVisible();
@@ -69,11 +69,10 @@ test.describe('Dashboard', () => {
   test('legível em 390 px: os cards empilham sem rolagem horizontal', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
-    await expect(page.getByTestId('kpi-gastos')).toBeVisible();
+    await expect(page.getByTestId('mobile-kpi-summary')).toBeVisible();
+    await expect(page.getByTestId('mobile-kpi-summary')).toContainText('Receitas');
+    await expect(page.getByTestId('mobile-kpi-summary')).toContainText('Sobra');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
-    const a = await page.getByTestId('kpi-gastos').boundingBox();
-    const b = await page.getByTestId('kpi-receitas').boundingBox();
-    expect(b!.y).toBeGreaterThan(a!.y);
   });
 });

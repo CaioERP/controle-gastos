@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -15,6 +15,8 @@ import {
   invoices,
   merchants,
   netWorthSnapshots,
+  spendingLimits,
+  spendingLimitDispatches,
   syncRuns,
   transactions,
   transactionSources,
@@ -36,6 +38,8 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
     const catMap = new Map(catRows.map((r) => [r.slug, r.id]));
 
     // 2. Apagar na ordem correta
+    await tx.delete(spendingLimitDispatches);
+    await tx.delete(spendingLimits);
     await tx.delete(netWorthSnapshots);
     await tx.delete(benchmarkSeries);
     await tx.delete(assetPrices);
@@ -279,6 +283,58 @@ export async function loadFixtures(db: Db, opts: FixtureOptions): Promise<void> 
       referenceDate: opts.referenceDate,
       institutionId: nubankInstId,
     });
+
+    // 9. Metas de exemplo por categoria para o card de metas (B6-05)
+    const monthStartStr = `${opts.referenceDate.slice(0, 7)}-01`;
+    const monthEndStr = `${opts.referenceDate.slice(0, 7)}-31`;
+
+    const catSlugs = [
+      { slug: 'alimentacao', name: 'Alimentação', ratio: 0.85 }, // > 100% (estourada)
+      { slug: 'transporte', name: 'Transporte', ratio: 1.15 }, // ~87% (alerta 80-99%)
+      { slug: 'lazer', name: 'Lazer', ratio: 1.6 }, // ~62%
+      { slug: 'compras', name: 'Compras', ratio: 2.0 }, // ~50%
+    ];
+
+    for (const item of catSlugs) {
+      const catId = catMap.get(item.slug);
+      if (!catId) continue;
+
+      const childIds = (
+        await tx
+          .select({ id: categories.id })
+          .from(categories)
+          .where(eq(categories.parentId, catId))
+      ).map((c) => c.id);
+      const allIds = [catId, ...childIds];
+
+      const [res] = await tx
+        .select({
+          spent: sql<number>`coalesce(sum(case when ${transactions.amountCents} < 0 then abs(${transactions.amountCents}) else 0 end), 0)`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.categoryId, allIds),
+            sql`${transactions.date} >= ${monthStartStr}`,
+            sql`${transactions.date} <= ${monthEndStr}`,
+            isNull(transactions.deletedAt),
+          ),
+        );
+
+      const spent = Number(res?.spent ?? 0);
+      const amountCents = spent > 0 ? Math.round(spent * item.ratio) : 100000;
+
+      await tx.insert(spendingLimits).values({
+        id: randomUUID(),
+        name: item.name,
+        categoryId: catId,
+        period: 'monthly',
+        amountCents,
+        thresholds: [80, 100],
+        notifyPace: true,
+        isActive: true,
+      });
+    }
   });
 }
 
