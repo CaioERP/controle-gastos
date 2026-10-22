@@ -11,11 +11,16 @@ import { getLimitsOverview } from '@/server/queries/limits';
 import { parseFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
 import { PeriodOnlyBar } from '@/components/home/period-only-bar';
-import { accountsTotals, categoryTransactionsHref, parentCategoryIds } from '@/components/charts/links';
-import { NEUTRAL_COLOR, seriesColor } from '@/components/charts/palette';
-import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
+import {
+  accountsTotals,
+  categoryTransactionsHref,
+  parentCategoryIds,
+  paymentMethodTransactionsHref,
+} from '@/components/charts/links';
+import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
+import { SectionCard } from '@/components/charts/section-card';
 import { KpiCard } from '@/components/dashboard/kpi-card';
-import { CategoryDonut } from '@/components/dashboard/category-donut';
+import { BreakdownDonut } from '@/components/charts/breakdown-donut';
 import { PaymentMethodBars } from '@/components/dashboard/payment-method-bars';
 import { MonthlyStacked } from '@/components/dashboard/monthly-stacked';
 import { TopMerchants, topMerchants } from '@/components/dashboard/top-merchants';
@@ -28,6 +33,11 @@ export type OverviewTabProps = {
 
 export async function OverviewTab({ searchParams }: OverviewTabProps) {
   const filters = parseFilters(searchParams);
+  const rawRosca = Array.isArray(searchParams.rosca) ? searchParams.rosca[0] : searchParams.rosca;
+  const roscaMode = rawRosca === 'forma' ? 'forma' : 'categoria';
+  const rawBarras = Array.isArray(searchParams.barras) ? searchParams.barras[0] : searchParams.barras;
+  const barrasMode = rawBarras === 'categoria' ? 'categoria' : 'forma';
+
   // Com `cat` na URL, a rosca quebra por categoria exata para o link não ampliar o filtro.
   const catDim = categoryDimensionFor(filters);
   const db = getDb();
@@ -63,12 +73,42 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
     ...(hasExcluded ? { totalsAccountIds } : {}),
   };
 
-  const slices = topWithOthers(byCategory, 7).map((item, i) => ({
+  const categorySlices = topWithOthers(byCategory, 7).map((item, i) => ({
     key: item.key,
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
     totalCents: item.totalCents,
-    href: categoryTransactionsHref(filters, item.key, linkOpts),
+    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
+    totalCents: item.totalCents,
+    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+
+  const pmSlices = topWithOthers(byPaymentMethod, 7).map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
+    totalCents: item.totalCents,
+    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+  const pmSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
+    totalCents: item.totalCents,
+    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
   }));
 
   return (
@@ -121,21 +161,25 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="Gastos por categoria" description="Clique numa categoria para ver as transações.">
-          {slices.length > 0 ? <CategoryDonut slices={slices} totalCents={totalCents} /> : <SectionEmpty />}
-        </SectionCard>
-        <SectionCard title="Gastos por forma de pagamento">
-          {byPaymentMethod.length > 0 ? (
-            <PaymentMethodBars
-              items={byPaymentMethod}
-              totalCents={totalCents}
-              filters={filters}
-              totalsAccountIds={hasExcluded ? totalsAccountIds : undefined}
-            />
-          ) : (
-            <SectionEmpty />
-          )}
-        </SectionCard>
+        <BreakdownDonut
+          title="Gastos por categoria"
+          description="Clique numa categoria para ver as transações."
+          mode={roscaMode}
+          byCategory={categorySlices}
+          byPaymentMethod={pmSlices}
+          byCategoryMobile={categorySlicesMobile}
+          byPaymentMethodMobile={pmSlicesMobile}
+          totalCents={totalCents}
+        />
+        <PaymentMethodBars
+          byPaymentMethod={byPaymentMethod}
+          byCategory={byCategory}
+          mode={barrasMode}
+          totalCents={totalCents}
+          filters={filters}
+          totalsAccountIds={hasExcluded ? totalsAccountIds : undefined}
+          parentIds={catDim === 'category' ? parentCategoryIds(categories) : undefined}
+        />
       </div>
 
       <SectionCard title="Evolução mensal" description="Últimos 6 meses, empilhado por categoria.">

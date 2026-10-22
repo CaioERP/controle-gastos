@@ -510,6 +510,7 @@ export const notifications = pgTable(
     entityId: uuid('entity_id'),
     channel: notificationChannelEnum('channel').notNull().default('in_app'),
     readAt: tstz('read_at'),
+    pushSentAt: tstz('push_sent_at'),
     fingerprint: text('fingerprint'),
     createdAt: tstz('created_at').notNull().defaultNow(),
   },
@@ -528,6 +529,16 @@ export const notificationPreferences = pgTable('notification_preferences', {
   push: boolean('push').notNull().default(false),
   telegram: boolean('telegram').notNull().default(false),
   updatedAt: tstz('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: id(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  deviceLabel: text('device_label'), // "iPhone", "Chrome no Windows" (vem do navegador)
+  lastSuccessAt: tstz('last_success_at'),
+  ...timestamps,
 });
 
 
