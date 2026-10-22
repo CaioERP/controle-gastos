@@ -24,6 +24,7 @@ export type SpendingLimitDispatch = typeof s.spendingLimitDispatches.$inferSelec
 export type Recurrence = typeof s.recurrences.$inferSelect;
 export type Notification = typeof s.notifications.$inferSelect;
 export type NotificationPreference = typeof s.notificationPreferences.$inferSelect;
+export type PushSubscription = typeof s.pushSubscriptions.$inferSelect;
 
 
 
