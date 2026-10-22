@@ -100,8 +100,9 @@ export function PushDeviceCard({ vapidPublicKey, className }: PushDeviceCardProp
         return;
       }
       try {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
+        // getRegistration, e não `ready`: sem SW registrado, `ready` nunca resolve e o card ficaria carregando.
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = reg ? await reg.pushManager.getSubscription() : null;
         if (active) {
           setSubscription(sub);
           setSubLoading(false);
@@ -143,6 +144,10 @@ export function PushDeviceCard({ vapidPublicKey, className }: PushDeviceCardProp
         return;
       }
 
+      // Em dev o SwRegister não registra o SW; ativar o push registra aqui.
+      if (!(await navigator.serviceWorker.getRegistration())) {
+        await navigator.serviceWorker.register('/sw.js');
+      }
       const reg = await navigator.serviceWorker.ready;
       const key = urlBase64ToUint8Array(vapidPublicKey);
       const sub = await reg.pushManager.subscribe({
@@ -186,8 +191,8 @@ export function PushDeviceCard({ vapidPublicKey, className }: PushDeviceCardProp
         await subscription.unsubscribe();
         await unsubscribePush(endpoint);
       } else {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = reg ? await reg.pushManager.getSubscription() : null;
         if (sub) {
           const endpoint = sub.endpoint;
           await sub.unsubscribe();
