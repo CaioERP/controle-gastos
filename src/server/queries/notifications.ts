@@ -5,6 +5,7 @@ import type { Db } from '@/server/db/client';
 import { notificationPreferences, notifications } from '@/server/db/schema';
 import { NOTIFICATION_TYPES, type NotificationType } from '@/server/domain/enums';
 import { NOTIFICATION_TYPE_LABELS } from '@/server/domain/labels';
+import { pushEnabledFor } from '@/server/push/defaults';
 
 export type NotificationRow = {
   id: string;
@@ -24,6 +25,7 @@ export type NotificationPreferenceRow = {
   description: string;
   enabled: boolean;
   inApp: boolean;
+  push: boolean;
   telegram: boolean;
 };
 
@@ -109,12 +111,17 @@ export async function getNotificationPreferences(db: Db): Promise<NotificationPr
 
   return NOTIFICATION_TYPES.map((type) => {
     const stored = prefsMap.get(type);
+    const enabled = stored?.enabled ?? true;
     return {
       type,
       label: NOTIFICATION_TYPE_LABELS[type] || type,
       description: NOTIFICATION_DESCRIPTIONS[type] || '',
-      enabled: stored?.enabled ?? true,
+      enabled,
       inApp: stored?.inApp ?? true,
+      push: pushEnabledFor(
+        type,
+        stored ? { enabled: stored.enabled, push: stored.push } : undefined,
+      ),
       telegram: stored?.telegram ?? false,
     };
   });

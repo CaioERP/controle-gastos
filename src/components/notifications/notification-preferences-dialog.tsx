@@ -38,9 +38,15 @@ function PreferencesForm({ preferences: initialPrefs, onCancel, onSuccess }: Pre
   const [prefs, setPrefs] = React.useState<NotificationPreferenceRow[]>(initialPrefs);
   const [isPending, startTransition] = React.useTransition();
 
-  function handleToggle(type: NotificationPreferenceRow['type'], enabled: boolean) {
+  function handleToggleApp(type: NotificationPreferenceRow['type'], enabled: boolean) {
     setPrefs((prev) =>
       prev.map((p) => (p.type === type ? { ...p, enabled, inApp: enabled } : p)),
+    );
+  }
+
+  function handleTogglePush(type: NotificationPreferenceRow['type'], push: boolean) {
+    setPrefs((prev) =>
+      prev.map((p) => (p.type === type ? { ...p, push } : p)),
     );
   }
 
@@ -51,6 +57,7 @@ function PreferencesForm({ preferences: initialPrefs, onCancel, onSuccess }: Pre
           type: p.type,
           enabled: p.enabled,
           inApp: p.inApp,
+          push: p.push,
           telegram: p.telegram,
         }));
 
@@ -93,10 +100,16 @@ function PreferencesForm({ preferences: initialPrefs, onCancel, onSuccess }: Pre
     <>
       <div className="space-y-6 py-2">
         {groups.map((group) => (
-          <div key={group.title} className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {group.title}
-            </h4>
+          <div key={group.title} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.title}
+              </h4>
+              <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground pr-2">
+                <span className="w-12 text-center">No app</span>
+                <span className="w-12 text-center">Push</span>
+              </div>
+            </div>
             <div className="rounded-lg border divide-y divide-border/60">
               {group.items.map((item) => (
                 <div
@@ -104,22 +117,33 @@ function PreferencesForm({ preferences: initialPrefs, onCancel, onSuccess }: Pre
                   className="flex items-center justify-between gap-3 p-3 text-sm"
                 >
                   <div className="space-y-0.5 min-w-0 pr-2">
-                    <label
-                      htmlFor={`pref-${item.type}`}
-                      className="font-medium text-foreground text-xs sm:text-sm cursor-pointer block"
-                    >
+                    <span className="font-medium text-foreground text-xs sm:text-sm block">
                       {item.label}
-                    </label>
+                    </span>
                     <p className="text-[11px] text-muted-foreground line-clamp-2">
                       {item.description}
                     </p>
                   </div>
-                  <Switch
-                    id={`pref-${item.type}`}
-                    checked={item.enabled}
-                    onCheckedChange={(checked) => handleToggle(item.type, checked)}
-                    size="sm"
-                  />
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="w-12 flex justify-center">
+                      <Switch
+                        id={`pref-app-${item.type}`}
+                        checked={item.enabled}
+                        onCheckedChange={(checked) => handleToggleApp(item.type, checked)}
+                        size="sm"
+                        aria-label={`No app para ${item.label}`}
+                      />
+                    </div>
+                    <div className="w-12 flex justify-center">
+                      <Switch
+                        id={`pref-push-${item.type}`}
+                        checked={item.push}
+                        onCheckedChange={(checked) => handleTogglePush(item.type, checked)}
+                        size="sm"
+                        aria-label={`Push para ${item.label}`}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -152,7 +176,7 @@ export function NotificationPreferencesDialog({
 }: NotificationPreferencesDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">

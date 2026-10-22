@@ -3,6 +3,7 @@ import {
   getNotificationPreferences,
   listNotifications,
 } from '@/server/queries/notifications';
+import { getVapidPublicKey } from '@/server/push/vapid';
 import { NotificationsView } from '@/components/notifications/notifications-view';
 
 export const dynamic = 'force-dynamic';
@@ -15,11 +16,14 @@ export default async function NotificacoesPage() {
     getNotificationPreferences(db),
   ]);
 
+  const vapidPublicKey = getVapidPublicKey();
+
   return (
     <NotificationsView
       initialNotifications={items}
       initialUnreadCount={unreadCount}
       initialPreferences={preferences}
+      vapidPublicKey={vapidPublicKey}
     />
   );
 }

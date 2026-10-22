@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
 import { NotificationItem } from './notification-item';
 import { NotificationPreferencesDialog } from './notification-preferences-dialog';
+import { PushDeviceCard } from './push-device-card';
 import type { NotificationPreferenceRow, NotificationRow } from '@/server/queries/notifications';
 import { markAllNotificationsReadAction } from '@/app/(app)/notificacoes/actions';
 
@@ -16,6 +17,7 @@ type NotificationsViewProps = {
   initialNotifications: NotificationRow[];
   initialUnreadCount: number;
   initialPreferences: NotificationPreferenceRow[];
+  vapidPublicKey?: string | null;
 };
 
 type TabFilter = 'all' | 'unread';
@@ -24,6 +26,7 @@ export function NotificationsView({
   initialNotifications,
   initialUnreadCount,
   initialPreferences,
+  vapidPublicKey = null,
 }: NotificationsViewProps) {
   const [tab, setTab] = React.useState<TabFilter>('all');
   const [prefsOpen, setPrefsOpen] = React.useState(false);
@@ -110,6 +113,8 @@ export function NotificationsView({
           </div>
         }
       />
+
+      <PushDeviceCard vapidPublicKey={vapidPublicKey} />
 
       {/* Abas: Todas e Não lidas */}
       <div className="flex items-center justify-between border-b pb-2">
