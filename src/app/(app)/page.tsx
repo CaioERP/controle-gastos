@@ -15,11 +15,11 @@ import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
 import { buttonVariants } from '@/components/ui/button';
-import { accountsTotals, categoryTransactionsHref, parentCategoryIds } from '@/components/charts/links';
-import { NEUTRAL_COLOR, seriesColor } from '@/components/charts/palette';
-import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
+import { accountsTotals, categoryTransactionsHref, parentCategoryIds, paymentMethodTransactionsHref } from '@/components/charts/links';
+import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
+import { SectionCard } from '@/components/charts/section-card';
 import { KpiCard } from '@/components/dashboard/kpi-card';
-import { CategoryDonut } from '@/components/dashboard/category-donut';
+import { BreakdownDonut } from '@/components/charts/breakdown-donut';
 import { PaymentMethodBars } from '@/components/dashboard/payment-method-bars';
 import { MonthlyStacked } from '@/components/dashboard/monthly-stacked';
 import { TopMerchants, topMerchants } from '@/components/dashboard/top-merchants';
@@ -32,7 +32,13 @@ export const dynamic = 'force-dynamic';
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function DashboardPage({ searchParams }: Props) {
-  const filters = parseFilters(await searchParams);
+  const sp = await searchParams;
+  const filters = parseFilters(sp);
+  const rawRosca = Array.isArray(sp.rosca) ? sp.rosca[0] : sp.rosca;
+  const roscaMode = rawRosca === 'forma' ? 'forma' : 'categoria';
+  const rawBarras = Array.isArray(sp.barras) ? sp.barras[0] : sp.barras;
+  const barrasMode = rawBarras === 'categoria' ? 'categoria' : 'forma';
+
   // Com `cat` na URL, a rosca quebra por categoria exata para o link não ampliar o filtro.
   const catDim = categoryDimensionFor(filters);
   const db = getDb();
@@ -88,12 +94,46 @@ export default async function DashboardPage({ searchParams }: Props) {
     ...(hasExcluded ? { totalsAccountIds } : {}),
   };
 
-  const slices = topWithOthers(byCategory, 7).map((item, i) => ({
+  const categorySlicesDesktop = topWithOthers(byCategory, 7).map((item, i) => ({
     key: item.key,
     label: item.label,
     color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
     totalCents: item.totalCents,
-    href: categoryTransactionsHref(filters, item.key, linkOpts),
+    href: item.key === 'outras' ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+
+  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
+    totalCents: item.totalCents,
+    href: item.key === 'outras' ? null : categoryTransactionsHref(filters, item.key, linkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+
+  const paymentMethodLinkOpts = hasExcluded ? { totalsAccountIds } : undefined;
+
+  const paymentMethodSlicesDesktop = topWithOthers(byPaymentMethod, 7).map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
+    totalCents: item.totalCents,
+    href: item.key === 'outras' ? null : paymentMethodTransactionsHref(filters, item.key, paymentMethodLinkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
+  }));
+
+  const paymentMethodSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
+    totalCents: item.totalCents,
+    href: item.key === 'outras' ? null : paymentMethodTransactionsHref(filters, item.key, paymentMethodLinkOpts),
+    isOthers: item.isOthers,
+    grouped: item.grouped,
   }));
 
   return (
@@ -141,21 +181,25 @@ export default async function DashboardPage({ searchParams }: Props) {
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="Gastos por categoria" description="Clique numa categoria para ver as transações.">
-          {slices.length > 0 ? <CategoryDonut slices={slices} totalCents={totalCents} /> : <SectionEmpty />}
-        </SectionCard>
-        <SectionCard title="Gastos por forma de pagamento">
-          {byPaymentMethod.length > 0 ? (
-            <PaymentMethodBars
-              items={byPaymentMethod}
-              totalCents={totalCents}
-              filters={filters}
-              totalsAccountIds={hasExcluded ? totalsAccountIds : undefined}
-            />
-          ) : (
-            <SectionEmpty />
-          )}
-        </SectionCard>
+        <BreakdownDonut
+          title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
+          description="Clique para ver as transações."
+          mode={roscaMode}
+          byCategory={categorySlicesDesktop}
+          byCategoryMobile={categorySlicesMobile}
+          byPaymentMethod={paymentMethodSlicesDesktop}
+          byPaymentMethodMobile={paymentMethodSlicesMobile}
+          totalCents={totalCents}
+        />
+        <PaymentMethodBars
+          mode={barrasMode}
+          byPaymentMethod={byPaymentMethod}
+          byCategory={byCategory}
+          totalCents={totalCents}
+          filters={filters}
+          totalsAccountIds={hasExcluded ? totalsAccountIds : undefined}
+          parentIds={catDim === 'category' ? parentCategoryIds(categories) : undefined}
+        />
       </div>
 
       <SectionCard title="Evolução mensal" description="Últimos 6 meses, empilhado por categoria.">

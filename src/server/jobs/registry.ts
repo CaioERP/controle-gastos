@@ -9,6 +9,7 @@ import { checkConnectionsLifecycle } from '@/server/ingestion/connection-lifecyc
 import { computeInvoiceStatus } from '@/server/ingestion/invoices';
 import { captureNetWorthSnapshot } from '@/server/investments/net-worth';
 import { updateMarketPricesAndBenchmarks } from '@/server/investments/update-prices';
+import { sendPendingPush } from '@/server/push/send';
 
 export type JobName =
   | 'sync-all'
@@ -146,6 +147,16 @@ export async function runJob(
         stats: result,
       })
       .where(eq(syncRuns.id, syncRunId));
+
+    try {
+      await sendPendingPush(db);
+    } catch (pushErr) {
+      console.error(
+        '[jobs] Falha ao enviar notificações push pendentes:',
+        pushErr instanceof Error ? pushErr.message : pushErr,
+      );
+    }
+
     return { syncRunId, result };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

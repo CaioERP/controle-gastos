@@ -6,11 +6,15 @@ import type { BreakdownItem } from './breakdown';
 import { getFutureInstallments } from './installments';
 import { getSpendingSummary, type SpendingSummary } from './summary';
 
-export type TopItem = BreakdownItem & { isOthers: boolean };
+export type TopItem = BreakdownItem & {
+  isOthers: boolean;
+  grouped?: BreakdownItem[];
+};
 
 /**
  * Top N linhas positivas + "Outras" (restante positivo + linhas negativas de estorno).
  * A soma dos itens retornados é sempre igual à soma da entrada, para que legenda e total batam.
+ * Quando há "Outras", `grouped` traz os itens agrupados em ordem decrescente de valor.
  */
 export function topWithOthers(items: BreakdownItem[], n: number, othersLabel = 'Outras'): TopItem[] {
   const positives = items.filter((i) => i.totalCents > 0).sort((a, b) => b.totalCents - a.totalCents);
@@ -25,6 +29,7 @@ export function topWithOthers(items: BreakdownItem[], n: number, othersLabel = '
       totalCents: rest.reduce((s, i) => s + i.totalCents, 0),
       count: rest.reduce((s, i) => s + i.count, 0),
       isOthers: true,
+      grouped: [...rest].sort((a, b) => b.totalCents - a.totalCents),
     });
   }
   return top;
