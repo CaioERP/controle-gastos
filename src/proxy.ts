@@ -6,12 +6,18 @@ import { authConfigured, authDisabled, hasValidSession } from '@/server/auth/gua
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // 1. Arquivos estáticos e rotas com segredo próprio (jobs: CRON_SECRET; webhook: PLUGGY_WEBHOOK_SECRET)
+  // 1. Arquivos estáticos e rotas com segredo próprio (jobs: CRON_SECRET; webhook: PLUGGY_WEBHOOK_SECRET; arquivos PWA)
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
     pathname.startsWith('/api/webhooks/') ||
-    pathname.startsWith('/api/jobs/')
+    pathname.startsWith('/api/jobs/') ||
+    pathname === '/sw.js' ||
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/offline.html' ||
+    pathname === '/icon' ||
+    pathname === '/apple-icon' ||
+    pathname.startsWith('/pwa-icon/')
   ) {
     return NextResponse.next();
   }
