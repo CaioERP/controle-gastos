@@ -2,9 +2,9 @@
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
-> **Última atualização por:** Coordenador / Revisor (2026-10-21 — planejamento da Fase 6, mobile e início).
+> **Última atualização por:** Coordenador / Revisor (2026-10-22 — Fase 6 revisada e integrada, PRs #77–#88).
 >
-> **Prioridade atual: Fase 6.** A Fase 5 (deploy) fica com o usuário, que fará a parte de hospedagem por conta própria.
+> **Fase 6 concluída.** A Fase 5 (deploy) fica com o usuário, que fará a parte de hospedagem por conta própria. O teste real do PWA e do push no celular depende do deploy com HTTPS.
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída · ⏸️ fora do escopo por enquanto
 
@@ -63,18 +63,18 @@ Onda 4                                            │  B6-08 push (interface)
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
-| A6-01 | Resumo das metas mensais (card de metas) e itens de "Precisa de você" (`src/server/home/`) | A | — | 🟡 Agente A — PR #77 em revisão |
-| A6-02 | Ritmo de gastos do mês e "Livre para gastar" | A | — | 🟡 Agente A — PR #80 em revisão |
-| A6-03 | Dados da aba Conta: saldo diário reconstruído (90 dias), previsão até o fim do mês, entradas e saídas | A | A6-02 | 🟡 Agente A — PR #81 em revisão |
-| A6-04 | Notificações push, dados: `push_subscriptions`, chaves VAPID, envio com `web-push` depois dos jobs | A | — | 🟡 Agente A — PR #83 em revisão |
-| B6-01 | Estrutura do Início: abas na URL, faixa "Precisa de você", filtros enxutos, título "Início" | B | A6-01 | 🟡 Agente B — PR #84 em revisão |
-| B6-02 | Rosca e barras com toggle Categoria / Forma de pagamento; detalhe de "Outras"; legenda curta no celular | B | — | 🟡 Agente B — PR #78 em revisão |
-| B6-03 | Aba Conta (passa a ser a aba padrão) | B | A6-02, A6-03, B6-01, B6-02 | 🟡 Agente B — PR #87 em revisão |
-| B6-04 | Aba Cartões | B | B6-01, B6-02 | 🟡 Agente B — PR #85 em revisão |
-| B6-05 | Aba Visão geral: gráfico de ritmo, card de metas, versão do celular, metas nas fixtures | B | A6-01, A6-02, B6-01, B6-02 | 🟡 Agente B — PR #86 em revisão |
-| B6-06 | Barra de navegação inferior no celular (substitui o ☰) | B | — | 🟡 Agente B — PR #79 em revisão |
-| B6-07 | PWA: manifest, ícones, service worker só com a tela "Sem conexão" | B | — | 🟡 Agente B — PR #82 em revisão |
-| B6-08 | Notificações push, interface: ativar por aparelho, coluna Push nas preferências, eventos no service worker | B | A6-04, B6-07 | 🟡 Agente B — PR #88 em revisão |
+| A6-01 | Resumo das metas mensais (card de metas) e itens de "Precisa de você" (`src/server/home/`) | A | — | ✅ (#77) |
+| A6-02 | Ritmo de gastos do mês e "Livre para gastar" | A | — | ✅ (#80) |
+| A6-03 | Dados da aba Conta: saldo diário reconstruído (90 dias), previsão até o fim do mês, entradas e saídas | A | A6-02 | ✅ (#81) |
+| A6-04 | Notificações push, dados: `push_subscriptions`, chaves VAPID, envio com `web-push` depois dos jobs | A | — | ✅ (#83) |
+| B6-01 | Estrutura do Início: abas na URL, faixa "Precisa de você", filtros enxutos, título "Início" | B | A6-01 | ✅ (#84) |
+| B6-02 | Rosca e barras com toggle Categoria / Forma de pagamento; detalhe de "Outras"; legenda curta no celular | B | — | ✅ (#78) |
+| B6-03 | Aba Conta (passa a ser a aba padrão) | B | A6-02, A6-03, B6-01, B6-02 | ✅ (#87) |
+| B6-04 | Aba Cartões | B | B6-01, B6-02 | ✅ (#85) |
+| B6-05 | Aba Visão geral: gráfico de ritmo, card de metas, versão do celular, metas nas fixtures | B | A6-01, A6-02, B6-01, B6-02 | ✅ (#86) |
+| B6-06 | Barra de navegação inferior no celular (substitui o ☰) | B | — | ✅ (#79) |
+| B6-07 | PWA: manifest, ícones, service worker só com a tela "Sem conexão" | B | — | ✅ (#82) |
+| B6-08 | Notificações push, interface: ativar por aparelho, coluna Push nas preferências, eventos no service worker | B | A6-04, B6-07 | ✅ (#88) |
 
 ---
 
@@ -215,3 +215,4 @@ Onda 4                                            │  B6-08 push (interface)
 - [Fase 4 — revisão] 🟢 projeção (#70): com < 3 meses de histórico a média divide por 3; exclusão da média por `merchantId` remove todo o gasto no estabelecimento; faturas antigas com status desatualizado caem no 1º mês; recorrência sem categoria tratada como despesa — Coordenador, 2026-10-21
 - [Fase 4 — revisão] 🟢 limites/notificações (#69): limiar despachado mesmo com o tipo desativado; tipos `sync_error`/`price_hike`/`cancelled_subscription` com preferência mas sem gerador, e `inApp`/`telegram` ainda ignorados (só `enabled` vale); `getLimitsOverview` calcula sugestões também no dashboard; aceitar sugestão de categoria com limite pausado cria um segundo; botão "marcar como lida" aninhado em link; central limitada a 100 itens — Coordenador, 2026-10-21
 - [Segurança #75 → Fase 5] 🟢 limite de tentativas de login fica em memória (basta num servidor só; na Vercel guardar as falhas no banco); segredo do webhook do Pluggy vai na query (conferir na doc oficial se o Pluggy aceita cabeçalho próprio); CSP sem `script-src` para não quebrar o widget do Pluggy (apertar depois de mapear os domínios); cookie `__Host-` em produção; webhook com `void triggerSync` precisa de `await`/fila em serverless — Coordenador, 2026-10-21
+- [Fase 6 — revisão #77–#88] 🟠 corrigidos nas branches antes do merge: troca de categoria nas últimas transações da aba Conta não salvava; metas fictícias com `<mês>-31` quebravam o `db:reset` em meses de 30 dias; variação do ritmo exibida como fração crua; links das roscas de Conta e Cartões sem o filtro de contas; card de push travado sem SW registrado. 🟢 restantes: cada rosca desenha as versões de desktop e celular (aviso do Recharts "width(0) and height(0)"); toggle "Este cartão | Todos" sem efeito nas parcelas da aba Cartões; rótulos do eixo Y do gráfico de saldo cortados; `getFreeToSpend` consultado duas vezes na aba Conta; `savePushSubscription` aceita endpoint não https; chave Push pode ser ligada com "No app" desligado (não envia); resultado de `unsubscribePush` não conferido — Coordenador, 2026-10-22
