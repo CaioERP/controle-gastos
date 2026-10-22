@@ -26,6 +26,8 @@
 | 14 | Simulador de metas e aposentadoria | Médio | M | R$ 0 | Fase 3 |
 | 15 | Contingência: agregador pago se o Meu Pluggy acabar | Crítico se acontecer | P (troca de adapter) | Alto (planos comerciais) | Interface `SourceAdapter` |
 | 16 | IA com a Claude API: categorização automática, PDF de qualquer banco e perguntas em linguagem natural | Alto | P (categorização: restaurar) · M (PDF, perguntas) | Centavos por uso | H-03 (chave da Claude) |
+| 17 | Botão flutuante "+" para lançar transação | Médio | P | R$ 0 | B6-06 |
+| 18 | Personalização dos cards do Início | Baixo/Médio | M | R$ 0 | Fase 6 |
 
 ---
 
@@ -184,3 +186,19 @@
 - **Custo mensal:** centavos por uso (Haiku na categorização e nas perguntas, cerca de R$ 0,02–0,05 por pergunta). Confirmar preços atuais.
 - **O que é necessário para funcionar:** H-03 (`ANTHROPIC_API_KEY` no `.env.local` ou no painel da hospedagem).
 - **Riscos:** descrições de transações (mascaradas) saem do sistema para a Anthropic; custo variável se o volume crescer.
+
+## 17. Botão flutuante "+" para lançar transação
+- **O que é:** um botão fixo no canto da tela, no celular, que abre o lançamento manual de transação (B2-03a) de qualquer página.
+- **Valor:** lançar um gasto em dinheiro na hora, sem navegar até Transações.
+- **Esforço:** P (o formulário já existe).
+- **Custo mensal:** R$ 0.
+- **O que é necessário para funcionar:** B6-06 (barra inferior), para não brigar com ela pelo espaço.
+- **Riscos:** cobrir conteúdo no fim das páginas; posicionar acima da barra inferior.
+
+## 18. Personalização dos cards do Início
+- **O que é:** escolher quais cards aparecem em cada aba do Início e em que ordem, com a ordem do celular separada da do desktop (como no Monarch).
+- **Valor:** cada um vê primeiro o que mais usa.
+- **Esforço:** M (preferência salva no banco, modo de edição e arrastar para reordenar).
+- **Custo mensal:** R$ 0.
+- **O que é necessário para funcionar:** Fase 6 concluída e o layout fixo validado pelo uso.
+- **Riscos:** complexidade de interface para um usuário só; avaliar depois de algumas semanas com o layout fixo.

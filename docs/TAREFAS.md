@@ -2,7 +2,9 @@
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
-> **Última atualização por:** Coordenador / Revisor (2026-10-20 — integração dos PRs #30 a #44).
+> **Última atualização por:** Coordenador / Revisor (2026-10-21 — planejamento da Fase 6, mobile e início).
+>
+> **Prioridade atual: Fase 6.** A Fase 5 (deploy) fica com o usuário, que fará a parte de hospedagem por conta própria.
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída · ⏸️ fora do escopo por enquanto
 
@@ -42,6 +44,37 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | H-05 | Conectar Inter/PagBank no Meu Pluggy quando abrir as contas | — | ⬜ |
 | H-06 | Criar contas GitHub, hospedagem (Vercel ou Railway) e Supabase | Fase 5 | ⬜ |
 | H-07 | Revisar a fila de categorização nas primeiras semanas | Após M1 | ⬜ |
+
+---
+
+## Fase 6 — Mobile e início · specs: [`tarefas/fase-6-dados.md`](./tarefas/fase-6-dados.md) e [`tarefas/fase-6-interface.md`](./tarefas/fase-6-interface.md)
+
+> Decidida com o usuário em 2026-10-21 (resumo em `fase-6-interface.md`, seção "Decisões"): Início com abas Conta | Cartões | Visão geral, "Precisa de você", "Livre para gastar", card de metas, roscas com toggle, barra de navegação inferior, PWA e push.
+
+```
+            Agente A (Dados)                          Agente B (Interface)
+Onda 1   A6-01 metas + "precisa de você"          │  B6-02 rosca/barras · B6-06 barra inferior · B6-07 PWA
+         A6-02 ritmo + livre para gastar          │
+Onda 2   A6-03 dados da aba Conta                 │  B6-01 estrutura do Início (precisa A6-01)
+         A6-04 push (dados; commit contract:)     │  B6-04 aba Cartões
+Onda 3                                            │  B6-05 Visão geral · B6-03 aba Conta (vira a padrão)
+Onda 4                                            │  B6-08 push (interface)
+```
+
+| ID | Tarefa | Agente | Depende de | Status |
+|---|---|---|---|---|
+| A6-01 | Resumo das metas mensais (card de metas) e itens de "Precisa de você" (`src/server/home/`) | A | — | ⬜ |
+| A6-02 | Ritmo de gastos do mês e "Livre para gastar" | A | — | ⬜ |
+| A6-03 | Dados da aba Conta: saldo diário reconstruído (90 dias), previsão até o fim do mês, entradas e saídas | A | A6-02 | ⬜ |
+| A6-04 | Notificações push, dados: `push_subscriptions`, chaves VAPID, envio com `web-push` depois dos jobs | A | — | ⬜ |
+| B6-01 | Estrutura do Início: abas na URL, faixa "Precisa de você", filtros enxutos, título "Início" | B | A6-01 | ⬜ |
+| B6-02 | Rosca e barras com toggle Categoria / Forma de pagamento; detalhe de "Outras"; legenda curta no celular | B | — | ⬜ |
+| B6-03 | Aba Conta (passa a ser a aba padrão) | B | A6-02, A6-03, B6-01, B6-02 | ⬜ |
+| B6-04 | Aba Cartões | B | B6-01, B6-02 | ⬜ |
+| B6-05 | Aba Visão geral: gráfico de ritmo, card de metas, versão do celular, metas nas fixtures | B | A6-01, A6-02, B6-01, B6-02 | ⬜ |
+| B6-06 | Barra de navegação inferior no celular (substitui o ☰) | B | — | ⬜ |
+| B6-07 | PWA: manifest, ícones, service worker só com a tela "Sem conexão" | B | — | ⬜ |
+| B6-08 | Notificações push, interface: ativar por aparelho, coluna Push nas preferências, eventos no service worker | B | A6-04, B6-07 | ⬜ |
 
 ---
 
@@ -142,7 +175,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
 | A5-01 | Banco Supabase, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
 | A5-02 | Jobs agendados na hospedagem, webhook Pluggy, segredos | A | A5-01 | ⬜ |
-| B5-01 | Endurecimento da autenticação e PWA | B | P5-00 | ⬜ |
+| B5-01 | Endurecimento da autenticação e PWA | B | P5-00 | ✅ autenticação no PR #75 (2FA, limite de tentativas, cabeçalhos); o PWA passou para a B6-07 |
 | B5-02 | CI no GitHub Actions (check + e2e) | B | P5-00, H-06 | ⬜ |
 
 ---

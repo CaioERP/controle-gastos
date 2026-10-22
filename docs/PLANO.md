@@ -149,6 +149,7 @@ Categoria · Forma de pagamento · Instituição · Conta/Cartão · Natureza ·
 | **3. Patrimônio** | Investimentos, cotações, rentabilidade, patrimônio líquido | Visão completa do patrimônio |
 | **4. Inteligência** | Limites de gasto com notificações, assinaturas, orçamentos sugeridos, alertas, projeção, perguntas em linguagem natural | Sistema avisa antes do problema |
 | **5. Deploy** | GitHub + Supabase + hospedagem (Vercel ou Railway), CI, segurança | Acessível de qualquer lugar com segurança |
+| **6. Mobile e início** | Início com abas (Conta, Cartões, Visão geral), "Livre para gastar", card de metas, navegação inferior no celular, PWA e push. Feita antes da Fase 5 | Abrir o app no celular e entender o mês em uma tela |
 
 Quadro de status em [`TAREFAS.md`](./TAREFAS.md); especificação passo a passo de cada tarefa em [`tarefas/`](./tarefas/).
 

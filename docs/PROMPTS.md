@@ -23,6 +23,10 @@
 | 12 | Agente forte | P5-00 (detalhar o deploy) | Fase 4 na main (ou antes, se o usuário quiser publicar cedo) | — |
 | 13 | Agente A | A5-01, A5-02 | P5-00 ✅ e H-06 feito pelo usuário | 14 |
 | 14 | Agente B | B5-01, B5-02 | P5-00 ✅ e H-06 | 13 |
+| 15 | Agente A | A6-01 a A6-04 (Fase 6, mobile e início) | nenhum | 16 |
+| 16 | Agente B | B6-01 a B6-08 (Fase 6, mobile e início) | nenhum para B6-02, B6-06 e B6-07; as outras esperam as dependências | 15 |
+
+> **Ordem atual (2026-10-21):** a Fase 6 vem antes da Fase 5. O deploy (prompts 12 a 14) fica com o usuário.
 
 ---
 
@@ -490,6 +494,98 @@ Regras:
 
 No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
 os desvios e as pendências.
+```
+
+---
+
+## 15 — Agente A: Fase 6, dados do novo Início e push
+
+```text
+Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md (§1 tem as pastas novas
+src/server/home/ e src/server/push/, que são suas), docs/TAREFAS.md (seção Fase 6) e
+docs/tarefas/fase-6-dados.md. Para entender o que a tela vai mostrar, leia também a seção "Decisões"
+de docs/tarefas/fase-6-interface.md.
+
+Pré-requisito: nenhum. O worktree está destacado na origin/main: antes de começar, rode
+git fetch e crie cada branch a partir da origin/main atualizada.
+
+Tarefas, nesta ordem, um PR cada:
+1. A6-01: resumo das metas mensais e itens de "Precisa de você"
+2. A6-02: ritmo de gastos e "Livre para gastar"
+3. A6-03: dados da aba Conta (depende da A6-02; se o PR dela ainda estiver aberto, use a regra de
+   "dependência em revisão" do AGENTS.md §3)
+4. A6-04: notificações push, dados. A mudança de schema (push_subscriptions e
+   notifications.push_sent_at) vai antes, num commit "contract:" isolado direto na main, como manda o
+   CONTRATOS.md §6. A dependência nova web-push precisa do motivo registrado no commit.
+
+O Agente B trabalha em paralelo e espera a A6-01 para começar a estrutura do Início. Abra o PR da
+A6-01 assim que ela estiver pronta.
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira no quadro se está ⬜ e se as dependências
+  estão ✅ (ou com PR aberto, pela regra de dependência em revisão). Reserve e atualize o status no
+  checkout de integração.
+- Escreva só os testes que a spec pede: funções puras de dinheiro e datas, mais um teste simples por
+  consulta. Nada de e2e.
+- Não invente APIs. Para o web-push, siga a documentação do pacote no npm.
+- Segredos (chaves VAPID) só no .env.local; no .env.example, as variáveis vazias. Nunca registre o
+  endpoint de uma inscrição de push em log.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check,
+os desvios e as pendências.
+```
+
+---
+
+## 16 — Agente B: Fase 6, novo Início, navegação no celular, PWA e push
+
+```text
+Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md
+(seção Fase 6) e docs/tarefas/fase-6-interface.md, começando pela seção "Decisões", que é o que o
+usuário aprovou. As funções de dados que você vai chamar estão especificadas em
+docs/tarefas/fase-6-dados.md (pasta src/server/home/, do Agente A).
+
+Pré-requisito: nenhum para B6-02, B6-06 e B6-07. As outras tarefas esperam as dependências do quadro.
+O worktree está destacado na origin/main: antes de começar, rode git fetch e crie cada branch a
+partir da origin/main atualizada.
+
+Tarefas, nesta ordem, um PR cada:
+1. B6-02: rosca e barras com toggle
+2. B6-06: barra de navegação inferior no celular
+3. B6-07: PWA (a spec autoriza editar src/proxy.ts, next.config.ts e src/app/layout.tsx)
+4. B6-01: estrutura do Início (precisa da A6-01)
+5. B6-04: aba Cartões
+6. B6-05: aba Visão geral (precisa da A6-01 e da A6-02)
+7. B6-03: aba Conta (precisa da A6-02 e da A6-03). É ela que torna Conta a aba padrão.
+8. B6-08: push, interface (precisa da A6-04 e da B6-07)
+
+Se uma dependência do Agente A estiver só com PR aberto, use a regra de "dependência em revisão" do
+AGENTS.md §3. Se ela nem tiver PR, pule para a próxima tarefa livre da lista e volte depois.
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira no quadro se está ⬜ e se as dependências
+  estão ✅ (ou com PR aberto). Reserve e atualize o status no checkout de integração.
+- Textos em pt-BR, dinheiro com <Money /> e datas com <DateBR />. "Celular" é abaixo de md (768 px).
+  Teste cada tela em 390 px e no desktop.
+- Respeite o modo "esconder valores": totais sensíveis, valores de transação individual com
+  sensitive={false}, data-sensitive-axis nos gráficos de dinheiro.
+- O service worker não pode guardar dados financeiros: o cache só tem o offline.html.
+- Escreva só os testes que a spec pede (no máximo um e2e de fumaça por tela) e ajuste os e2e que
+  quebrarem com a troca de "Dashboard" por "Início".
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3001. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, prints em 390 px e no desktop das
+telas novas, o resultado do npm run check, os desvios e as pendências (inclusive os testes que só dá
+para fazer no celular depois do deploy).
 ```
 
 ---
