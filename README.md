@@ -114,3 +114,7 @@ O projeto foi desenvolvido com agentes de IA trabalhando em paralelo; os documen
 | [`docs/tarefas/`](docs/tarefas/) | Especificação passo a passo de cada tarefa |
 | [`docs/MELHORIAS.md`](docs/MELHORIAS.md) | Ideias futuras com custo, esforço e pré-requisitos |
 | [`AGENTS.md`](AGENTS.md) | Regras de trabalho para os agentes de IA |
+
+## Licença
+
+[MIT](LICENSE): use, modifique e distribua à vontade, mantendo o aviso de copyright. O software é fornecido sem garantia.
