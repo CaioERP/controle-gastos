@@ -14,7 +14,7 @@ import { CardsTab } from '@/components/home/tabs/cards-tab';
 
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_TAB: HomeTab = 'geral';
+const DEFAULT_TAB: HomeTab = 'conta';
 
 const VALID_TABS = new Set<HomeTab>(['conta', 'cartoes', 'geral']);
 

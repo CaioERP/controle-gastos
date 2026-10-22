@@ -13,6 +13,10 @@ test.describe('Dashboard', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
 
+    // Na aba Conta (padrão): fumaça de Saldo em contas e Livre para gastar (B6-03)
+    await expect(page.getByText('Saldo em contas')).toBeVisible();
+    await expect(page.getByText(/Livre para gastar/i)).toBeVisible();
+
     // Passo de fumaça da estrutura de abas: clicar em "Visão geral" e ver o card "Gastos"
     await page.getByRole('link', { name: /Visão geral/i }).click();
 
@@ -30,7 +34,7 @@ test.describe('Dashboard', () => {
   });
 
   test('clicar numa fatia da rosca leva para /transacoes com cat= e o mesmo período', async ({ page }) => {
-    await page.goto('/?mes=2026-09');
+    await page.goto('/?mes=2026-09&aba=geral');
     // Seletor estável: cada fatia tem data-slice=<id da categoria>. O centro da caixa de uma fatia
     // grande cai no furo da rosca, por isso o clique é disparado no próprio elemento.
     const slice = page.locator('path[data-slice]').first();
@@ -42,7 +46,7 @@ test.describe('Dashboard', () => {
   });
 
   test('legenda da rosca leva para /transacoes com cat= da categoria', async ({ page }) => {
-    await page.goto('/?mes=2026-09');
+    await page.goto('/?mes=2026-09&aba=geral');
     const legend = page.getByRole('list', { name: 'Legenda: gastos por categoria' });
     const first = legend.getByRole('link').first();
     const href = await first.getAttribute('href');
@@ -53,7 +57,7 @@ test.describe('Dashboard', () => {
   });
 
   test('barra de forma de pagamento leva para /transacoes com forma=', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?aba=geral');
     const bars = page.getByRole('list', { name: 'Gastos por forma de pagamento' });
     await bars.getByRole('link').first().click();
     await expect(page).toHaveURL(/\/transacoes\?.*forma=/);
@@ -68,7 +72,7 @@ test.describe('Dashboard', () => {
 
   test('legível em 390 px: os cards empilham sem rolagem horizontal', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/');
+    await page.goto('/?aba=geral');
     await expect(page.getByTestId('mobile-kpi-summary')).toBeVisible();
     await expect(page.getByTestId('mobile-kpi-summary')).toContainText('Receitas');
     await expect(page.getByTestId('mobile-kpi-summary')).toContainText('Sobra');
