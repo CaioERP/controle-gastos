@@ -323,6 +323,12 @@ export async function linkSourceToTransaction(
     }
   }
 
+  // Horário: só preenche quando ainda não há; nunca troca um já gravado.
+  if (!existingTx.occurredAt && incoming.occurredAt) {
+    patch.occurredAt = new Date(incoming.occurredAt);
+    updated = true;
+  }
+
   if (updated) {
     await db.update(transactions).set(patch).where(eq(transactions.id, transactionId));
   }

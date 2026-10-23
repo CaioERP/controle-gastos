@@ -3,7 +3,9 @@
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Money } from '@/components/format/money';
+import { formatTimeBR } from '@/components/format/time-br';
 import { cn } from '@/lib/utils';
+import { formatDateBR } from '@/server/domain/dates';
 import { PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
 import type { CategoryTree } from '@/server/queries/catalog';
 import type { TransactionRow as Tx } from '@/server/queries/transaction-row';
@@ -18,6 +20,8 @@ type TransactionRowProps = {
   categories: CategoryTree[];
   onOpen: (tx: Tx) => void;
   onRecategorize: RecategorizeHandler;
+  /** Fora da lista agrupada por dia (ex.: últimas transações), a linha mostra a data. */
+  showDate?: boolean;
 };
 
 export const TransactionRow = React.memo(function TransactionRow({
@@ -25,6 +29,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   categories,
   onOpen,
   onRecategorize,
+  showDate = false,
 }: TransactionRowProps) {
   const projected = tx.status === 'projected';
   const reportable = isReportable(tx.kind);
@@ -57,6 +62,13 @@ export const TransactionRow = React.memo(function TransactionRow({
           />
           <span className="truncate">{tx.account.name}</span>
           {tx.card && <span className="shrink-0 tabular-nums">•{tx.card.last4}</span>}
+          {(showDate || tx.occurredAt) && (
+            <span className="shrink-0 tabular-nums">
+              · {[showDate ? formatDateBR(tx.date).slice(0, 5) : null, tx.occurredAt ? formatTimeBR(tx.occurredAt) : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          )}
         </div>
         <button
           type="button"

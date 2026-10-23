@@ -32,6 +32,7 @@ import { paymentMethodColor, seriesColor } from '@/components/charts/palette';
 import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
 import { BreakdownBars } from '@/components/analysis/breakdown-bars';
 import { CrosstabTable } from '@/components/analysis/crosstab-table';
+import { CrosstabMobile } from '@/components/analysis/crosstab-mobile';
 import { DimensionSelect } from '@/components/analysis/dimension-select';
 import { MerchantRanking } from '@/components/analysis/merchant-ranking';
 import { MonthlyEvolution } from '@/components/analysis/monthly-evolution';
@@ -166,7 +167,18 @@ export default async function AnalisePage({ searchParams }: Props) {
             title="Categoria × forma de pagamento"
             description="Intensidade da cor proporcional ao valor. Clique numa célula para ver as transações."
           >
-            {heatmap.rows.length > 0 ? <CrosstabTable heatmap={heatmap} filters={filters} linkOptions={linkOpts} /> : <SectionEmpty />}
+            {heatmap.rows.length > 0 ? (
+              <>
+                <div className="hidden md:block">
+                  <CrosstabTable heatmap={heatmap} filters={filters} linkOptions={linkOpts} />
+                </div>
+                <div className="md:hidden">
+                  <CrosstabMobile heatmap={heatmap} filters={filters} linkOptions={linkOpts} />
+                </div>
+              </>
+            ) : (
+              <SectionEmpty />
+            )}
           </SectionCard>
 
           <SectionCard
@@ -180,7 +192,7 @@ export default async function AnalisePage({ searchParams }: Props) {
           </SectionCard>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <SectionCard title="Ranking de estabelecimentos" description="Top 15 do período.">
+            <SectionCard title="Ranking de estabelecimentos" description="Maiores do período.">
               <MerchantRanking rows={merchantRanking(byMerchant, 15)} />
             </SectionCard>
             <SectionCard title="Comparação com o período anterior" description={`Período atual × ${prevLabel}.`}>

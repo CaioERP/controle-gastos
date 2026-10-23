@@ -60,10 +60,10 @@ test.describe('Análise', () => {
     await expect(page.getByRole('button', { name: 'Linhas' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('em 390 px a página não rola na horizontal (matriz rola no próprio contêiner)', async ({ page }) => {
+  test('em 390 px a página não rola na horizontal (matriz vira lista)', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/analise');
-    await expect(page.getByTestId('crosstab')).toBeVisible();
+    await expect(page.getByTestId('crosstab-mobile')).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });

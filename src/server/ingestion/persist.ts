@@ -172,6 +172,7 @@ export async function upsertTransaction(
         accountId,
         cardId,
         date: n.date,
+        occurredAt: n.occurredAt ? new Date(n.occurredAt) : null,
         amountCents: n.amountCents,
         currency: n.currency,
         descriptionRaw: n.descriptionRaw,
@@ -235,6 +236,12 @@ export async function upsertTransaction(
       (patch as Record<string, unknown>)[key] = nextVal;
       changed = true;
     }
+  }
+
+  // Horário: só preenche quando ainda não há; nunca troca um já gravado.
+  if (!existingTx.occurredAt && n.occurredAt) {
+    patch.occurredAt = new Date(n.occurredAt);
+    changed = true;
   }
 
   if (patch.amountCents !== undefined) {

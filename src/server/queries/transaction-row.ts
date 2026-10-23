@@ -20,6 +20,7 @@ export type TransactionRow = {
   id: string;
   parentTransactionId?: string | null;
   date: string;
+  occurredAt?: string | null; // ISO UTC; null quando a fonte não informa a hora
   description: string;
   descriptionRaw: string;
   amountCents: number;
@@ -44,6 +45,7 @@ const transactionRowColumns = {
   id: transactions.id,
   parentTransactionId: transactions.parentTransactionId,
   date: transactions.date,
+  occurredAt: transactions.occurredAt,
   description: transactions.description,
   descriptionRaw: transactions.descriptionRaw,
   amountCents: transactions.amountCents,
@@ -117,6 +119,7 @@ export function toTransactionRow(r: TransactionRowRecord, tagList: TransactionTa
     id: r.id,
     parentTransactionId: r.parentTransactionId ?? null,
     date: r.date,
+    occurredAt: r.occurredAt ? new Date(r.occurredAt).toISOString() : null,
     description: r.description,
     descriptionRaw: r.descriptionRaw,
     amountCents: r.amountCents,

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ListOrdered, Inbox, PieChart, Menu, Wallet } from 'lucide-react';
+import { Landmark, LayoutDashboard, ListOrdered, PieChart, Menu, Wallet } from 'lucide-react';
 import { isNavItemActive } from './nav-items';
 import { NavList } from './nav-list';
 import { SearchTrigger } from './command-palette';
@@ -16,16 +16,16 @@ export interface BottomNavProps {
 }
 
 const PRIMARY_NAV = [
-  { href: '/', label: 'Início', icon: LayoutDashboard },
-  { href: '/transacoes', label: 'Transações', icon: ListOrdered },
-  { href: '/revisao', label: 'Revisão', icon: Inbox },
-  { href: '/analise', label: 'Análise', icon: PieChart },
+  { href: '/', label: 'Início', icon: LayoutDashboard, featured: false },
+  { href: '/transacoes', label: 'Transações', icon: ListOrdered, featured: false },
+  { href: '/contas', label: 'Contas', icon: Landmark, featured: true },
+  { href: '/analise', label: 'Análise', icon: PieChart, featured: false },
 ] as const;
 
 /**
  * Barra de navegação inferior exclusiva para dispositivos móveis (< md / 768px).
- * Substitui o menu hambúrguer no cabeçalho com acesso rápido a Início, Transações,
- * Revisão (com badge), Análise e menu "Mais" para as demais telas.
+ * Início, Transações, Contas (no centro, em destaque), Análise e o menu "Mais", que leva a
+ * Revisão e as demais telas (com o badge de transações para revisar).
  */
 export function BottomNav({ reviewCount = 0, footerSlot }: BottomNavProps) {
   const pathname = usePathname();
@@ -39,7 +39,6 @@ export function BottomNav({ reviewCount = 0, footerSlot }: BottomNavProps) {
       <div className="flex items-center justify-around h-14">
         {PRIMARY_NAV.map((item) => {
           const active = isNavItemActive(item.href, pathname);
-          const isReview = item.href === '/revisao';
 
           return (
             <Link
@@ -53,17 +52,13 @@ export function BottomNav({ reviewCount = 0, footerSlot }: BottomNavProps) {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <div className="relative">
+              {item.featured ? (
+                <span className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                  <item.icon className="size-5" />
+                </span>
+              ) : (
                 <item.icon className="size-5" />
-                {isReview && reviewCount > 0 && (
-                  <span
-                    aria-label={`${reviewCount} ${reviewCount === 1 ? 'transação para revisar' : 'transações para revisar'}`}
-                    className="absolute -top-1 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground leading-none"
-                  >
-                    {reviewCount > 99 ? '99+' : reviewCount}
-                  </span>
-                )}
-              </div>
+              )}
               <span className="truncate">{item.label}</span>
             </Link>
           );
@@ -82,7 +77,17 @@ export function BottomNav({ reviewCount = 0, footerSlot }: BottomNavProps) {
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Menu className="size-5" />
+                <span className="relative">
+                  <Menu className="size-5" />
+                  {reviewCount > 0 && (
+                    <span
+                      aria-label={`${reviewCount} ${reviewCount === 1 ? 'transação para revisar' : 'transações para revisar'}`}
+                      className="absolute -top-1 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground leading-none"
+                    >
+                      {reviewCount > 99 ? '99+' : reviewCount}
+                    </span>
+                  )}
+                </span>
                 <span>Mais</span>
               </button>
             }

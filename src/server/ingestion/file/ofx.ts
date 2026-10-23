@@ -3,6 +3,7 @@ import { toCents } from '@/server/domain/money';
 import { parseInstallment } from '../installments';
 import { extractMerchantName } from '../merchant';
 import { decidePaymentMethod } from '../payment-method';
+import { occurredAtFromOfx } from '../occurred-at';
 import { toDisplayCase } from '../strings';
 import type { NormalizedTransaction } from '../types';
 import { assignDayOccurrences, buildFileExternalId } from './hash';
@@ -75,6 +76,7 @@ export function parseOfx(
 
   type RawItem = {
     date: string;
+    occurredAt: string | null;
     amountCents: number;
     descriptionRaw: string;
     fitId: string | null;
@@ -118,6 +120,7 @@ export function parseOfx(
 
     const fitId = extractTagValue(block, 'FITID');
     rawItems.push({
+      occurredAt: occurredAtFromOfx(dtPosted),
       date,
       amountCents,
       descriptionRaw,
@@ -171,6 +174,7 @@ export function parseOfx(
       externalId,
       accountExternalId: account.id,
       date: item.date,
+      occurredAt: item.occurredAt,
       amountCents: item.amountCents,
       currency,
       descriptionRaw: item.descriptionRaw,

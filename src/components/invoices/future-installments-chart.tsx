@@ -19,12 +19,24 @@ type FutureInstallmentsChartProps = {
   cardName: string;
   /** Cor da instituição do cartão (institutions.color). */
   cardColor: string;
+  /** Sem o toggle, o gráfico mostra só `card` (a aba Cartões escolhe o cartão por um seletor próprio). */
+  showScopeToggle?: boolean;
+  /** Conteúdo extra no cabeçalho, à direita do título. */
+  action?: React.ReactNode;
 };
 
 const ALL_CARDS_COLOR = '#3B82F6';
 
-export function FutureInstallmentsChart({ card, all, cardName, cardColor }: FutureInstallmentsChartProps) {
-  const [scope, setScope] = React.useState<Scope>('card');
+export function FutureInstallmentsChart({
+  card,
+  all,
+  cardName,
+  cardColor,
+  showScopeToggle = true,
+  action,
+}: FutureInstallmentsChartProps) {
+  const [chosenScope, setScope] = React.useState<Scope>('card');
+  const scope = showScopeToggle ? chosenScope : 'card';
   const rows = scope === 'card' ? card : all;
   const chartConfig = {
     totalCents: { label: 'Parcelas', color: scope === 'card' ? cardColor : ALL_CARDS_COLOR },
@@ -33,7 +45,7 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
   const data = rows.map((r) => ({ ...r, label: formatMonthShort(r.month) }));
 
   const options: Array<{ value: Scope; label: string }> = [
-    { value: 'card', label: 'Este cartão' },
+    { value: 'card', label: cardName },
     { value: 'all', label: 'Todos os cartões' },
   ];
 
@@ -42,6 +54,8 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">Parcelas futuras</CardTitle>
+          {action}
+          {showScopeToggle && (
           <div role="group" aria-label="Escopo das parcelas" className="inline-flex rounded-lg border bg-muted/50 p-1">
             {options.map((o) => (
               <button
@@ -50,7 +64,7 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
                 aria-pressed={scope === o.value}
                 onClick={() => setScope(o.value)}
                 className={cn(
-                  'rounded-md px-2.5 py-1 text-xs font-medium transition-all',
+                  'max-w-40 truncate rounded-md px-2.5 py-1 text-xs font-medium transition-all',
                   scope === o.value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -58,6 +72,7 @@ export function FutureInstallmentsChart({ card, all, cardName, cardColor }: Futu
               </button>
             ))}
           </div>
+          )}
         </div>
         <CardDescription data-testid="committed-text">
           <Money cents={total} className="text-foreground" /> já comprometidos nos próximos 12 meses

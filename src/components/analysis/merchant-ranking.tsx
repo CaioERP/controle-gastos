@@ -1,12 +1,20 @@
+'use client';
+
 import * as React from 'react';
+import { Button } from '@/components/ui/button';
 import { Money } from '@/components/format/money';
 import type { MerchantRankingRow } from '@/server/queries/analysis';
 
-/** Ranking de estabelecimentos: tabela no desktop, lista de cartões no celular. */
-export function MerchantRanking({ rows }: { rows: MerchantRankingRow[] }) {
-  if (rows.length === 0) {
+const INITIAL_ROWS = 5;
+
+/** Ranking de estabelecimentos: tabela no desktop, lista de cartões no celular. Começa com 5. */
+export function MerchantRanking({ rows: allRows }: { rows: MerchantRankingRow[] }) {
+  const [expanded, setExpanded] = React.useState(false);
+  if (allRows.length === 0) {
     return <p className="py-6 text-center text-sm text-muted-foreground">Nenhum estabelecimento no período.</p>;
   }
+  const rows = expanded ? allRows : allRows.slice(0, INITIAL_ROWS);
+  const hidden = allRows.length - INITIAL_ROWS;
   return (
     <>
       <table className="hidden w-full text-sm sm:table">
@@ -48,6 +56,11 @@ export function MerchantRanking({ rows }: { rows: MerchantRankingRow[] }) {
           </li>
         ))}
       </ol>
+      {hidden > 0 && (
+        <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'Mostrar menos' : `Mostrar mais (${hidden})`}
+        </Button>
+      )}
     </>
   );
 }
