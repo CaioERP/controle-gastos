@@ -187,6 +187,8 @@ export const transactions = pgTable(
     cardId: uuid('card_id').references(() => cards.id, { onDelete: 'set null' }),
     invoiceId: uuid('invoice_id').references(() => invoices.id, { onDelete: 'set null' }),
     date: isoDate('date').notNull(),
+    // Momento da transação quando a fonte informa a hora; null quando só há data. Filtros e totais usam `date`.
+    occurredAt: tstz('occurred_at'),
     amountCents: money('amount_cents').notNull(),
     currency: text('currency').notNull().default('BRL'),
     descriptionRaw: text('description_raw').notNull(),

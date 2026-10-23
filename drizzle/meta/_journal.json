@@ -43,6 +43,13 @@
       "when": 1792635341288,
       "tag": "0005_worthless_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792756606217,
+      "tag": "0006_last_talos",
+      "breakpoints": true
     }
   ]
 }
