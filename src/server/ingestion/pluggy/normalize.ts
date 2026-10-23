@@ -6,6 +6,7 @@ import { toCents } from '../../domain/money';
 import { parseInstallment } from '../installments';
 import { extractMerchantName } from '../merchant';
 import { decidePaymentMethod } from '../payment-method';
+import { occurredAtFromPluggy } from '../occurred-at';
 import { toDisplayCase } from '../strings';
 import type { NormalizedTransaction, RawAccount } from '../types';
 import type { PluggyAccount, PluggyTransaction } from './api';
@@ -190,6 +191,7 @@ export function normalizePluggyTransaction(
     externalId: tx.id,
     accountExternalId: account.externalId,
     date: dateStr,
+    occurredAt: occurredAtFromPluggy(tx.date),
     amountCents,
     currency: tx.currencyCode ?? account.currency ?? 'BRL',
     descriptionRaw,

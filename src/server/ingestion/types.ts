@@ -39,6 +39,7 @@ export type NormalizedTransaction = {
   externalId: string;
   accountExternalId: string;
   date: string; // YYYY-MM-DD
+  occurredAt?: string | null; // ISO UTC quando a fonte informa a hora (só para exibir)
   amountCents: number; // R1
   currency: string;
   descriptionRaw: string;
