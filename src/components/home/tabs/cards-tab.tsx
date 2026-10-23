@@ -21,6 +21,7 @@ import { PeriodOnlyBar } from '@/components/home/period-only-bar';
 import { InvoicesHero } from '@/components/home/cards/invoices-hero';
 import { CardTile, type CardTileAccount } from '@/components/home/cards/card-tile';
 import { FutureInstallmentsChart } from '@/components/invoices/future-installments-chart';
+import { InstallmentsCardPicker } from '@/components/home/cards/installments-card-picker';
 import { fillInstallmentMonths } from '@/components/invoices/invoice-summary';
 import { BreakdownDonut } from '@/components/charts/breakdown-donut';
 import { EmptyState } from '@/components/states/empty-state';
@@ -74,9 +75,12 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
 
   // Rosca e links só com os cartões, para a lista de transações bater com a fatia.
   const cardFilters = { ...filters, accountIds: cardAccountIds };
-  const [categories, futureInstallmentsRaw, byCategory, byPaymentMethod] = await Promise.all([
+  const rawParcelas = Array.isArray(searchParams.parcelas) ? searchParams.parcelas[0] : searchParams.parcelas;
+  const installmentsCard = cardAccounts.find((c) => c.id === rawParcelas) ?? null;
+  const [categories, futureInstallmentsRaw, selectedInstallmentsRaw, byCategory, byPaymentMethod] = await Promise.all([
     listCategories(db),
     getFutureInstallments(db, { accountIds: cardAccountIds }),
+    installmentsCard ? getFutureInstallments(db, { accountIds: [installmentsCard.id] }) : Promise.resolve([]),
     getBreakdown(db, cardFilters, catDim),
     getBreakdown(db, cardFilters, 'paymentMethod'),
   ]);
@@ -148,10 +152,21 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
       </section>
 
       <FutureInstallmentsChart
-        card={filledInstallments}
+        card={installmentsCard ? fillInstallmentMonths(selectedInstallmentsRaw, today()) : filledInstallments}
         all={filledInstallments}
-        cardName="Todos os cartões"
-        cardColor="#3B82F6"
+        cardName={installmentsCard ? (installmentsCard.displayName ?? installmentsCard.name) : 'todos os cartões'}
+        cardColor={installmentsCard ? installmentsCard.institution.color : '#3B82F6'}
+        showScopeToggle={false}
+        action={
+          <InstallmentsCardPicker
+            cards={cardAccounts.map((c) => ({
+              id: c.id,
+              name: c.displayName ?? c.name,
+              institutionName: c.institution.name,
+            }))}
+            selectedId={installmentsCard?.id ?? null}
+          />
+        }
       />
 
       <BreakdownDonut
