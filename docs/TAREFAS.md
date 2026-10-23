@@ -2,9 +2,9 @@
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
-> **Última atualização por:** Coordenador / Revisor (2026-10-22 — Fase 6 revisada e integrada, PRs #77–#88).
+> **Última atualização por:** Coordenador / Revisor (2026-10-23 — Fase 6.1, ajustes de uso).
 >
-> **Fase 6 concluída.** A Fase 5 (deploy) fica com o usuário, que fará a parte de hospedagem por conta própria. O teste real do PWA e do push no celular depende do deploy com HTTPS.
+> **Prioridade atual: Fase 6.1 (ajustes de uso).** A Fase 6 está concluída. A Fase 5 (deploy) fica com o usuário; o teste do PWA e do push no celular depende do deploy com HTTPS.
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída · ⏸️ fora do escopo por enquanto
 
@@ -75,6 +75,25 @@ Onda 4                                            │  B6-08 push (interface)
 | B6-06 | Barra de navegação inferior no celular (substitui o ☰) | B | — | ✅ (#79) |
 | B6-07 | PWA: manifest, ícones, service worker só com a tela "Sem conexão" | B | — | ✅ (#82) |
 | B6-08 | Notificações push, interface: ativar por aparelho, coluna Push nas preferências, eventos no service worker | B | A6-04, B6-07 | ✅ (#88) |
+
+## Fase 6.1 — Ajustes de uso · spec: [`tarefas/fase-6-ajustes.md`](./tarefas/fase-6-ajustes.md)
+
+> Pedidos do usuário em 2026-10-23 (resumo em `fase-6-ajustes.md`, seção "Decisões"): horário das transações, parcelas por cartão, Contas no centro da barra inferior com a Revisão no menu, matriz da Análise legível no celular e ranking de lojas com "Mostrar mais".
+
+```
+            Agente A (Dados)                          Agente B (Interface)
+Onda 1   A6-05 horário das transações             │  B6-10 parcelas por cartão · B6-11 barra inferior
+         (commit contract: antes)                 │  B6-12 Análise no celular
+Onda 2                                            │  B6-09 data e horário na tela (precisa A6-05)
+```
+
+| ID | Tarefa | Agente | Depende de | Status |
+|---|---|---|---|---|
+| A6-05 | Horário das transações: coluna `transactions.occurred_at` (contract:), Pluggy e OFX, backfill | A | — | ⬜ |
+| B6-09 | Data e horário na lista, no detalhe e nas últimas transações da aba Conta | B | A6-05 | ⬜ |
+| B6-10 | Parcelas futuras por cartão: seletor na aba Cartões; nome do cartão no toggle da tela Faturas | B | — | ⬜ |
+| B6-11 | Barra inferior: Contas no centro, Revisão no menu "Mais" (badge no Mais) | B | — | ⬜ |
+| B6-12 | Análise no celular: matriz categoria × forma em lista; ranking de lojas com 5 e "Mostrar mais" | B | — | ⬜ |
 
 ---
 

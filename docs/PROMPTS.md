@@ -25,8 +25,10 @@
 | 14 | Agente B | B5-01, B5-02 | P5-00 ✅ e H-06 | 13 |
 | 15 | Agente A | A6-01 a A6-04 (Fase 6, mobile e início) | nenhum | 16 |
 | 16 | Agente B | B6-01 a B6-08 (Fase 6, mobile e início) | nenhum para B6-02, B6-06 e B6-07; as outras esperam as dependências | 15 |
+| 17 | Agente A | A6-05 (Fase 6.1, horário das transações) | nenhum | 18 |
+| 18 | Agente B | B6-09 a B6-12 (Fase 6.1, ajustes de uso) | nenhum para B6-10, B6-11 e B6-12; a B6-09 espera a A6-05 | 17 |
 
-> **Ordem atual (2026-10-21):** a Fase 6 vem antes da Fase 5. O deploy (prompts 12 a 14) fica com o usuário.
+> **Ordem atual (2026-10-23):** a Fase 6 está concluída; agora vêm os ajustes da Fase 6.1 (prompts 17 e 18). O deploy (prompts 12 a 14) fica com o usuário.
 
 ---
 
@@ -586,6 +588,82 @@ Regras:
 No fim, mande para cada PR: o número e o link, o que foi feito, prints em 390 px e no desktop das
 telas novas, o resultado do npm run check, os desvios e as pendências (inclusive os testes que só dá
 para fazer no celular depois do deploy).
+```
+
+---
+
+## 17 — Agente A: Fase 6.1, horário das transações
+
+```text
+Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md (§6, protocolo de
+contrato), docs/TAREFAS.md (seção Fase 6.1) e docs/tarefas/fase-6-ajustes.md (seção "Decisões" e a
+A6-05).
+
+Pré-requisito: nenhum. O worktree ainda está na branch antiga da A6-04, que já foi mesclada e apagada
+no GitHub: rode git fetch, faça git switch --detach origin/main e crie a branch nova a partir dela.
+
+Tarefa (um PR):
+1. A6-05: horário das transações. A coluna nova transactions.occurred_at vai antes, num commit
+   "contract:" isolado direto na main (CONTRATOS.md §6), com a migration gerada por npm run db:generate
+   na main atualizada. O Agente B espera esse commit para a B6-09: faça-o primeiro.
+
+Regras:
+- Reserve a tarefa no quadro (checkout de integração) antes de começar e atualize o status no fim.
+- A coluna date continua sendo a fonte de verdade de períodos e totais. Não mude como ela é calculada.
+- Horário só quando a fonte informa. Siga as regras da spec para "meia-noite = sem hora".
+- O script de backfill imprime só totais, nunca descrição, valor ou id de transação.
+- Escreva só os testes da spec (funções puras de occurred-at.ts). Nada de e2e.
+- Não invente formatos de API: confira o formato do DTPOSTED nos testes de ofx.ts.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande: o número e o link do PR, o hash do commit contract:, o que foi feito, o resultado do
+npm run check, os desvios e as pendências (inclusive o que só dá para conferir com dados reais do
+Pluggy, como quantas transações vieram com horário).
+```
+
+---
+
+## 18 — Agente B: Fase 6.1, ajustes de uso
+
+```text
+Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md
+(seção Fase 6.1) e docs/tarefas/fase-6-ajustes.md, começando pela seção "Decisões", que é o que o
+usuário pediu.
+
+Pré-requisito: nenhum para B6-10, B6-11 e B6-12. A B6-09 espera a A6-05 (pelo menos o commit
+"contract:" da coluna occurred_at na main; se o PR da A6-05 estiver aberto, use a regra de
+"dependência em revisão" do AGENTS.md §3). O worktree ainda está na branch antiga da B6-08, já
+mesclada e apagada no GitHub: rode git fetch, faça git switch --detach origin/main e crie cada branch
+a partir da origin/main atualizada.
+
+Tarefas, nesta ordem, um PR cada:
+1. B6-11: barra inferior com Contas no centro e Revisão no menu "Mais"
+2. B6-10: parcelas futuras por cartão (aba Cartões) e nome do cartão no toggle da tela Faturas
+3. B6-12: Análise no celular (matriz em lista) e ranking de lojas com "Mostrar mais"
+4. B6-09: data e horário nas transações (precisa da A6-05)
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira no quadro se está ⬜ e se as dependências
+  estão ✅ (ou com PR aberto). Reserve e atualize o status no checkout de integração.
+- Textos em pt-BR, dinheiro com <Money /> e datas com <DateBR />. "Celular" é abaixo de md (768 px).
+  Teste cada tela em 390 px e no desktop.
+- Respeite o modo "esconder valores": totais sensíveis, valores de transação individual com
+  sensitive={false}.
+- Sem horário conhecido, mostre só a data. Nunca "00:00".
+- Escreva só os testes que a spec pede e ajuste os e2e que quebrarem (por exemplo, os que clicam em
+  "Revisão" na barra inferior).
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3001. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, prints em 390 px e no desktop das
+telas alteradas, o resultado do npm run check, os desvios e as pendências.
 ```
 
 ---
