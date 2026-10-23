@@ -2,9 +2,9 @@
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
-> **Última atualização por:** Coordenador / Revisor (2026-10-23 — Fase 6.1, ajustes de uso).
+> **Última atualização por:** Coordenador / Revisor (2026-10-23 — Fase 6.1 implementada e integrada no PR #89).
 >
-> **Prioridade atual: Fase 6.1 (ajustes de uso).** A Fase 6 está concluída. A Fase 5 (deploy) fica com o usuário; o teste do PWA e do push no celular depende do deploy com HTTPS.
+> **Fases 6 e 6.1 concluídas.** Próximo: melhorias do mobile (proposta de design em andamento). A Fase 5 (deploy) fica com o usuário; o teste do PWA e do push no celular depende do deploy com HTTPS.
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída · ⏸️ fora do escopo por enquanto
 
@@ -89,11 +89,11 @@ Onda 2                                            │  B6-09 data e horário na 
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
-| A6-05 | Horário das transações: coluna `transactions.occurred_at` (contract:), Pluggy e OFX, backfill | A | — | ⬜ |
-| B6-09 | Data e horário na lista, no detalhe e nas últimas transações da aba Conta | B | A6-05 | ⬜ |
-| B6-10 | Parcelas futuras por cartão: seletor na aba Cartões; nome do cartão no toggle da tela Faturas | B | — | ⬜ |
-| B6-11 | Barra inferior: Contas no centro, Revisão no menu "Mais" (badge no Mais) | B | — | ⬜ |
-| B6-12 | Análise no celular: matriz categoria × forma em lista; ranking de lojas com 5 e "Mostrar mais" | B | — | ⬜ |
+| A6-05 | Horário das transações: coluna `transactions.occurred_at` (contract:), Pluggy e OFX, backfill | A | — | ✅ (#89) |
+| B6-09 | Data e horário na lista, no detalhe e nas últimas transações da aba Conta | B | A6-05 | ✅ (#89) |
+| B6-10 | Parcelas futuras por cartão: seletor na aba Cartões; nome do cartão no toggle da tela Faturas | B | — | ✅ (#89) |
+| B6-11 | Barra inferior: Contas no centro, Revisão no menu "Mais" (badge no Mais) | B | — | ✅ (#89) |
+| B6-12 | Análise no celular: matriz categoria × forma em lista; ranking de lojas com 5 e "Mostrar mais" | B | — | ✅ (#89) |
 
 ---
 
