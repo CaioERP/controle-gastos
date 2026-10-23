@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Money } from '@/components/format/money';
 import { DateBR } from '@/components/format/date-br';
+import { formatTimeBR } from '@/components/format/time-br';
 import { formatAmountInput, parseOptionalAmount } from '@/components/catalog/catalog-helpers';
 import { PAYMENT_METHODS, TX_KINDS, type PaymentMethod, type TxKind } from '@/server/domain/enums';
 import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
@@ -198,6 +199,7 @@ function SheetBody({
         <SheetTitle className="truncate">{tx.description}</SheetTitle>
         <SheetDescription className="flex items-center gap-2">
           <DateBR date={tx.date} />
+          {tx.occurredAt && <span className="tabular-nums">às {formatTimeBR(tx.occurredAt)}</span>}
           <span aria-hidden="true">·</span>
           <Money sensitive={false} cents={tx.amountCents} />
         </SheetDescription>

@@ -88,6 +88,7 @@ export function RecentTransactions({
                   categories={categories}
                   onOpen={handleOpen}
                   onRecategorize={handleRecategorize}
+                  showDate
                 />
               ))}
             </ul>
