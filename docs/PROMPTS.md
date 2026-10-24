@@ -27,9 +27,10 @@
 | 16 | Agente B | B6-01 a B6-08 (Fase 6, mobile e início) | nenhum para B6-02, B6-06 e B6-07; as outras esperam as dependências | 15 |
 | 17 | Agente A | A6-05 (Fase 6.1, horário das transações) | nenhum | 18 |
 | 18 | Agente B | B6-09 a B6-12 (Fase 6.1, ajustes de uso) | nenhum para B6-10, B6-11 e B6-12; a B6-09 espera a A6-05 | 17 |
-| 19 | Agente B | B6-13 a B6-18 (Fase 6.2, refinamento visual do site inteiro) | nenhum para a B6-13; as outras esperam a B6-13 | — |
+| 19 | Agente B | B6-13 a B6-19 (Fase 6.2, refinamento visual do site inteiro) | nenhum para a B6-13; as outras esperam a B6-13; a B6-15 espera também a A6-06 | 20 |
+| 20 | Agente A | A6-06 a A6-10 (Fase 6.2, fortalecer o backend) | nenhum | 19 |
 
-> **Ordem atual (2026-10-24):** Fases 6 e 6.1 concluídas; agora vem a Fase 6.2 (prompt 19, só Agente B). O deploy (prompts 12 a 14) fica com o usuário.
+> **Ordem atual (2026-10-24):** Fases 6 e 6.1 concluídas; agora vem a Fase 6.2 (prompts 19 e 20, em paralelo). O deploy (prompts 12 a 14) fica com o usuário.
 
 ---
 
@@ -686,11 +687,16 @@ cada branch a partir da origin/main atualizada.
 
 Tarefas, nesta ordem, um PR cada:
 1. B6-13: fundação visual (Money tone, StatStrip, Section, cabeçalhos, barra inferior)
-2. B6-14: linha de transação compacta e página Transações
-3. B6-16: Contas e cartões
-4. B6-17: Análise por seções (a tabela categoria × forma de pagamento continua no desktop)
-5. B6-15: Início (precisa da B6-14)
-6. B6-18: demais páginas
+2. B6-19: rosca com interface profunda (toDonutSlices)
+3. B6-14: linha de transação compacta e página Transações
+4. B6-16: Contas e cartões
+5. B6-17: Análise por seções (a tabela categoria × forma de pagamento continua no desktop)
+6. B6-15: Início (precisa da B6-14, da B6-19 e da A6-06 do Agente A)
+7. B6-18: demais páginas
+
+O Agente A trabalha em paralelo no backend (docs/tarefas/fase-6-2-backend.md) e mexe em poucas linhas
+de arquivos seus (cláusulas where em queries/, duas actions de alternar, um case no attention-strip).
+Se der conflito, faça rebase e mantenha as duas mudanças.
 
 Se a B6-13 ainda estiver em revisão quando começar as outras, use a regra de "dependência em
 revisão" do AGENTS.md §3 (branch a partir da branch da B6-13, PR com --base nela).
@@ -713,6 +719,46 @@ Regras:
 No fim, mande para cada PR: o número e o link, o que foi feito, prints em 390 px e 1440 px das
 telas alteradas (antes e depois quando possível), o resultado do npm run check, os desvios e as
 pendências.
+```
+
+---
+
+## 20 — Agente A: Fase 6.2, fortalecer o backend
+
+```text
+Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
+C:UsersUsuárioDocumentsCaioprojectscontrole-gastos-a.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md (§1 e §6),
+docs/TAREFAS.md (seção Fase 6.2) e docs/tarefas/fase-6-2-backend.md, começando pela introdução
+(os 5 problemas) e pela seção "Autorizações de pasta".
+
+Pré-requisito: nenhum. O worktree ainda está numa branch antiga, já mesclada e apagada no GitHub:
+rode git fetch, faça git switch --detach origin/main e crie cada branch a partir da origin/main
+atualizada.
+
+Tarefas, nesta ordem, um PR cada:
+1. A6-06: resumo de contas uma vez por requisição (faça primeiro: a B6-15 do Agente B depende dela)
+2. A6-07: livro-razão src/server/ledger/ (commit "contract:" registrando as pastas novas no
+   CONTRATOS.md §1); migre as consultas em commits por grupo
+3. A6-08: mesclagem única (R9)
+4. A6-09: comandos de alternar (commit "contract:" com as assinaturas novas)
+5. A6-10: falhas visíveis (log com redação de segredos + item no "Precisa de você")
+
+Regras:
+- Reserve cada tarefa no quadro (checkout de integração) antes de começar e atualize o status no fim.
+- Nenhuma mudança de comportamento visível, exceto o item novo da A6-10 e os 3 bugs listados na A6-07.
+  Os testes que já existem em queries/ têm de continuar passando sem mudar valores esperados.
+- Em arquivos do Agente B, mexa só no que a seção "Autorizações de pasta" permite. O Agente B está
+  refazendo as telas ao mesmo tempo: PRs pequenos, rebase frequente; em conflito de tela, mantenha a
+  versão dele e reaplique só a sua linha.
+- Logs nunca podem levar segredos, tokens, endpoints de push nem dados de transação.
+- Escreva só os testes da spec. Nada de e2e.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3000. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, o resultado do npm run check, os
+desvios e as pendências (na A6-07, a lista de consultas que ficaram sem recorte e por quê).
 ```
 
 ---

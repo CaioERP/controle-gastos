@@ -1,4 +1,4 @@
-# Fase 6.2 — Refinamento visual do site inteiro (B6-13 a B6-18)
+# Fase 6.2 — Refinamento visual do site inteiro (B6-13 a B6-19)
 
 > Aprovado pelo usuário em 2026-10-24, a partir de um canvas de design com as telas de hoje e as propostas, no celular (390 px) e no desktop (1440 px). Vale para o site todo.
 > **Referência visual no repositório:** `docs/design/fase-6-2/` tem a marcação HTML das 8 telas propostas: celular e desktop de Início, Transações, Contas e Análise. Abra no navegador ou leia o HTML para ver espaçamentos, tamanhos e cores. São maquetes com dados fictícios: **não copie a marcação**. Reproduza o visual com os componentes do projeto (Tailwind, shadcn, `<Money />`). Os links entre os arquivos (`*.dc.html`) não funcionam fora do canvas; ignore.
@@ -51,13 +51,16 @@ Respeite o tema escuro: use os tokens, nunca hex fixo.
 
 ```
 B6-13 fundação (Money, StatStrip, Section, cabeçalhos, barra inferior)
+  ├── B6-19 rosca com interface profunda
   ├── B6-14 linha de transação + página Transações
-  │     └── B6-15 Início (abas Conta, Cartões e Visão geral)
+  │     └── B6-15 Início (abas Conta, Cartões e Visão geral)   ← também precisa da B6-19 e da A6-06 (Agente A)
   ├── B6-16 Contas e cartões
   ├── B6-17 Análise
   └── B6-18 demais páginas
 ```
-Um PR por tarefa. Depois da B6-13, as outras podem ir em qualquer ordem, com uma exceção: a B6-15 usa a linha de transação nova da B6-14.
+Um PR por tarefa. Depois da B6-13, as outras podem ir em qualquer ordem, com uma exceção: a B6-15 usa a linha de transação da B6-14, a rosca da B6-19 e o resumo de contas em cache da A6-06.
+
+> **Em paralelo:** o Agente A faz a trilha de backend da Fase 6.2 (`fase-6-2-backend.md`, A6-06 a A6-10), que mexe em poucas linhas de arquivos seus. Os casos estão listados lá: cláusulas `where` em `queries/`, as duas actions de alternar e um `case` no `attention-strip`. Se der conflito, faça rebase e mantenha as duas mudanças.
 
 ---
 
@@ -140,9 +143,48 @@ Um PR por tarefa. Depois da B6-13, as outras podem ir em qualquer ordem, com uma
 
 ---
 
+## B6-19 — Rosca com interface profunda
+
+**Depende de:** B6-13 · **Tamanho:** pequeno
+
+### Por quê
+A conversão de `BreakdownItem[]` em fatias (`topWithOthers`, cor, link, "Outras", versão de celular e de desktop) está copiada 13 vezes nas abas do Início, e o `BreakdownDonut` pede 6 listas de fatias prontas. Na Fase 6, um link de fatia esqueceu o filtro de contas por causa disso.
+
+### Arquivos
+- **Criar:** `src/components/charts/donut-slices.ts` e `donut-slices.test.ts`
+- **Editar:** `src/components/charts/breakdown-donut.tsx`, `src/components/home/tabs/account-tab.tsx`, `cards-tab.tsx`, `overview-tab.tsx`
+
+### Passo a passo
+1. **`donut-slices.ts`** (pura):
+   ```ts
+   export function toDonutSlices(args: {
+     items: BreakdownItem[];
+     dimension: 'categoria' | 'forma';
+     filters: TxFilters;          // já com o recorte da aba (ex.: accountIds das contas de caixa)
+     linkOptions?: CategoryLinkOptions;
+     limit: number;               // 5 no celular, 7 no desktop
+   }): DonutSlice[]
+   ```
+   Reúne o que está repetido: `topWithOthers`, `seriesColor` ou `paymentMethodColor`, `NEUTRAL_COLOR` para "Outras", `grouped` e o link com `categoryTransactionsHref` ou `paymentMethodTransactionsHref`.
+2. **`BreakdownDonut`** passa a receber `byCategory: BreakdownItem[]`, `byPaymentMethod: BreakdownItem[]`, `filters`, `linkOptions?`, `mode`, `totalCents` e `title`. Ele chama `toDonutSlices` para celular (5) e desktop (7) por dentro. Cada aba passa a ter uma chamada só.
+3. Apague das três abas o código de fatias repetido.
+
+### Testes
+- `donut-slices.test.ts`:
+  - 9 categorias com limite 5 dão 6 fatias, a última "Outras" com `grouped` de 4 itens e sem link;
+  - o link da fatia leva os `accountIds` dos filtros recebidos.
+
+### Critérios de aceite
+- [ ] Nenhuma aba monta fatias à mão.
+- [ ] As roscas aparecem iguais às de hoje (toggle, "Outras" com detalhe, legenda 5/7).
+
+---
+
 ## B6-15 — Início
 
-**Depende de:** B6-13, B6-14 · **Tamanho:** grande
+**Depende de:** B6-13, B6-14, B6-19, A6-06 (Agente A) · **Tamanho:** grande
+
+> **Resumo de contas uma vez só (A6-06):** na página do Início e nas abas, troque as chamadas de `getAccountsOverview(db)` por `getRequestAccountsOverview()` (de `src/server/queries/request-cache.ts`). Passe o resultado como `opts.overview` para `getAttentionItems`, `getFreeToSpend` e `getCashAccountsTab`.
 
 ### Arquivos
 - **Editar:** `src/components/home/tabs/account-tab.tsx`, `src/components/home/account/*` (balance-hero, free-to-spend, balance-chart, cash-flow-card, recent-transactions), `src/components/home/attention-strip.tsx`, `src/components/home/home-tabs.tsx`, `src/components/home/period-only-bar.tsx`, `src/components/home/tabs/cards-tab.tsx`, `src/components/home/tabs/overview-tab.tsx`
