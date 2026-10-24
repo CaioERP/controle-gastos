@@ -193,15 +193,7 @@ export async function getLimitsOverview(
   const withSuggestions = opts?.withSuggestions ?? true;
   let suggestions: SuggestedBudgetRow[] = [];
   if (withSuggestions) {
-    const rawSuggestions = await suggestBudgets(db, refDate);
-    suggestions = rawSuggestions.map((s) => ({
-      categoryId: s.categoryId,
-      categoryName: s.categoryName,
-      categoryColor: s.categoryColor,
-      average3mCents: s.averageCents,
-      suggestedCents: s.suggestedAmountCents,
-      currentLimitCents: s.currentLimitCents,
-    }));
+    suggestions = await getSuggestedBudgets(db, refDate);
   }
 
   const activeLimits = limits.filter((l) => l.isActive);
@@ -223,4 +215,17 @@ export async function getLimitsOverview(
     limits,
     suggestions,
   };
+}
+
+/** Sugestões de orçamento (média de 3 meses) no formato da tela; a página de Limites as carrega em streaming. */
+export async function getSuggestedBudgets(db: Db, refDate: string = getToday()): Promise<SuggestedBudgetRow[]> {
+  const raw = await suggestBudgets(db, refDate);
+  return raw.map((s) => ({
+    categoryId: s.categoryId,
+    categoryName: s.categoryName,
+    categoryColor: s.categoryColor,
+    average3mCents: s.averageCents,
+    suggestedCents: s.suggestedAmountCents,
+    currentLimitCents: s.currentLimitCents,
+  }));
 }
