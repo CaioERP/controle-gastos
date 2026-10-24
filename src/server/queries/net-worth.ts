@@ -9,6 +9,7 @@ import {
   transactions,
 } from '@/server/db/schema';
 import { addMonthsISO, monthStart, today as getToday } from '@/server/domain/dates';
+import { txLive } from '@/server/ledger';
 import {
   computeNetWorth,
   type NetWorthComputation,
@@ -80,8 +81,7 @@ export async function getNetWorthOverview(
       .where(
         and(
           eq(transactions.status, 'projected'),
-          isNull(transactions.deletedAt),
-          isNull(transactions.parentTransactionId),
+          txLive,
         ),
       ),
   ]);

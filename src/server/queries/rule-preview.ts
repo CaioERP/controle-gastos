@@ -3,6 +3,7 @@ import type { Db } from '@/server/db/client';
 import { categories, merchants, transactions } from '@/server/db/schema';
 import { ruleMatches, type MatchableRule } from '@/server/categorization/rules';
 import { addDaysISO, today } from '@/server/domain/dates';
+import { txNotProjected } from '@/server/ledger';
 import type { RuleInput } from '@/server/commands/rules';
 
 /** Campos da regra que decidem com quais transações ela casa. */
@@ -85,9 +86,8 @@ export async function getRulePreview(
     .leftJoin(categories, eq(categories.id, transactions.categoryId))
     .where(
       and(
-        isNull(transactions.deletedAt),
+        txNotProjected,
         inArray(transactions.kind, [...CATEGORIZABLE_KINDS]),
-        ne(transactions.status, 'projected'),
         gte(transactions.date, from),
         lte(transactions.date, to),
         input.accountId ? eq(transactions.accountId, input.accountId) : undefined,
