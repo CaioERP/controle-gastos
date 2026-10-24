@@ -16,6 +16,7 @@ export const FILTER_PARAM_KEYS = [
   'forma',
   'cat',
   'tag',
+  'estab',
   'q',
   'regime',
   'projetadas',
@@ -165,6 +166,7 @@ export function parseFilters(params: RawFilterParams, ref: string = today()): Tx
   const paymentMethods = parsePaymentMethods(p.forma);
   const categoryIds = parseUuids(p.cat);
   const tagIds = parseUuids(p.tag);
+  const merchantIds = parseUuids(p.estab);
 
   let basis: 'accrual' | 'cash' | undefined;
   if (p.regime === 'caixa') basis = 'cash';
@@ -185,6 +187,7 @@ export function parseFilters(params: RawFilterParams, ref: string = today()): Tx
     ...(paymentMethods ? { paymentMethods } : {}),
     ...(categoryIds ? { categoryIds } : {}),
     ...(tagIds ? { tagIds } : {}),
+    ...(merchantIds ? { merchantIds } : {}),
     ...(search ? { search } : {}),
     basis: basis ?? base.basis ?? 'accrual',
     ...(includeProjected ? { includeProjected: true } : {}),
@@ -240,6 +243,9 @@ export function serializeFilters(f: Partial<TxFilters>, base?: TxFilters): strin
   }
   if (f.tagIds && f.tagIds.length > 0) {
     sp.set('tag', f.tagIds.join(','));
+  }
+  if (f.merchantIds && f.merchantIds.length > 0) {
+    sp.set('estab', f.merchantIds.join(','));
   }
   if (f.search && f.search.trim()) {
     sp.set('q', f.search.trim());

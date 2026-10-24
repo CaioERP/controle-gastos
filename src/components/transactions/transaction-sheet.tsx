@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScissorsIcon } from 'lucide-react';
@@ -197,11 +198,22 @@ function SheetBody({
     <>
       <SheetHeader className="border-b pr-12">
         <SheetTitle className="truncate">{tx.description}</SheetTitle>
-        <SheetDescription className="flex items-center gap-2">
+        <SheetDescription className="flex items-center gap-2 flex-wrap">
           <DateBR date={tx.date} />
           {tx.occurredAt && <span className="tabular-nums">às {formatTimeBR(tx.occurredAt)}</span>}
           <span aria-hidden="true">·</span>
           <Money sensitive={false} cents={tx.amountCents} />
+          {tx.merchant && (
+            <>
+              <span aria-hidden="true">·</span>
+              <Link
+                href={`/estabelecimentos/${tx.merchant.id}`}
+                className="text-primary underline-offset-4 hover:underline truncate max-w-[150px]"
+              >
+                {tx.merchant.name}
+              </Link>
+            </>
+          )}
         </SheetDescription>
       </SheetHeader>
 

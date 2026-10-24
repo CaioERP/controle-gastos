@@ -3,6 +3,7 @@ import { today } from '@/server/domain/dates';
 import { TX_KINDS } from '@/server/domain/enums';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { listCategories, listTags } from '@/server/queries/catalog';
+import { getMerchantNames } from '@/server/queries/merchant-history';
 import { getSpendingSummary } from '@/server/queries/summary';
 import { countTransactions, getReviewCount, listTransactions } from '@/server/queries/transactions';
 import { parseFilters, serializeFilters } from '@/server/queries/url-filters';
@@ -24,7 +25,7 @@ export default async function Page({ searchParams }: Props) {
   // as agregações das outras telas seguem R2. O mesmo objeto vai para o "Carregar mais".
   const filters = parseFilters(await searchParams);
   const db = getDb();
-  const [accountsOverview, categories, tags, page, summary, reviewCount, totalCount] = await Promise.all([
+  const [accountsOverview, categories, tags, page, summary, reviewCount, totalCount, filterMerchants] = await Promise.all([
     getAccountsOverview(db),
     listCategories(db),
     listTags(db),
@@ -32,6 +33,7 @@ export default async function Page({ searchParams }: Props) {
     getSpendingSummary(db, filters),
     getReviewCount(db),
     countTransactions(db, filters),
+    getMerchantNames(db, filters.merchantIds ?? []),
   ]);
 
   const manualAccounts = accountsOverview.flatMap((inst) =>
@@ -62,6 +64,7 @@ export default async function Page({ searchParams }: Props) {
         accounts={accountsOverview}
         categories={categories}
         tags={tags}
+        merchants={filterMerchants}
         defaultKinds={TX_KINDS}
       />
       <TransactionsSummary

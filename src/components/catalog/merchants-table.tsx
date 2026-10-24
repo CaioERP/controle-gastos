@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { PencilIcon, SearchIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,7 +81,11 @@ export function MerchantsTable({ merchants, search, categoryGroups }: MerchantsT
             {merchants.map((m) => (
               <li key={m.id} data-testid="merchant-row" className={`flex items-center gap-3 px-4 py-2.5 ${GRID}`}>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{m.name}</div>
+                  <div className="truncate text-sm font-medium">
+                    <Link href={`/estabelecimentos/${m.id}`} className="hover:underline text-foreground">
+                      {m.name}
+                    </Link>
+                  </div>
                   <div className="truncate text-xs text-muted-foreground md:hidden">
                     {m.defaultCategory?.name ?? 'Sem categoria padrão'} · {m.transactionCount}{' '}
                     {m.transactionCount === 1 ? 'transação' : 'transações'}

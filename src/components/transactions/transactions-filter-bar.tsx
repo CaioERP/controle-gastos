@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, Scale, SlidersHorizontal, Wallet } from 'lucide-react';
+import { Calendar, Scale, SlidersHorizontal, Store, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -24,6 +24,7 @@ type TransactionsFilterBarProps = {
   accounts: InstitutionWithAccounts[];
   categories: CategoryTree[];
   tags: Array<{ id: string; name: string; color: string }>;
+  merchants?: Array<{ id: string; name: string }>;
   defaultKinds?: readonly TxKind[];
 };
 
@@ -36,6 +37,7 @@ function activeFilterCount(f: TxFilters): number {
     (f.tagIds?.length ?? 0) +
     (f.paymentMethods?.length ?? 0) +
     (f.kinds?.length ?? 0) +
+    (f.merchantIds?.length ?? 0) +
     (f.includeProjected ? 1 : 0) +
     (f.needsReview ? 1 : 0) +
     (f.basis === 'cash' ? 1 : 0)
@@ -64,6 +66,7 @@ export function TransactionsFilterBar({
   accounts,
   categories,
   tags,
+  merchants,
   defaultKinds = TX_KINDS,
 }: TransactionsFilterBarProps) {
   const [sheetOpen, setSheetOpen] = React.useState(false);
@@ -72,10 +75,16 @@ export function TransactionsFilterBar({
   const activeCount = activeFilterCount(filters);
   const openSheet = () => setSheetOpen(true);
 
+  const activeMerchantName = React.useMemo(() => {
+    if (!filters.merchantIds?.length) return null;
+    const found = merchants?.find((m) => m.id === filters.merchantIds![0]);
+    return found?.name ?? 'Estabelecimento';
+  }, [filters.merchantIds, merchants]);
+
   return (
     <div className="flex flex-col gap-2.5 w-full" data-slot="transactions-filter-bar">
       <div className="hidden md:block">
-        <FilterBar accounts={accounts} categories={categories} tags={tags} defaultKinds={defaultKinds}>
+        <FilterBar accounts={accounts} categories={categories} tags={tags} merchants={merchants} defaultKinds={defaultKinds}>
           <SearchInput className="sm:max-w-none" />
         </FilterBar>
       </div>
@@ -113,6 +122,12 @@ export function TransactionsFilterBar({
           <Scale className="size-3" />
           <span>{filters.basis === 'cash' ? 'Caixa' : 'Competência'}</span>
         </button>
+        {activeMerchantName && (
+          <button type="button" onClick={openSheet} className={CHIP_CLASS}>
+            <Store className="size-3" />
+            <span>{activeMerchantName}</span>
+          </button>
+        )}
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -120,7 +135,7 @@ export function TransactionsFilterBar({
           <SheetHeader className="pb-2">
             <SheetTitle>Filtros</SheetTitle>
           </SheetHeader>
-          <FilterBar accounts={accounts} categories={categories} tags={tags} defaultKinds={defaultKinds} />
+          <FilterBar accounts={accounts} categories={categories} tags={tags} merchants={merchants} defaultKinds={defaultKinds} />
           <SheetClose render={<Button className="w-full">Concluir</Button>} />
         </SheetContent>
       </Sheet>

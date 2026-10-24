@@ -170,6 +170,17 @@ describe('url-filters', () => {
       expect(roundTrip.kinds).toEqual(['expense', 'transfer', 'invoice_payment']);
       expect(roundTrip.needsReview).toBe(true);
     });
+
+    it('combinação 7: filtro de estabelecimento (estab/merchantIds) vai e volta na URL', () => {
+      const original: TxFilters = {
+        ...base,
+        merchantIds: [UUID_1],
+      };
+      const qs = serializeFilters(original, base);
+      expect(qs).toContain(`estab=${UUID_1}`);
+      const roundTrip = parseFilters(qs, REF_DATE);
+      expect(roundTrip.merchantIds).toEqual([UUID_1]);
+    });
   });
 
   describe('withFilters', () => {

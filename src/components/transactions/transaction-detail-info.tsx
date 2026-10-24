@@ -124,6 +124,16 @@ export function TransactionDetailInfo({ tx, onReload }: { tx: Tx; onReload?: () 
         <Info label="Descrição original">
           <span className="break-all font-mono text-xs">{tx.descriptionRaw}</span>
         </Info>
+        {tx.merchant && (
+          <Info label="Estabelecimento">
+            <Link
+              href={`/estabelecimentos/${tx.merchant.id}`}
+              className="text-primary underline-offset-4 hover:underline font-medium"
+            >
+              {tx.merchant.name}
+            </Link>
+          </Info>
+        )}
         <Info label="Conta">
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2 rounded-full" style={{ backgroundColor: tx.institution.color }} aria-hidden="true" />

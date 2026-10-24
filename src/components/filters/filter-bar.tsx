@@ -17,6 +17,7 @@ type FilterBarProps = {
   accounts: InstitutionWithAccounts[];
   categories: CategoryTree[];
   tags: Array<{ id: string; name: string; color: string }>;
+  merchants?: Array<{ id: string; name: string }>;
   /**
    * Naturezas que a página considera quando a URL não tem `natureza` (só para exibir o seletor).
    * Agregações: reportáveis (R2, padrão). Lista de transações: todas.
@@ -29,6 +30,7 @@ export function FilterBar({
   accounts,
   categories,
   tags,
+  merchants,
   defaultKinds = REPORTABLE_KINDS,
   children,
 }: FilterBarProps) {
@@ -59,6 +61,7 @@ export function FilterBar({
       paymentMethods: undefined,
       categoryIds: undefined,
       tagIds: undefined,
+      merchantIds: undefined,
       search: undefined,
       includeProjected: undefined,
       needsReview: undefined,
@@ -109,6 +112,7 @@ export function FilterBar({
         accounts={accounts}
         categories={categories}
         tags={tags}
+        merchants={merchants}
         onRemove={(patch) => updateFilters(patch)}
         onClear={clearExtraFilters}
       />

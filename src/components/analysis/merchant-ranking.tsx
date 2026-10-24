@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Money } from '@/components/format/money';
 import type { MerchantRankingRow } from '@/server/queries/analysis';
@@ -31,7 +32,11 @@ export function MerchantRanking({ rows: allRows }: { rows: MerchantRankingRow[] 
           {rows.map((r, i) => (
             <tr key={r.key} className="border-t">
               <td className="py-1.5 pr-2 text-xs text-muted-foreground tabular-nums">{i + 1}</td>
-              <td className="max-w-48 truncate py-1.5 pr-2">{r.label}</td>
+              <td className="max-w-48 truncate py-1.5 pr-2">
+                <Link href={`/estabelecimentos/${r.key}`} className="hover:underline font-medium text-foreground">
+                  {r.label}
+                </Link>
+              </td>
               <td className="py-1.5 px-2 text-right"><Money cents={r.totalCents} /></td>
               <td className="py-1.5 px-2 text-right tabular-nums">{r.count}</td>
               <td className="py-1.5 pl-2 text-right"><Money cents={r.averageCents} className="font-normal" /></td>
@@ -45,7 +50,9 @@ export function MerchantRanking({ rows: allRows }: { rows: MerchantRankingRow[] 
             <div className="flex items-center justify-between gap-2">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="text-xs text-muted-foreground tabular-nums">{i + 1}</span>
-                <span className="truncate font-medium">{r.label}</span>
+                <Link href={`/estabelecimentos/${r.key}`} className="truncate font-medium text-foreground hover:underline">
+                  {r.label}
+                </Link>
               </span>
               <Money cents={r.totalCents} />
             </div>

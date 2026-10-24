@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Money } from '@/components/format/money';
 import { formatTimeBR } from '@/components/format/time-br';
 import { cn } from '@/lib/utils';
@@ -97,7 +98,15 @@ export const TransactionRow = React.memo(function TransactionRow({
               <span className="shrink-0 text-amber-600 dark:text-amber-400">· prevista</span>
             )}
             {merchantDiffers && (
-              <span className="shrink-0 max-w-[100px] truncate">· {tx.merchant!.name}</span>
+              <span className="shrink-0 max-w-[100px] truncate">
+                ·{' '}
+                <Link
+                  href={`/estabelecimentos/${tx.merchant!.id}`}
+                  className="hover:underline focus-visible:underline"
+                >
+                  {tx.merchant!.name}
+                </Link>
+              </span>
             )}
             {tx.installment && (
               <span className="shrink-0 tabular-nums" aria-label={`Parcela ${tx.installment.number} de ${tx.installment.total}`}>
