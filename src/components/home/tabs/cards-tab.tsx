@@ -3,7 +3,7 @@ import { CreditCard } from 'lucide-react';
 import { getDb } from '@/server/db/client';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { creditCardAccountIds } from '@/server/home/accounts';
-import { summarizeAccounts, topWithOthers } from '@/server/queries/dashboard';
+import { summarizeAccounts } from '@/server/queries/dashboard';
 import { getFutureInstallments } from '@/server/queries/installments';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories } from '@/server/queries/catalog';
@@ -12,11 +12,8 @@ import { parseFilters } from '@/server/queries/url-filters';
 import { today } from '@/server/domain/dates';
 import {
   accountsTotals,
-  categoryTransactionsHref,
   parentCategoryIds,
-  paymentMethodTransactionsHref,
 } from '@/components/charts/links';
-import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
 import { PeriodOnlyBar } from '@/components/home/period-only-bar';
 import { InvoicesHero } from '@/components/home/cards/invoices-hero';
 import { CardTile, type CardTileAccount } from '@/components/home/cards/card-tile';
@@ -96,44 +93,6 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
 
   const totalCents = byCategory.reduce((acc, c) => acc + c.totalCents, 0);
 
-  const categorySlices = topWithOthers(byCategory, 7).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
-  const pmSlices = topWithOthers(byPaymentMethod, 7).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const pmSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
   return (
     <div className="space-y-6">
       <PeriodOnlyBar />
@@ -173,10 +132,10 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
         title="Gastos no cartão"
         description="Clique para ver os lançamentos no período."
         mode={roscaMode}
-        byCategory={categorySlices}
-        byPaymentMethod={pmSlices}
-        byCategoryMobile={categorySlicesMobile}
-        byPaymentMethodMobile={pmSlicesMobile}
+        byCategory={byCategory}
+        byPaymentMethod={byPaymentMethod}
+        filters={cardFilters}
+        linkOptions={linkOpts}
         totalCents={totalCents}
       />
     </div>
