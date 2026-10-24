@@ -49,9 +49,9 @@ export function InvoiceTimeline({ cardId, invoices, selectedId }: InvoiceTimelin
                 data-testid="invoice-chip"
                 data-forecast={forecast ? 'true' : undefined}
                 className={cn(
-                  'flex w-28 flex-col gap-1 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:border-foreground/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex w-28 flex-col gap-1 rounded-lg border border-border/60 bg-card px-3 py-2 text-left transition-colors hover:border-foreground/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   forecast && 'border-dashed',
-                  selected && 'border-primary ring-2 ring-primary/30',
+                  selected && 'border-foreground ring-1 ring-foreground/20',
                 )}
               >
                 <span className="text-xs font-medium text-muted-foreground">
