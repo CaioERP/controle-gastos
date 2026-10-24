@@ -3,7 +3,7 @@ import type { Db } from '@/server/db/client';
 import { accounts, categories, invoices, recurrences } from '@/server/db/schema';
 import { monthEnd, today as getToday } from '@/server/domain/dates';
 import { recurrenceOccurrences } from '@/server/cashflow/projection';
-import { getAccountsOverview } from '@/server/queries/accounts';
+import { getAccountsOverview, type InstitutionWithAccounts } from '@/server/queries/accounts';
 import { cashAccountIds, creditCardAccountIds } from './accounts';
 
 export type FreeToSpendEvent = {
@@ -59,12 +59,12 @@ export function computeFreeToSpend(
 
 export async function getFreeToSpend(
   db: Db,
-  opts: { today?: string } = {},
+  opts: { today?: string; overview?: InstitutionWithAccounts[] } = {},
 ): Promise<FreeToSpend> {
   const todayStr = opts.today ?? getToday();
   const untilDate = monthEnd(todayStr);
 
-  const overview = await getAccountsOverview(db, { today: todayStr });
+  const overview = opts.overview ?? (await getAccountsOverview(db, { today: todayStr }));
   const cashIds = new Set(cashAccountIds(overview));
   const cardIds = creditCardAccountIds(overview);
 
