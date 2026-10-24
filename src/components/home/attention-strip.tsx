@@ -1,5 +1,7 @@
 import * as React from 'react';
 import Link from 'next/link';
+import { formatDistanceToNow, isValid } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
   AlertTriangle,
   ChevronRight,
@@ -9,6 +11,16 @@ import {
 } from 'lucide-react';
 import type { AttentionItem } from '@/server/home/attention';
 import { Money } from '@/components/format/money';
+
+const JOB_LABELS: Record<string, string> = {
+  'sync-all': 'sincronização',
+  'prices-daily': 'cotações',
+  'invoice-status': 'status das faturas',
+  'connection-health': 'saúde das conexões',
+  'net-worth-snapshot': 'patrimônio',
+  'evaluate-alerts': 'alertas',
+  'detect-recurrences': 'assinaturas',
+};
 
 function getAttentionIcon(item: AttentionItem) {
   switch (item.kind) {
@@ -20,6 +32,8 @@ function getAttentionIcon(item: AttentionItem) {
       return AlertTriangle;
     case 'limit':
       return Target;
+    case 'job_error':
+      return AlertTriangle;
   }
 }
 
@@ -64,6 +78,19 @@ function renderAttentionContent(item: AttentionItem) {
           : `Meta ${item.name} em ${item.spentPercent}%`;
       return <span>{text}</span>;
     }
+    case 'job_error': {
+      const label = JOB_LABELS[item.job] ?? item.job;
+      let timeText = '';
+      try {
+        const d = new Date(item.failedAt);
+        if (isValid(d)) {
+          timeText = ` há ${formatDistanceToNow(d, { locale: ptBR })}`;
+        }
+      } catch {
+        // ignora erro de parse
+      }
+      return <span>Falha em {label}{timeText}</span>;
+    }
   }
 }
 
@@ -77,6 +104,8 @@ function getItemKey(item: AttentionItem, index: number): string {
       return `conn-${item.connectionId}`;
     case 'limit':
       return `limit-${item.limitId}`;
+    case 'job_error':
+      return `job-error-${item.job}`;
   }
 }
 

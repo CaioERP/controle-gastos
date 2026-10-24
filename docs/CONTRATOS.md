@@ -773,3 +773,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-24 | Agente A | A6-07 | Pastas novas do Agente A: src/server/ledger/ (recortes do livro-razão) e src/server/log.ts (registro de erros sem segredos) |
 | 2026-10-24 | Agente B | B6-20 | Índice `transactions_merchant_idx` em `transactions(merchant_id)` (migration 0007) e campo `merchantIds` no `txFiltersSchema` (aditivo) |
 | 2026-10-24 | Agente A | A6-09 | Comandos `setSpendingLimitActive` e `setRecurrenceStatus` para alternar status sem remontar upsert |
+| 2026-10-24 | Agente A | A6-10 | Utilitário `src/server/log.ts` com `logServerError`, `logServerWarn` e `redact` |

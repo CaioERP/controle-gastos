@@ -5,6 +5,7 @@ import { accounts, categories, spendingLimits } from '@/server/db/schema';
 import { LIMIT_PERIODS, PAYMENT_METHODS } from '@/server/domain/enums';
 import { CommandError, toCommandError } from '@/server/domain/errors';
 import { evaluateLimitsEngine, evaluateSystemAlerts } from '@/server/limits/engine';
+import { logServerError } from '@/server/log';
 
 export const upsertSpendingLimitInput = z.object({
   id: z.string().uuid().optional(),
@@ -182,6 +183,6 @@ export async function evaluateSpendingLimitsSafely(
   try {
     await evaluateSpendingLimits(db, opts);
   } catch (err) {
-    console.error('[limits] avaliação de limites e alertas falhou', err);
+    logServerError('limits', err, { action: 'avaliação de limites e alertas' });
   }
 }

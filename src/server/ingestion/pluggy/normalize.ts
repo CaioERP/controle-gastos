@@ -10,6 +10,7 @@ import { occurredAtFromPluggy } from '../occurred-at';
 import { toDisplayCase } from '../strings';
 import type { NormalizedTransaction, RawAccount } from '../types';
 import type { PluggyAccount, PluggyTransaction } from './api';
+import { logServerWarn } from '@/server/log';
 
 function toSaoPauloDateString(raw: string): string {
   const trimmed = raw.trim();
@@ -40,8 +41,9 @@ export function normalizePluggyAccount(
   } else if (acc.type === 'INVESTMENT') {
     type = 'investment';
   } else {
-    console.warn(
-      `[ingestion] tipo de conta não reconhecido: ${acc.type}/${acc.subtype}, assumindo checking`
+    logServerWarn(
+      'ingestion',
+      `tipo de conta não reconhecido: ${acc.type}/${acc.subtype}, assumindo checking`,
     );
     type = 'checking';
   }
