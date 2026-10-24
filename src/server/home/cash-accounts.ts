@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { transactions } from '@/server/db/schema';
 import { addDaysISO, today as getToday } from '@/server/domain/dates';

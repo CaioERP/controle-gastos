@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db } from '@/server/db/client';
 import { accounts, categories, merchants, transactions } from '@/server/db/schema';

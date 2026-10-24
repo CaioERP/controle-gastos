@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import {
   accounts,

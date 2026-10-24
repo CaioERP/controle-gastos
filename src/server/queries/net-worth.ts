@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNull } from 'drizzle-orm';
+import { and, asc, eq, gte } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,

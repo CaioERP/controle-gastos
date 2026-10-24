@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { categories, merchants, transactions } from '@/server/db/schema';
 import { ruleMatches, type MatchableRule } from '@/server/categorization/rules';
