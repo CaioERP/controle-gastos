@@ -18,11 +18,11 @@ export function TransactionsSummary({
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
       <span>
-        Saídas <Money sensitive={false} cents={expenseCents} className="font-semibold text-foreground" />
+        Saídas <Money cents={expenseCents} className="font-semibold text-foreground" />
       </span>
       <span>·</span>
       <span>
-        Entradas <Money sensitive={false} cents={incomeCents} colored tone="flow" className="font-semibold" />
+        Entradas <Money cents={incomeCents} colored tone="flow" className="font-semibold" />
       </span>
       <span>·</span>
       <span>

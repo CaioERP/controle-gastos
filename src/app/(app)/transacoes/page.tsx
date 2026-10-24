@@ -1,13 +1,10 @@
-import { eq, sql } from 'drizzle-orm';
 import { getDb } from '@/server/db/client';
-import { accounts, invoices, transactions } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
 import { TX_KINDS } from '@/server/domain/enums';
 import { getAccountsOverview } from '@/server/queries/accounts';
-import { buildTxWhere } from '@/server/queries/base';
 import { listCategories, listTags } from '@/server/queries/catalog';
 import { getSpendingSummary } from '@/server/queries/summary';
-import { getReviewCount, listTransactions } from '@/server/queries/transactions';
+import { countTransactions, getReviewCount, listTransactions } from '@/server/queries/transactions';
 import { parseFilters, serializeFilters } from '@/server/queries/url-filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { ManualTransactionDialog } from '@/components/manual/manual-transaction-dialog';
@@ -27,22 +24,15 @@ export default async function Page({ searchParams }: Props) {
   // as agregações das outras telas seguem R2. O mesmo objeto vai para o "Carregar mais".
   const filters = parseFilters(await searchParams);
   const db = getDb();
-  const [accountsOverview, categories, tags, page, summary, reviewCount, totalCountRow] = await Promise.all([
+  const [accountsOverview, categories, tags, page, summary, reviewCount, totalCount] = await Promise.all([
     getAccountsOverview(db),
     listCategories(db),
     listTags(db),
     listTransactions(db, filters, { limit: FIRST_PAGE }),
     getSpendingSummary(db, filters),
     getReviewCount(db),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(transactions)
-      .innerJoin(accounts, eq(accounts.id, transactions.accountId))
-      .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
-      .where(buildTxWhere(filters, { forTotals: false, defaultKinds: TX_KINDS })),
+    countTransactions(db, filters),
   ]);
-
-  const totalCount = Number(totalCountRow[0]?.count ?? page.items.length);
 
   const manualAccounts = accountsOverview.flatMap((inst) =>
     inst.accounts
