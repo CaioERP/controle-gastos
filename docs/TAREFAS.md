@@ -111,20 +111,20 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
 | B6-13 | Fundação: `<Money tone="flow">`, `StatStrip`, `Section`, `SectionCard` leve, `PageHeader` novo, título da tela na barra do celular, privacidade/tema no Mais, barra inferior alinhada | B | — | 🟡 Agente B — PR #91 em revisão |
-| B6-14 | Linha de transação compacta (avatar da categoria, "Total do dia") e página Transações (busca + filtros numa linha, ⋯ Exportar, resumo; filtros em Sheet no celular) | B | B6-13 | 🟡 Agente B |
-| B6-15 | Início: abas + período numa linha, "Precisa de você" em chips, herói "Livre para gastar", saldo sem eixo Y, fluxo em linha, desktop em 2 colunas; Cartões e Visão geral no estilo novo | B | B6-13, B6-14, B6-19, A6-06 | ⬜ |
-| B6-16 | Contas e cartões: faixa de 4 números, listas por tipo, cartão em linha com barra de limite, desktop em 2 colunas | B | B6-13 | ⬜ |
-| B6-17 | Análise por seções (`secao`): Categorias com lista + barra por forma, total e "o que mais mudou"; tabela categoria × forma mantida no desktop | B | B6-13 | ⬜ |
-| B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | ⬜ |
+| B6-14 | Linha de transação compacta (avatar da categoria, "Total do dia") e página Transações (busca + filtros numa linha, ⋯ Exportar, resumo; filtros em Sheet no celular) | B | B6-13 | 🟡 Agente B — PR #96 em revisão |
+| B6-15 | Início: abas + período numa linha, "Precisa de você" em chips, herói "Livre para gastar", saldo sem eixo Y, fluxo em linha, desktop em 2 colunas; Cartões e Visão geral no estilo novo | B | B6-13, B6-14, B6-19, A6-06 | 🟡 Agente B — PR #102 em revisão |
+| B6-16 | Contas e cartões: faixa de 4 números, listas por tipo, cartão em linha com barra de limite, desktop em 2 colunas | B | B6-13 | 🟡 Agente B — PR #98 em revisão |
+| B6-17 | Análise por seções (`secao`): Categorias com lista + barra por forma, total e "o que mais mudou"; tabela categoria × forma mantida no desktop | B | B6-13 | 🟡 Agente B — PR #99 em revisão |
+| B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | 🟡 Agente B — PR #100 em revisão |
 | B6-19 | Rosca com interface profunda: `toDonutSlices` puro e `BreakdownDonut` recebendo itens brutos (fim das 13 cópias nas abas) | B | B6-13 | 🟡 Agente B — PR #94 em revisão |
-| B6-20 | Histórico por estabelecimento: páginas `/estabelecimentos` e `/estabelecimentos/[id]` (12 meses, por mês, formas de pagamento, histórico), filtro `estab` (contract: `merchantIds`) e links em todo lugar onde aparece um estabelecimento | B | B6-13, B6-14 | ⬜ |
+| B6-20 | Histórico por estabelecimento: páginas `/estabelecimentos` e `/estabelecimentos/[id]` (12 meses, por mês, formas de pagamento, histórico), filtro `estab` (contract: `merchantIds`) e links em todo lugar onde aparece um estabelecimento | B | B6-13, B6-14 | 🟡 Agente B |
 | B6-21 | Resposta imediata: toggle da rosca sem ida ao servidor, sinal de carregando em filtros e abas (`useTransition`/`useLinkStatus`), streaming com `Suspense` e esqueletos, gráficos abaixo da dobra com `next/dynamic` | B | B6-13 | ⬜ |
 | A6-06 | Resumo de contas uma vez por requisição (`getRequestAccountsOverview` com `cache`); funções do Início aceitam `overview` | A | — | 🟡 Agente A — PR #90 em revisão |
 | A6-07 | Livro-razão `src/server/ledger/`: recortes nomeados (`txLive`, `txPosted`…) usados por toda consulta; corrige busca, contagem da revisão e itens de fatura com mães divididas | A | — | 🟡 Agente A — PR #92 em revisão |
 | A6-08 | Mesclagem única (R9): `mergeIncoming` puro usado por `persist` e `dedupe` | A | — | 🟡 Agente A — PR #93 em revisão |
-| A6-09 | Comandos `setSpendingLimitActive` e `setRecurrenceStatus` (contract:); actions sem acesso direto ao banco | A | — | 🟡 Agente A |
-| A6-10 | Falhas visíveis: `logServerError` com redação de segredos; job com falha recente no "Precisa de você" | A | — | ⬜ |
-| A6-11 | Leituras mais rápidas: sugestões de orçamento só na página de Limites, gasto das metas em lote (fim do N+1), duas consultas mais caras da Visão geral; metas de tempo no build de produção | A | A6-06 | ⬜ |
+| A6-09 | Comandos `setSpendingLimitActive` e `setRecurrenceStatus` (contract:); actions sem acesso direto ao banco | A | — | 🟡 Agente A — PR #95 em revisão |
+| A6-10 | Falhas visíveis: `logServerError` com redação de segredos; job com falha recente no "Precisa de você" | A | — | 🟡 Agente A — PR #97 em revisão |
+| A6-11 | Leituras mais rápidas: sugestões de orçamento só na página de Limites, gasto das metas em lote (fim do N+1), duas consultas mais caras da Visão geral; metas de tempo no build de produção | A | A6-06 | 🟡 Agente A — PR #101 em revisão |
 
 ---
 
