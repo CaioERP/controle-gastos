@@ -218,6 +218,7 @@ export const transactions = pgTable(
     index('transactions_account_date_idx').on(t.accountId, t.date),
     index('transactions_date_idx').on(t.date),
     index('transactions_category_idx').on(t.categoryId),
+    index('transactions_merchant_idx').on(t.merchantId),
     index('transactions_installment_group_idx').on(t.installmentGroupId),
     index('transactions_invoice_idx').on(t.invoiceId),
     index('transactions_parent_transaction_idx').on(t.parentTransactionId),
