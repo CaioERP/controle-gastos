@@ -4,13 +4,13 @@ import { formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   AlertTriangle,
-  ChevronRight,
   CreditCard,
   ListChecks,
   Target,
 } from 'lucide-react';
 import type { AttentionItem } from '@/server/home/attention';
 import { Money } from '@/components/format/money';
+import { cn } from '@/lib/utils';
 
 const JOB_LABELS: Record<string, string> = {
   'sync-all': 'sincronização',
@@ -37,7 +37,28 @@ function getAttentionIcon(item: AttentionItem) {
   }
 }
 
-function renderAttentionContent(item: AttentionItem) {
+function renderAttentionContent(item: AttentionItem, isMobile = false) {
+  if (isMobile) {
+    switch (item.kind) {
+      case 'review':
+        return `${item.count} para revisar`;
+      case 'invoice_due':
+        if (item.daysLeft === 0) return `Fatura ${item.accountName} hoje`;
+        if (item.daysLeft === 1) return `Fatura ${item.accountName} amanhã`;
+        if (item.daysLeft > 1) return `Fatura ${item.accountName} em ${item.daysLeft}d`;
+        if (item.daysLeft === -1) return `Fatura ${item.accountName} venceu ontem`;
+        return `Fatura ${item.accountName} venceu há ${Math.abs(item.daysLeft)}d`;
+      case 'connection':
+        return item.status === 'expired' || item.status === 'revoked'
+          ? `${item.institutionName} reconectar`
+          : `Erro ${item.institutionName}`;
+      case 'limit':
+        return item.spentPercent > 100
+          ? `${item.name} ${item.spentPercent}%`
+          : `${item.name} em ${item.spentPercent}%`;
+    }
+  }
+
   switch (item.kind) {
     case 'review':
       return (
@@ -109,47 +130,90 @@ function getItemKey(item: AttentionItem, index: number): string {
   }
 }
 
-export function AttentionStrip({ items }: { items: AttentionItem[] }) {
+export type AttentionStripProps = {
+  items: AttentionItem[];
+  mode?: 'all' | 'desktop-only' | 'mobile-only';
+  className?: string;
+};
+
+export function AttentionStrip({ items, mode = 'all', className }: AttentionStripProps) {
   if (items.length === 0) return null;
 
-  return (
-    <aside aria-label="Precisa de você" className="space-y-2">
-      {/* Desktop: linha horizontal de chips clicáveis */}
-      <div className="hidden md:flex flex-wrap items-center gap-2">
-        {items.map((item, idx) => {
-          const Icon = getAttentionIcon(item);
-          return (
-            <Link
-              key={getItemKey(item, idx)}
-              href={item.href}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-950 dark:text-amber-200 hover:bg-amber-500/20 transition-colors"
-            >
-              <Icon className="size-3.5 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
-              {renderAttentionContent(item)}
-            </Link>
-          );
-        })}
-      </div>
+  const showDesktop = mode === 'all' || mode === 'desktop-only';
+  const showMobile = mode === 'all' || mode === 'mobile-only';
 
-      {/* Celular: lista vertical compacta com seta */}
-      <div className="md:hidden flex flex-col divide-y divide-border/60 rounded-lg border border-border/60 bg-card text-card-foreground overflow-hidden">
-        {items.map((item, idx) => {
-          const Icon = getAttentionIcon(item);
-          return (
-            <Link
-              key={getItemKey(item, idx)}
-              href={item.href}
-              className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-xs font-medium hover:bg-muted/50 transition-colors active:bg-muted"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
-                <div className="truncate">{renderAttentionContent(item)}</div>
-              </div>
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            </Link>
-          );
-        })}
-      </div>
+  return (
+    <aside aria-label="Precisa de você" className={cn('space-y-2', className)}>
+      {/* Desktop: linha horizontal de chips clicáveis */}
+      {showDesktop && (
+        <div className={cn(mode === 'all' ? 'hidden md:flex' : 'flex', 'flex-wrap items-center gap-2')}>
+          {items.map((item, idx) => {
+            const Icon = getAttentionIcon(item);
+            const isCritical = item.kind === 'limit' && item.spentPercent > 100;
+            return (
+              <Link
+                key={getItemKey(item, idx)}
+                href={item.href}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                  isCritical
+                    ? 'border-red-500/30 bg-red-500/10 text-red-950 dark:text-red-200 hover:bg-red-500/20'
+                    : 'border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-200 hover:bg-amber-500/20',
+                )}
+              >
+                <Icon
+                  className={cn(
+                    'size-3.5 shrink-0',
+                    isCritical
+                      ? 'text-red-700 dark:text-red-400'
+                      : 'text-amber-700 dark:text-amber-400',
+                  )}
+                  aria-hidden
+                />
+                {renderAttentionContent(item, false)}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Celular: linha rolável na horizontal (snap-x) */}
+      {showMobile && (
+        <div
+          className={cn(
+            mode === 'all' ? 'md:hidden' : 'flex',
+            'flex items-center gap-2 overflow-x-auto snap-x scrollbar-none pb-1 -mx-4 px-4 sm:mx-0 sm:px-0',
+          )}
+        >
+          {items.map((item, idx) => {
+            const Icon = getAttentionIcon(item);
+            const isCritical = item.kind === 'limit' && item.spentPercent > 100;
+            return (
+              <Link
+                key={getItemKey(item, idx)}
+                href={item.href}
+                className={cn(
+                  'snap-start shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-medium active:opacity-80 transition-colors',
+                  isCritical
+                    ? 'border-red-500/30 bg-red-500/10 text-red-950 dark:text-red-200'
+                    : 'border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-200',
+                )}
+              >
+                <Icon
+                  className={cn(
+                    'size-3.5 shrink-0',
+                    isCritical
+                      ? 'text-red-700 dark:text-red-400'
+                      : 'text-amber-700 dark:text-amber-400',
+                  )}
+                  aria-hidden
+                />
+                <span>{renderAttentionContent(item, true)}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </aside>
   );
 }
