@@ -16,7 +16,7 @@ import {
   today as getToday,
 } from '@/server/domain/dates';
 import { normalizeForMatch } from '@/server/ingestion/strings';
-import { notSplitParent } from '@/server/queries/split-filter';
+import { accountInTotals, txLive, txNotProjected } from '@/server/ledger';
 
 export type MonthlyCashFlowPoint = {
   month: string; // YYYY-MM
@@ -184,8 +184,7 @@ export async function getCashFlowProjection(
     .from(transactions)
     .where(
       and(
-        isNull(transactions.deletedAt),
-        notSplitParent,
+        txLive,
         eq(transactions.status, 'projected'),
         sql`${transactions.date} <= ${horizonEnd}`,
       ),
@@ -234,12 +233,9 @@ export async function getCashFlowProjection(
     .innerJoin(accounts, eq(accounts.id, transactions.accountId))
     .where(
       and(
-        eq(accounts.includeInTotals, true),
-        eq(accounts.isHidden, false),
+        accountInTotals,
+        txNotProjected,
         inArray(transactions.kind, ['expense', 'refund']),
-        ne(transactions.status, 'projected'),
-        isNull(transactions.deletedAt),
-        notSplitParent,
         sql`${transactions.date} >= ${m3}`,
         sql`${transactions.date} <= ${monthEnd(m1)}`,
       ),
