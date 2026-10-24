@@ -2,10 +2,9 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { MoreVerticalIcon, ArrowUpRightIcon, EyeOffIcon, EyeIcon, AlertCircleIcon, CreditCardIcon } from 'lucide-react';
+import { ArrowUpRightIcon, EyeIcon, EyeOffIcon, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
@@ -24,16 +23,25 @@ import { formatDateBR } from '@/server/domain/dates';
 import type { InstitutionWithAccounts } from '@/server/queries/accounts';
 
 type CardAccountRowProps = {
-  account: InstitutionWithAccounts['accounts'][number];
+  account: InstitutionWithAccounts['accounts'][number] & {
+    institutionColor?: string;
+    institutionName?: string;
+  };
+  institution?: {
+    name: string;
+    color: string;
+  };
 };
 
-export function CardAccountRow({ account }: CardAccountRowProps) {
+export function CardAccountRow({ account, institution }: CardAccountRowProps) {
   const [renameOpen, setRenameOpen] = React.useState(false);
   const [cycleOpen, setCycleOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
 
   const credit = account.credit;
   const hasCycle = credit && credit.closingDay !== null && credit.dueDay !== null;
+  const instName = institution?.name ?? account.institutionName ?? '';
+  const instColor = institution?.color ?? account.institutionColor ?? '#71717a';
 
   const handleToggleIncludeInTotals = (checked: boolean) => {
     startTransition(async () => {
@@ -65,50 +73,55 @@ export function CardAccountRow({ account }: CardAccountRowProps) {
   };
 
   return (
-    <div className="flex flex-col p-4 rounded-lg border bg-card gap-3.5 hover:border-foreground/20 transition-colors shadow-2xs">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <CreditCardIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="font-semibold text-sm text-foreground">
-              {account.displayName ?? account.name}
-            </span>
-            {account.displayName && (
-              <span className="text-[11px] text-muted-foreground">({account.name})</span>
-            )}
-            {account.isHidden && (
-              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                Oculta
+    <div className="py-3 border-b border-border/40 last:border-b-0 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span
+            className="size-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: instColor }}
+            aria-hidden="true"
+          />
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex flex-wrap items-baseline gap-1.5 min-w-0">
+              <span className="font-medium text-sm text-foreground truncate">
+                {account.displayName ?? account.name}
               </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {account.cards.map((c) => (
-              <Badge
-                key={c.id}
-                variant="outline"
-                className="text-[10px] font-normal py-0 px-1.5 text-muted-foreground bg-muted/40"
-              >
-                •{c.last4} {c.isVirtual ? 'virtual' : 'físico'}
-                {c.isAdditional ? ' (adicional)' : ''}
-              </Badge>
-            ))}
+              {account.displayName && (
+                <span className="text-xs text-muted-foreground truncate">({account.name})</span>
+              )}
+              {account.cards.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {account.cards.map((c) => `•${c.last4}${c.isVirtual ? ' virtual' : ''}`).join(' · ')}
+                </span>
+              )}
+              {account.isHidden && (
+                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
+                  Oculta
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">
+              {instName ? `${instName} · ` : ''}
+              {hasCycle ? (
+                <>
+                  fecha dia {credit.closingDay} · vence{' '}
+                  {credit.openInvoice ? formatDateBR(credit.openInvoice.dueDate).slice(0, 5) : `dia ${credit.dueDay}`}
+                </>
+              ) : (
+                'ciclo não configurado'
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-3">
+        <div className="flex items-center gap-2.5 shrink-0">
           {credit?.openInvoice && (
-            <div className="text-right">
-              <div className="text-xs text-muted-foreground">Fatura aberta</div>
+            <div className="flex items-center gap-2 text-right">
+              <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                {INVOICE_STATUS_LABELS[credit.openInvoice.status]}
+              </span>
               <div className="text-sm font-semibold tabular-nums text-foreground">
                 <Money cents={credit.openInvoice.totalCents} />
-              </div>
-              <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
-                <span>Vence {formatDateBR(credit.openInvoice.dueDate)}</span>
-                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                  {INVOICE_STATUS_LABELS[credit.openInvoice.status]}
-                </Badge>
               </div>
             </div>
           )}
@@ -119,21 +132,17 @@ export function CardAccountRow({ account }: CardAccountRowProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  className="size-8 text-muted-foreground hover:text-foreground"
                   aria-label={`Opções do cartão ${account.displayName ?? account.name}`}
                 >
-                  <MoreVerticalIcon className="h-4 w-4" />
+                  <MoreHorizontal className="size-4" />
                 </Button>
               }
             />
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => setCycleOpen(true)}>
-                Configurar ciclo
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCycleOpen(true)}>Configurar ciclo</DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-                Renomear
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setRenameOpen(true)}>Renomear</DropdownMenuItem>
 
               <div className="flex items-center justify-between px-2 py-1.5 text-xs">
                 <span className="text-muted-foreground">Incluir nos totais</span>
@@ -180,53 +189,35 @@ export function CardAccountRow({ account }: CardAccountRowProps) {
               />
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <RenameDialog
+            open={renameOpen}
+            onOpenChange={setRenameOpen}
+            accountId={account.id}
+            originalName={account.name}
+            currentDisplayName={account.displayName}
+          />
+
+          {credit && (
+            <CycleDialog
+              open={cycleOpen}
+              onOpenChange={setCycleOpen}
+              accountId={account.id}
+              accountName={account.displayName ?? account.name}
+              initialClosingDay={credit.closingDay}
+              initialDueDay={credit.dueDay}
+            />
+          )}
         </div>
       </div>
 
-      {credit && (
+      {/* Barra fina de limite */}
+      <div className="pl-5.5 pr-10">
         <LimitBar
-          limitCents={credit.limitCents}
-          availableCents={credit.availableCents}
+          limitCents={credit?.limitCents ?? null}
+          availableCents={credit?.availableCents ?? null}
         />
-      )}
-
-      {hasCycle ? (
-        <div className="text-[11px] text-muted-foreground">
-          Fecha dia {credit.closingDay} · Vence dia {credit.dueDay}
-        </div>
-      ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs">
-          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
-            <AlertCircleIcon className="h-4 w-4 shrink-0" />
-            <span>Configure o fechamento e o vencimento para organizar as faturas</span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCycleOpen(true)}
-            className="h-7 text-xs border-amber-500/30 hover:bg-amber-500/20 self-start sm:self-auto"
-          >
-            Configurar ciclo
-          </Button>
-        </div>
-      )}
-
-      <RenameDialog
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
-        accountId={account.id}
-        originalName={account.name}
-        currentDisplayName={account.displayName}
-      />
-
-      <CycleDialog
-        open={cycleOpen}
-        onOpenChange={setCycleOpen}
-        accountId={account.id}
-        accountName={account.displayName ?? account.name}
-        initialClosingDay={credit?.closingDay ?? null}
-        initialDueDay={credit?.dueDay ?? null}
-      />
+      </div>
     </div>
   );
 }
