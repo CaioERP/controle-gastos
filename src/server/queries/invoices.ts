@@ -1,8 +1,8 @@
-import { and, desc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { invoices, transactions } from '@/server/db/schema';
 import type { InvoiceStatus } from '@/server/domain/enums';
-import { notSplitParent } from './split-filter';
+import { txLive } from '@/server/ledger';
 import { baseTransactionQuery, toTransactionRows, type TransactionRow } from './transaction-row';
 
 export type InvoiceSummary = {
@@ -38,8 +38,7 @@ export async function getInvoices(db: Db, accountId: string): Promise<InvoiceSum
       and(
         eq(transactions.invoiceId, invoices.id),
         ne(transactions.kind, 'invoice_payment'),
-        isNull(transactions.deletedAt),
-        notSplitParent,
+        txLive,
       ),
     )
     .where(eq(invoices.accountId, accountId))
@@ -67,8 +66,7 @@ export async function getInvoiceItems(db: Db, invoiceId: string): Promise<Transa
       and(
         eq(transactions.invoiceId, invoiceId),
         ne(transactions.kind, 'invoice_payment'),
-        isNull(transactions.deletedAt),
-        notSplitParent,
+        txLive,
       ),
     )
     .orderBy(transactions.date, transactions.id);

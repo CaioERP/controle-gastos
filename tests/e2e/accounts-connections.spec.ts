@@ -60,9 +60,10 @@ test.describe('Telas de contas e conexões', () => {
       await page.goto('/contas');
       await expect(page.locator('h1')).toHaveText('Contas e cartões');
 
-      // 1. Verifica seções de instituições pelos títulos
-      await expect(page.getByRole('heading', { name: 'Nubank' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Itaú' })).toBeVisible();
+      // 1. Verifica seções de contas e presença das instituições
+      await expect(page.getByRole('heading', { name: 'Contas', exact: true })).toBeVisible();
+      await expect(page.getByText('Nubank').first()).toBeVisible();
+      await expect(page.getByText('Itaú').first()).toBeVisible();
 
       // 2. Abre menu da conta para renomear
       const moreBtn = optionsButton(page, ORIGINAL_NAME);

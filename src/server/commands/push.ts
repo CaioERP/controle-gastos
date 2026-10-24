@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Db } from '@/server/db/client';
 import { pushSubscriptions } from '@/server/db/schema';
 import { CommandError, toCommandError } from '@/server/domain/errors';
+import { logServerError } from '@/server/log';
 import { ensureVapidConfigured, pushConfigured } from '@/server/push/vapid';
 
 export const savePushSubscriptionInput = z.object({
@@ -119,7 +120,7 @@ export async function sendTestPush(db: Db): Promise<{ sent: number }> {
             .delete(pushSubscriptions)
             .where(eq(pushSubscriptions.id, sub.id));
         } else {
-          console.error('[push] Falha ao enviar push de teste:', (err as Error)?.message ?? err);
+          logServerError('push', err, { action: 'push de teste' });
         }
       }
     }

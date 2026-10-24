@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { syncRuns } from '@/server/db/schema';
 import { JOBS, type JobDef, type JobName, runJob } from './registry';
+import { logServerError } from '@/server/log';
 
 /** Jobs vencidos: nunca rodaram com sucesso, ou o último sucesso foi há mais de intervalMinutes. */
 export function dueJobs(
@@ -69,11 +70,11 @@ export function startScheduler(db: Db, jobs: JobDef[] = JOBS): void {
         try {
           await runJob(db, jobName, jobs);
         } catch (err) {
-          console.error(`[scheduler] erro ao rodar job ${jobName}:`, err);
+          logServerError('scheduler', err, { job: jobName });
         }
       }
     } catch (err) {
-      console.error('[scheduler] erro no tick:', err);
+      logServerError('scheduler', err, { action: 'tick' });
     } finally {
       globalForScheduler.__controleGastosSchedulerRunning = false;
     }
