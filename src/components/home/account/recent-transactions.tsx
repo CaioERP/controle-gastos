@@ -89,6 +89,7 @@ export function RecentTransactions({
                 onOpen={handleOpen}
                 onRecategorize={handleRecategorize}
                 showDate
+                compact
               />
             ))}
           </ul>
