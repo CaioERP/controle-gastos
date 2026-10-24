@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Desktop · Análise</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#09090b;text-decoration:none}a:hover{color:#3f3f46}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #ffffff; color: #09090b; font-family: Geist, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+<aside aria-label="Menu" style="flex: 1 1 220px; max-width: 248px; box-sizing: border-box; border-right: 1px solid #f4f4f5; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; background: #fafafa">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px"><span style="width: 32px; height: 32px; border-radius: 9px; background: {{accent}}; color: #ffffff; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg></span><span style="font-size: 15px; font-weight: 600">Controle de Gastos</span></div>
+<button type="button" style="height: 36px; margin: 0 0 12px; padding: 0 10px; border: 1px solid #e4e4e7; border-radius: 10px; background: #ffffff; font: inherit; font-size: 13px; color: #71717a; display: flex; align-items: center; gap: 8px"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Buscar…<span style="margin-left: auto; font-size: 11px; border: 1px solid #e4e4e7; border-radius: 5px; padding: 1px 5px">Ctrl K</span></button>
+<a href="desktop-inicio.dc.html" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Início</a>
+<a href="desktop-transacoes.dc.html" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Transações</a>
+<a href="#" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center; justify-content: space-between">Revisão<span style="min-width: 22px; height: 20px; border-radius: 999px; background: #ea580c; color: #ffffff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">30</span></a>
+<a href="#" aria-current="page" style="height: 36px; padding: 0 10px; border-radius: 9px; background: {{accent}}; color: #ffffff; font-size: 14px; font-weight: 500; display: flex; align-items: center">Análise</a>
+<div style="margin: 14px 10px 4px; font-size: 11px; font-weight: 600; color: #71717a; letter-spacing: 0.06em">CONTAS</div>
+<a href="desktop-contas.dc.html" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Contas e cartões</a>
+<a href="#" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Faturas</a>
+<div style="margin: 14px 10px 4px; font-size: 11px; font-weight: 600; color: #71717a; letter-spacing: 0.06em">PLANEJAMENTO</div>
+<a href="#" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Limites e metas</a>
+<a href="#" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Assinaturas</a>
+<a href="#" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Projeção</a>
+<div style="margin: 14px 10px 4px; font-size: 11px; font-weight: 600; color: #71717a; letter-spacing: 0.06em">INVESTIMENTOS</div>
+<a href="#" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Investimentos</a>
+<a href="#" style="height: 36px; padding: 0 10px; border-radius: 9px; font-size: 14px; color: #3f3f46; display: flex; align-items: center">Patrimônio</a>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 40px 48px">
+<div style="max-width: 1160px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em">Análise</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<div style="display: flex; align-items: center; gap: 4px; border: 1px solid #e4e4e7; border-radius: 10px; padding: 3px; height: 38px; box-sizing: border-box"><button type="button" aria-label="Mês anterior" style="width: 28px; height: 28px; border: 0; background: transparent; font: inherit; color: #3f3f46">‹</button><span style="font-size: 13px; font-weight: 500; padding: 0 4px">Out/2026</span><button type="button" aria-label="Próximo mês" style="width: 28px; height: 28px; border: 0; background: transparent; font: inherit; color: #3f3f46">›</button></div>
+<button type="button" style="height: 38px; padding: 0 12px; border: 1px solid #e4e4e7; border-radius: 10px; background: #ffffff; font: inherit; font-size: 13px; color: #09090b">Todas as contas ▾</button>
+<button type="button" style="height: 38px; padding: 0 12px; border: 1px solid #e4e4e7; border-radius: 10px; background: #ffffff; font: inherit; font-size: 13px; color: #09090b">+ Filtros</button>
+</div>
+</div>
+
+<nav aria-label="Seções da análise" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #f4f4f5">
+<a href="#" aria-current="page" style="height: 40px; padding: 0 14px; font-size: 14px; font-weight: 600; display: flex; align-items: center; border-bottom: 2px solid {{accent}}; margin-bottom: -1px">Categorias</a>
+<a href="#" style="height: 40px; padding: 0 14px; font-size: 14px; color: #52525b; display: flex; align-items: center">Formas de pagamento</a>
+<a href="#" style="height: 40px; padding: 0 14px; font-size: 14px; color: #52525b; display: flex; align-items: center">Lojas</a>
+<a href="#" style="height: 40px; padding: 0 14px; font-size: 14px; color: #52525b; display: flex; align-items: center">Evolução</a>
+<a href="#" style="height: 40px; padding: 0 14px; font-size: 14px; color: #52525b; display: flex; align-items: center">Comparar períodos</a>
+</nav>
+
+<div style="display: flex; flex-wrap: wrap; gap: 40px; margin-top: 6px">
+
+<section aria-label="Gastos por categoria e forma de pagamento" style="flex: 7 1 440px; min-width: 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Por categoria</h2><span style="font-size: 12px; color: #71717a">barra = formas de pagamento · clique para ver as transações</span></div>
+
+<div style="padding: 12px 0; border-bottom: 1px solid #f4f4f5">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #8b5cf6"></span>Moradia</span><span><strong style="font-weight: 600">R$ 2.565,17</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">37,8%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 60%; background: #d97706"></span><span style="width: 40%; background: #0d9488"></span></div>
+</div>
+
+<div style="padding: 12px 16px; margin: 0 -16px; border-radius: 12px; background: #fafafa">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #eab308"></span>Compras</span><span><strong style="font-weight: 600">R$ 1.820,02</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">26,8%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 55%; background: #7c3aed"></span><span style="width: 45%; background: #db2777"></span></div>
+<div style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 24px; font-size: 13px">
+<a href="#" style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7c3aed"></span>Crédito à vista</span><span>1.001,01 <span style="color: #71717a">55%</span></span></a>
+<a href="#" style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #db2777"></span>Crédito parcelado</span><span>819,01 <span style="color: #71717a">45%</span></span></a>
+</div>
+</div>
+
+<div style="padding: 12px 0; border-bottom: 1px solid #f4f4f5">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #ec4899"></span>Lazer</span><span><strong style="font-weight: 600">R$ 489,39</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">7,2%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 70%; background: #7c3aed"></span><span style="width: 30%; background: #0d9488"></span></div>
+</div>
+<div style="padding: 12px 0; border-bottom: 1px solid #f4f4f5">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #3b82f6"></span>Transporte</span><span><strong style="font-weight: 600">R$ 439,70</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">6,5%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 50%; background: #0d9488"></span><span style="width: 30%; background: #2563eb"></span><span style="width: 20%; background: #7c3aed"></span></div>
+</div>
+<div style="padding: 12px 0; border-bottom: 1px solid #f4f4f5">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444"></span>Saúde</span><span><strong style="font-weight: 600">R$ 407,95</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">6,0%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 60%; background: #7c3aed"></span><span style="width: 40%; background: #0d9488"></span></div>
+</div>
+<div style="padding: 12px 0; border-bottom: 1px solid #f4f4f5">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #f97316"></span>Alimentação</span><span><strong style="font-weight: 600">R$ 391,15</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">5,8%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 50%; background: #2563eb"></span><span style="width: 50%; background: #0d9488"></span></div>
+</div>
+<div style="padding: 12px 0; border-bottom: 1px solid #f4f4f5">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #a1a1aa"></span>Sem categoria</span><span><strong style="font-weight: 600">R$ 335,12</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">4,9%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 100%; background: #0d9488"></span></div>
+</div>
+<div style="padding: 12px 0">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 10px; height: 10px; border-radius: 50%; background: #a16207"></span>Pets</span><span><strong style="font-weight: 600">R$ 268,19</strong> <span style="display: inline-block; width: 52px; text-align: right; font-size: 12px; color: #71717a">4,0%</span></span></div>
+<div style="margin-top: 8px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 65%; background: #7c3aed"></span><span style="width: 35%; background: #0d9488"></span></div>
+</div>
+<a href="#" style="display: inline-block; margin-top: 8px; font-size: 13px; color: #52525b; text-decoration: underline; text-underline-offset: 3px">Ver a tabela categoria × forma de pagamento</a>
+</section>
+
+<div style="flex: 5 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<section aria-label="Total do período" style="padding: 20px; border-radius: 16px; background: #fafafa">
+<div style="font-size: 13px; color: #71717a">Gastos em outubro</div>
+<div style="font-size: 36px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.15">R$ 6.779,56</div>
+<div style="font-size: 13px; margin-top: 4px"><span style="font-weight: 600; color: #b91c1c">▲ 16%</span> <span style="color: #52525b">vs setembro (R$ 5.844,45)</span></div>
+<div style="margin-top: 16px; height: 10px; border-radius: 999px; overflow: hidden; display: flex; gap: 1px"><span style="width: 45.3%; background: #0d9488"></span><span style="width: 30.2%; background: #7c3aed"></span><span style="width: 14.3%; background: #db2777"></span><span style="width: 4.4%; background: #2563eb"></span><span style="width: 3.6%; background: #d97706"></span><span style="width: 2.2%; background: #d4d4d8"></span></div>
+<ul style="margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px">
+<li style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0d9488"></span>Pix</span><span>3.073,22 <span style="color: #71717a">45,3%</span></span></li>
+<li style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7c3aed"></span>Crédito à vista</span><span>2.048,22 <span style="color: #71717a">30,2%</span></span></li>
+<li style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #db2777"></span>Crédito parcelado</span><span>970,00 <span style="color: #71717a">14,3%</span></span></li>
+<li style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2563eb"></span>Débito</span><span>298,05 <span style="color: #71717a">4,4%</span></span></li>
+<li style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #d97706"></span>Boleto</span><span>245,27 <span style="color: #71717a">3,6%</span></span></li>
+<li style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #d4d4d8"></span>Outras</span><span>144,80 <span style="color: #71717a">2,1%</span></span></li>
+</ul>
+</section>
+
+<section aria-label="O que mais mudou desde setembro">
+<h2 style="margin: 0 0 8px; font-size: 16px; font-weight: 600">O que mais mudou desde setembro</h2>
+<ul style="margin: 0; padding: 0; list-style: none; font-size: 14px">
+<li style="display: flex; justify-content: space-between; height: 40px; align-items: center; border-bottom: 1px solid #f4f4f5"><span>Alimentação</span><span><strong style="font-weight: 600">+277,66</strong> <span style="display: inline-block; width: 64px; text-align: right; font-size: 12px; font-weight: 600; color: #b91c1c">▲ 245%</span></span></li>
+<li style="display: flex; justify-content: space-between; height: 40px; align-items: center; border-bottom: 1px solid #f4f4f5"><span>Saúde</span><span><strong style="font-weight: 600">+235,16</strong> <span style="display: inline-block; width: 64px; text-align: right; font-size: 12px; font-weight: 600; color: #b91c1c">▲ 136%</span></span></li>
+<li style="display: flex; justify-content: space-between; height: 40px; align-items: center; border-bottom: 1px solid #f4f4f5"><span>Lazer</span><span><strong style="font-weight: 600">+213,69</strong> <span style="display: inline-block; width: 64px; text-align: right; font-size: 12px; font-weight: 600; color: #b91c1c">▲ 77%</span></span></li>
+<li style="display: flex; justify-content: space-between; height: 40px; align-items: center; border-bottom: 1px solid #f4f4f5"><span>Educação</span><span><strong style="font-weight: 600">−178,47</strong> <span style="display: inline-block; width: 64px; text-align: right; font-size: 12px; font-weight: 600; color: #047857">▼ 82%</span></span></li>
+<li style="display: flex; justify-content: space-between; height: 40px; align-items: center"><span>Transporte</span><span><strong style="font-weight: 600">−68,11</strong> <span style="display: inline-block; width: 64px; text-align: right; font-size: 12px; font-weight: 600; color: #047857">▼ 13%</span></span></li>
+</ul>
+<a href="#" style="display: inline-block; margin-top: 10px; font-size: 13px; color: #52525b; text-decoration: underline; text-underline-offset: 3px">Comparar todas as categorias</a>
+</section>
+</div>
+
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#18181b","options":["#18181b","#0f766e","#1d4ed8","#7c3aed"]},"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#18181b' };
+}
+}
+</script>
+</body>
+</html>

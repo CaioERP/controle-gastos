@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Proposta · Transações</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#09090b;text-decoration:none}a:hover{color:#3f3f46}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #ffffff; color: #09090b; font-family: Geist, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+<header style="height: 56px; padding: 0 8px 0 16px; display: flex; align-items: center; justify-content: space-between">
+<h1 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em">Transações</h1>
+<div style="display: flex; gap: 4px">
+<button type="button" aria-label="Novo lançamento" style="width: 44px; height: 44px; border: 0; background: {{accent}}; color: #ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button>
+<button type="button" aria-label="Mais opções (exportar CSV)" style="width: 44px; height: 44px; border: 0; background: transparent; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #09090b"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></button>
+</div>
+</header>
+
+<div style="padding: 0 16px; display: flex; gap: 8px">
+<label style="flex: 1; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 12px; background: #f4f4f5; color: #71717a; font-size: 14px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><input type="search" placeholder="Buscar por descrição" aria-label="Buscar por descrição" style="flex: 1; border: 0; background: transparent; font: inherit; color: #09090b; outline: none; min-width: 0"></label>
+<button type="button" aria-label="Filtros (2 ativos)" style="width: 44px; height: 44px; border: 1px solid #e4e4e7; background: #ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #09090b; position: relative"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path></svg><span style="position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 999px; background: {{accent}}; color: #ffffff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span></button>
+</div>
+
+<div style="padding: 10px 0 0 16px; display: flex; gap: 6px; overflow: hidden">
+<button type="button" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: {{accent}}; color: #ffffff; font: inherit; font-size: 12px; font-weight: 500">Out/2026 ▾</button>
+<button type="button" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #e4e4e7; background: #ffffff; font: inherit; font-size: 12px; color: #09090b">Todas as contas ▾</button>
+<button type="button" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #e4e4e7; background: #ffffff; font: inherit; font-size: 12px; color: #09090b">Competência</button>
+<button type="button" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #e4e4e7; background: #ffffff; font: inherit; font-size: 12px; color: #09090b">Categoria ▾</button>
+</div>
+
+<div style="margin: 12px 16px 0; display: flex; gap: 16px; font-size: 12px; color: #52525b">
+<span>Saídas <strong style="color: #09090b; font-weight: 600">6.779,56</strong></span>
+<span>Entradas <strong style="color: #047857; font-weight: 600">8.500,00</strong></span>
+<span>142 lançamentos</span>
+</div>
+
+<div style="margin-top: 12px; padding: 6px 16px; background: #fafafa; border-top: 1px solid #f4f4f5; border-bottom: 1px solid #f4f4f5; display: flex; justify-content: space-between; font-size: 12px; color: #52525b"><span style="font-weight: 600; color: #3f3f46">Sex, 23 de out</span><span>Total do dia −45,00</span></div>
+<div style="padding: 0 16px">
+<div style="display: flex; align-items: center; gap: 12px; height: 64px">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #fff7ed; color: #ea580c; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 14px; font-weight: 500">Padaria Manhã</div><div style="font-size: 12px; color: #71717a">Nubank · Débito · <span style="color: #b45309">pendente</span></div></div>
+<div style="font-size: 14px; font-weight: 600">−45,00</div>
+</div>
+</div>
+
+<div style="padding: 6px 16px; background: #fafafa; border-top: 1px solid #f4f4f5; border-bottom: 1px solid #f4f4f5; display: flex; justify-content: space-between; font-size: 12px; color: #52525b"><span style="font-weight: 600; color: #3f3f46">Qui, 22 de out</span><span>Total do dia −1.305,73</span></div>
+<div style="padding: 0 16px">
+<div style="display: flex; align-items: center; gap: 12px; height: 64px; border-bottom: 1px solid #f4f4f5">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #fdf2f8; color: #db2777; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.740-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 14px; font-weight: 500">Smart Fit</div><div style="font-size: 12px; color: #71717a">Personnalité •4321 · 14:32 · Crédito</div></div>
+<div style="font-size: 14px; font-weight: 600">−119,90</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 64px; border-bottom: 1px solid #f4f4f5">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #f4f4f5; color: #71717a; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.580-6.580a2.426 2.426 0 0 0 0-3.420z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Estabelecimento Desconhecido 1</div><div style="font-size: 12px; color: #71717a">Itaú CC · 14:32 · Pix</div></div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px"><div style="font-size: 14px; font-weight: 600">−47,46</div><button type="button" style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px dashed #f97316; background: #ffffff; color: #c2410c; font: inherit; font-size: 11px; font-weight: 500">Categorizar</button></div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 64px; border-bottom: 1px solid #f4f4f5">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #f4f4f5; color: #52525b; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"></rect><path d="M2 10h20"></path></svg></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 14px; font-weight: 500; color: #52525b">Pagamento de fatura</div><div style="font-size: 12px; color: #71717a">Mercado Pago · 14:32 · fora dos gastos</div></div>
+<div style="font-size: 14px; font-weight: 500; color: #71717a">−1.103,37</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 64px; border-bottom: 1px solid #f4f4f5">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"></path></svg></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 14px; font-weight: 500">Farmácia Tarde</div><div style="font-size: 12px; color: #71717a">Itaú CC · Pix · <span style="color: #b45309">pendente</span></div></div>
+<div style="font-size: 14px; font-weight: 600">−35,00</div>
+</div>
+</div>
+
+<div style="padding: 6px 16px; background: #fafafa; border-top: 1px solid #f4f4f5; border-bottom: 1px solid #f4f4f5; display: flex; justify-content: space-between; font-size: 12px; color: #52525b"><span style="font-weight: 600; color: #3f3f46">Ter, 21 de out</span><span>Total do dia +8.479,79</span></div>
+<div style="padding: 0 16px">
+<div style="display: flex; align-items: center; gap: 12px; height: 64px">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #ecfdf5; color: #047857; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 14px; font-weight: 500">Salário</div><div style="font-size: 12px; color: #71717a">Itaú CC · Transferência recebida</div></div>
+<div style="font-size: 14px; font-weight: 600; color: #047857">+8.500,00</div>
+</div>
+</div>
+
+<nav aria-label="Navegação inferior" style="position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: rgba(255,255,255,0.96); border-top: 1px solid #e4e4e7; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: end; padding-bottom: 8px; box-sizing: border-box">
+<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #71717a"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Início</a>
+<a href="#" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: #09090b"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>Transações</a>
+<a href="proposta-contas.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #71717a"><span style="width: 48px; height: 48px; margin-top: -26px; border-radius: 50%; background: {{accent}}; color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.18); border: 3px solid #ffffff"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h18"></path><path d="M6 18v-7"></path><path d="M10 18v-7"></path><path d="M14 18v-7"></path><path d="M18 18v-7"></path><path d="m12 2 8 5H4z"></path></svg></span>Contas</a>
+<a href="proposta-analise.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #71717a"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"></path><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path></svg>Análise</a>
+<a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #71717a; position: relative"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg><span style="position: absolute; top: -6px; left: 50%; margin-left: 4px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #ea580c; color: #ffffff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center">30</span>Mais</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#18181b","options":["#18181b","#0f766e","#1d4ed8","#7c3aed"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#18181b' };
+}
+}
+</script>
+</body>
+</html>

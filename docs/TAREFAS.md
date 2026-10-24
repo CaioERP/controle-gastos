@@ -2,9 +2,9 @@
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
-> **Última atualização por:** Coordenador / Revisor (2026-10-23 — Fase 6.1 implementada e integrada no PR #89).
+> **Última atualização por:** Coordenador / Revisor (2026-10-24 — planejamento da Fase 6.2, refinamento visual).
 >
-> **Fases 6 e 6.1 concluídas.** Próximo: melhorias do mobile (proposta de design em andamento). A Fase 5 (deploy) fica com o usuário; o teste do PWA e do push no celular depende do deploy com HTTPS.
+> **Prioridade atual: Fase 6.2 (refinamento visual do site inteiro).** Fases 6 e 6.1 concluídas. A Fase 5 (deploy) fica com o usuário; o teste do PWA e do push no celular depende do deploy com HTTPS.
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída · ⏸️ fora do escopo por enquanto
 
@@ -94,6 +94,26 @@ Onda 2                                            │  B6-09 data e horário na 
 | B6-10 | Parcelas futuras por cartão: seletor na aba Cartões; nome do cartão no toggle da tela Faturas | B | — | ✅ (#89) |
 | B6-11 | Barra inferior: Contas no centro, Revisão no menu "Mais" (badge no Mais) | B | — | ✅ (#89) |
 | B6-12 | Análise no celular: matriz categoria × forma em lista; ranking de lojas com 5 e "Mostrar mais" | B | — | ✅ (#89) |
+
+## Fase 6.2 — Refinamento visual do site inteiro · spec: [`tarefas/fase-6-2-visual.md`](./tarefas/fase-6-2-visual.md)
+
+> Aprovada pelo usuário em 2026-10-24 a partir do canvas de design (maquetes em `docs/design/fase-6-2/`). Direção "livro-caixa calmo": vermelho só para alerta, menos molduras (faixa de números no lugar de 4 cartões), linha de transação compacta, Início com "Livre para gastar" em destaque, Contas por tipo, Análise por seções. No desktop, a tabela categoria × forma de pagamento continua visível na Análise.
+
+```
+            Agente B (Interface)
+Onda 1   B6-13 fundação (Money tone, StatStrip, Section, cabeçalhos, barra inferior)
+Onda 2   B6-14 linha de transação + Transações · B6-16 Contas · B6-17 Análise · B6-18 demais páginas
+Onda 3   B6-15 Início (precisa da B6-14)
+```
+
+| ID | Tarefa | Agente | Depende de | Status |
+|---|---|---|---|---|
+| B6-13 | Fundação: `<Money tone="flow">`, `StatStrip`, `Section`, `SectionCard` leve, `PageHeader` novo, título da tela na barra do celular, privacidade/tema no Mais, barra inferior alinhada | B | — | ⬜ |
+| B6-14 | Linha de transação compacta (avatar da categoria, "Total do dia") e página Transações (busca + filtros numa linha, ⋯ Exportar, resumo; filtros em Sheet no celular) | B | B6-13 | ⬜ |
+| B6-15 | Início: abas + período numa linha, "Precisa de você" em chips, herói "Livre para gastar", saldo sem eixo Y, fluxo em linha, desktop em 2 colunas; Cartões e Visão geral no estilo novo | B | B6-13, B6-14 | ⬜ |
+| B6-16 | Contas e cartões: faixa de 4 números, listas por tipo, cartão em linha com barra de limite, desktop em 2 colunas | B | B6-13 | ⬜ |
+| B6-17 | Análise por seções (`secao`): Categorias com lista + barra por forma, total e "o que mais mudou"; tabela categoria × forma mantida no desktop | B | B6-13 | ⬜ |
+| B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | ⬜ |
 
 ---
 

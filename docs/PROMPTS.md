@@ -27,8 +27,9 @@
 | 16 | Agente B | B6-01 a B6-08 (Fase 6, mobile e início) | nenhum para B6-02, B6-06 e B6-07; as outras esperam as dependências | 15 |
 | 17 | Agente A | A6-05 (Fase 6.1, horário das transações) | nenhum | 18 |
 | 18 | Agente B | B6-09 a B6-12 (Fase 6.1, ajustes de uso) | nenhum para B6-10, B6-11 e B6-12; a B6-09 espera a A6-05 | 17 |
+| 19 | Agente B | B6-13 a B6-18 (Fase 6.2, refinamento visual do site inteiro) | nenhum para a B6-13; as outras esperam a B6-13 | — |
 
-> **Ordem atual (2026-10-23):** a Fase 6 está concluída; agora vêm os ajustes da Fase 6.1 (prompts 17 e 18). O deploy (prompts 12 a 14) fica com o usuário.
+> **Ordem atual (2026-10-24):** Fases 6 e 6.1 concluídas; agora vem a Fase 6.2 (prompt 19, só Agente B). O deploy (prompts 12 a 14) fica com o usuário.
 
 ---
 
@@ -664,6 +665,54 @@ Regras:
 
 No fim, mande para cada PR: o número e o link, o que foi feito, prints em 390 px e no desktop das
 telas alteradas, o resultado do npm run check, os desvios e as pendências.
+```
+
+---
+
+## 19 — Agente B: Fase 6.2, refinamento visual do site inteiro
+
+```text
+Você é o Agente B (Trilha Interface) do projeto controle-gastos. Trabalhe no worktree
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-b.
+
+Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md, docs/TAREFAS.md
+(seção Fase 6.2) e docs/tarefas/fase-6-2-visual.md, começando pela seção "Decisões", que é o que o
+usuário aprovou. As maquetes aprovadas estão em docs/design/fase-6-2/ (abra os .html no navegador):
+reproduza o visual com os componentes do projeto, sem copiar a marcação.
+
+Pré-requisito: nenhum para a B6-13; as outras esperam a B6-13. O worktree ainda está numa branch
+antiga, já mesclada e apagada no GitHub: rode git fetch, faça git switch --detach origin/main e crie
+cada branch a partir da origin/main atualizada.
+
+Tarefas, nesta ordem, um PR cada:
+1. B6-13: fundação visual (Money tone, StatStrip, Section, cabeçalhos, barra inferior)
+2. B6-14: linha de transação compacta e página Transações
+3. B6-16: Contas e cartões
+4. B6-17: Análise por seções (a tabela categoria × forma de pagamento continua no desktop)
+5. B6-15: Início (precisa da B6-14)
+6. B6-18: demais páginas
+
+Se a B6-13 ainda estiver em revisão quando começar as outras, use a regra de "dependência em
+revisão" do AGENTS.md §3 (branch a partir da branch da B6-13, PR com --base nela).
+
+Regras:
+- Pegue só as tarefas listadas. Antes de cada uma, confira no quadro se está ⬜ e se as dependências
+  estão ✅ (ou com PR aberto). Reserve e atualize o status no checkout de integração.
+- Use os tokens do tema (bg-muted, text-muted-foreground, border-border etc.), nunca hex fixo:
+  tudo precisa funcionar no tema escuro.
+- Vermelho só para alerta (saldo negativo projetado, meta estourada, perda de investimento).
+  Gasto comum usa <Money tone="flow">.
+- Respeite o modo "esconder valores": totais sensíveis, valores de transação individual com
+  sensitive={false}, data-sensitive-axis nos gráficos de dinheiro.
+- Nenhuma mudança em dados, consultas de regra de negócio do Agente A ou contratos.
+- Teste cada tela em 390 px e 1440 px. Escreva só os testes que a spec pede e ajuste os e2e
+  que quebrarem.
+- Não faça merge, não use --no-verify, não dê force push na main e não edite eslint.config.mjs.
+- Porta 3001. Pare o servidor de desenvolvimento antes de npm run db:*.
+
+No fim, mande para cada PR: o número e o link, o que foi feito, prints em 390 px e 1440 px das
+telas alteradas (antes e depois quando possível), o resultado do npm run check, os desvios e as
+pendências.
 ```
 
 ---
