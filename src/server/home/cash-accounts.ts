@@ -2,8 +2,8 @@ import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { transactions } from '@/server/db/schema';
 import { addDaysISO, today as getToday } from '@/server/domain/dates';
+import { txPosted } from '@/server/ledger';
 import { getAccountsOverview } from '@/server/queries/accounts';
-import { notSplitParent } from '@/server/queries/split-filter';
 import { cashAccountIds } from './accounts';
 import { getFreeToSpend } from './free-to-spend';
 
@@ -118,9 +118,7 @@ export async function getCashAccountsTab(
           .where(
             and(
               inArray(transactions.accountId, cashIds),
-              isNull(transactions.deletedAt),
-              notSplitParent,
-              eq(transactions.status, 'posted'),
+              txPosted,
               sql`${transactions.date} > ${historyFrom}`,
               sql`${transactions.date} <= ${todayStr}`,
             ),
@@ -189,9 +187,7 @@ export async function getCashAccountsTab(
           .where(
             and(
               inArray(transactions.accountId, cashIds),
-              isNull(transactions.deletedAt),
-              notSplitParent,
-              eq(transactions.status, 'posted'),
+              txPosted,
               gte(transactions.date, period.from),
               lte(transactions.date, period.to),
               ne(transactions.kind, 'transfer'),
