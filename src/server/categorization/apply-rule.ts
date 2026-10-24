@@ -33,6 +33,7 @@ export async function applyRuleToExisting(db: Db, rule: CategorizationRule): Pro
     })
     .from(transactions)
     .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
+    // Aplicação de regra em lote: filtra transações ativas categorizáveis
     .where(
       and(
         isNull(transactions.deletedAt),
@@ -57,6 +58,7 @@ export async function applyRuleToExisting(db: Db, rule: CategorizationRule): Pro
       paymentMethod: transactions.paymentMethod,
     })
     .from(transactions)
+    // Consulta interna por lote de IDs casados para conferir efeito da regra: não usa recorte do livro-razão
     .where(inArray(transactions.id, ids));
   const before = new Map(candidates.map((c) => [c.id, c]));
 

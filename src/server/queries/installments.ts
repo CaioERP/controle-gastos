@@ -1,9 +1,9 @@
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { accounts, invoices, transactions } from '@/server/db/schema';
 import type { TxFilters } from '@/server/domain/filters';
 import { addMonthsISO, monthStart, today } from '@/server/domain/dates';
-import { notSplitParent } from './split-filter';
+import { txLive } from '@/server/ledger';
 
 export type FutureInstallmentMonth = {
   month: string;
@@ -26,8 +26,7 @@ export async function getFutureInstallments(
   const monthExpr = sql<string>`coalesce(${invoices.referenceMonth}::text, to_char(${transactions.date}::date, 'YYYY-MM-01'))`;
 
   const conds = [
-    isNull(transactions.deletedAt),
-    notSplitParent,
+    txLive,
     eq(transactions.status, 'projected'),
     f.institutionIds?.length ? inArray(accounts.institutionId, f.institutionIds) : undefined,
     f.accountIds?.length ? inArray(transactions.accountId, f.accountIds) : undefined,
