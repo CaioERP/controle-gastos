@@ -181,10 +181,9 @@ export function CommandPalette() {
     router.push(href);
   };
 
-  const handleSelectMerchant = (name: string) => {
+  const handleSelectMerchant = (id: string) => {
     handleOpenChange(false);
-    const sp = new URLSearchParams({ aba: 'estabelecimentos', q: name });
-    router.push(`/categorias?${sp.toString()}`);
+    router.push(`/estabelecimentos/${id}`);
   };
 
   const handleSelectTransaction = (description: string, date: string) => {
@@ -269,7 +268,7 @@ export function CommandPalette() {
                 <CommandItem
                   key={m.id}
                   value={`merchant-${m.id}`}
-                  onSelect={() => handleSelectMerchant(m.name)}
+                  onSelect={() => handleSelectMerchant(m.id)}
                 >
                   <Store className="mr-2 size-4 text-muted-foreground" />
                   <span>{m.name}</span>

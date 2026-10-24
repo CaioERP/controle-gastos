@@ -56,6 +56,7 @@ export function buildTxWhere(f: TxFilters, opts: WhereOptions): SQL {
     f.tagIds?.length
       ? sql`exists (select 1 from ${transactionTags} tt where tt.transaction_id = ${transactions.id} and ${inArray(transactionTags.tagId, f.tagIds)})`
       : undefined,
+    f.merchantIds?.length ? inArray(transactions.merchantId, f.merchantIds) : undefined,
     f.search ? sql`lower(${transactions.description}) like ${'%' + escapeLike(f.search.toLowerCase()) + '%'}` : undefined,
     f.needsReview !== undefined ? eq(transactions.needsReview, f.needsReview) : undefined,
   ];

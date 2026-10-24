@@ -20,7 +20,7 @@ export function CatalogTabs({ active }: { active: CatalogTab }) {
       {CATALOG_TABS.map((t) => (
         <Link
           key={t.value}
-          href={`/categorias?aba=${t.value}`}
+          href={t.value === 'estabelecimentos' ? '/estabelecimentos' : `/categorias?aba=${t.value}`}
           aria-current={t.value === active ? 'page' : undefined}
           className={cn(
             'rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',

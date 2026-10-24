@@ -1,4 +1,6 @@
+import { inArray } from 'drizzle-orm';
 import { getDb } from '@/server/db/client';
+import { merchants } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
 import { TX_KINDS } from '@/server/domain/enums';
 import { getAccountsOverview } from '@/server/queries/accounts';
@@ -24,7 +26,7 @@ export default async function Page({ searchParams }: Props) {
   // as agregações das outras telas seguem R2. O mesmo objeto vai para o "Carregar mais".
   const filters = parseFilters(await searchParams);
   const db = getDb();
-  const [accountsOverview, categories, tags, page, summary, reviewCount, totalCount] = await Promise.all([
+  const [accountsOverview, categories, tags, page, summary, reviewCount, totalCount, filterMerchants] = await Promise.all([
     getAccountsOverview(db),
     listCategories(db),
     listTags(db),
@@ -32,6 +34,12 @@ export default async function Page({ searchParams }: Props) {
     getSpendingSummary(db, filters),
     getReviewCount(db),
     countTransactions(db, filters),
+    filters.merchantIds?.length
+      ? db
+          .select({ id: merchants.id, name: merchants.name })
+          .from(merchants)
+          .where(inArray(merchants.id, filters.merchantIds))
+      : Promise.resolve([]),
   ]);
 
   const manualAccounts = accountsOverview.flatMap((inst) =>
@@ -62,6 +70,7 @@ export default async function Page({ searchParams }: Props) {
         accounts={accountsOverview}
         categories={categories}
         tags={tags}
+        merchants={filterMerchants}
         defaultKinds={TX_KINDS}
       />
       <TransactionsSummary

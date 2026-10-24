@@ -14,6 +14,7 @@ type ActiveFilterChipsProps = {
   accounts: InstitutionWithAccounts[];
   categories: CategoryTree[];
   tags: Array<{ id: string; name: string; color: string }>;
+  merchants?: Array<{ id: string; name: string }>;
   onRemove: (patch: Partial<TxFilters>) => void;
   onClear: () => void;
 };
@@ -23,6 +24,7 @@ export function ActiveFilterChips({
   accounts,
   categories,
   tags,
+  merchants,
   onRemove,
   onClear,
 }: ActiveFilterChipsProps) {
@@ -128,6 +130,21 @@ export function ActiveFilterChips({
         onRemove: () => {
           const next = filters.tagIds?.filter((id) => id !== tagId);
           onRemove({ tagIds: next?.length ? next : undefined });
+        },
+      });
+    }
+  }
+
+  // 5b. Estabelecimentos
+  if (filters.merchantIds?.length) {
+    for (const mId of filters.merchantIds) {
+      const m = merchants?.find((item) => item.id === mId);
+      chips.push({
+        key: `estab-${mId}`,
+        label: m?.name ?? 'Estabelecimento',
+        onRemove: () => {
+          const next = filters.merchantIds?.filter((id) => id !== mId);
+          onRemove({ merchantIds: next?.length ? next : undefined });
         },
       });
     }
