@@ -75,9 +75,8 @@ export async function getMonthlySeries(
   const needsParentCategories =
     by === 'parentCategory' || Boolean(f.categoryIds?.length);
   const needsInstitutions =
-    by === 'institution' || Boolean(f.institutionIds?.length);
-  const needsMerchants =
-    by === 'merchant' || Boolean(f.merchantIds?.length);
+    by === 'institution' || by === 'account' || Boolean(f.institutionIds?.length);
+  const needsMerchants = by === 'merchant';
 
   let query = db
     .select({

@@ -1,8 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
-import { categories, spendingLimits } from '@/server/db/schema';
+import { accounts, categories, invoices, spendingLimits, transactions } from '@/server/db/schema';
 import { addMonthsISO, monthEnd, monthStart, today as getToday } from '@/server/domain/dates';
-import { getLimitSpent } from './engine';
+import { buildTxWhere, spendValue } from '@/server/queries/base';
+import { spentForLimit } from './spent';
 
 export type SuggestedBudget = {
   categoryId: string;
@@ -79,13 +80,55 @@ export async function suggestBudgets(
     }
   }
 
+  // Busca gastos dos 3 meses em lote (elimina N+1 de 3 consultas por categoria)
+  const rowsByMonth = await Promise.all(
+    months.map(async (m) => {
+      const where = buildTxWhere(
+        {
+          from: m.from,
+          to: m.to,
+          basis: 'accrual',
+        },
+        { forTotals: true },
+      );
+
+      const rows = await db
+        .select({
+          categoryId: transactions.categoryId,
+          categoryParentId: categories.parentId,
+          paymentMethod: transactions.paymentMethod,
+          accountId: transactions.accountId,
+          spentCents: sql<number>`coalesce(sum(${spendValue}), 0)`,
+        })
+        .from(transactions)
+        .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+        .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
+        .leftJoin(categories, eq(categories.id, transactions.categoryId))
+        .where(where)
+        .groupBy(
+          transactions.categoryId,
+          categories.parentId,
+          transactions.paymentMethod,
+          transactions.accountId,
+        );
+
+      return rows.map((r) => ({
+        categoryId: r.categoryId,
+        categoryParentId: r.categoryParentId,
+        paymentMethod: r.paymentMethod,
+        accountId: r.accountId,
+        spentCents: Number(r.spentCents ?? 0),
+      }));
+    }),
+  );
+
   const suggestions: SuggestedBudget[] = [];
 
   for (const cat of activeCategories) {
     const monthlySpends: number[] = [];
 
-    for (const m of months) {
-      const spent = await getLimitSpent(db, { categoryId: cat.id }, m);
+    for (const monthRows of rowsByMonth) {
+      const spent = spentForLimit({ categoryId: cat.id }, monthRows);
       if (spent > 0) {
         monthlySpends.push(spent);
       }
