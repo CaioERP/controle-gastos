@@ -116,6 +116,7 @@ npm run dev -- -p 3002   # confira as telas tocadas em 390 px e 1440 px
   - a citação literal do pedido do usuário.
   Depois repita a mesma chamada.
 - **Hook de formatação do editor:** reformata arquivos com outra largura de linha e deixa mudanças soltas no worktree. Descarte (`git checkout -- <arquivo>`) quando a mudança for só formatação, e não rode `prettier --write` em arquivo inteiro: gera diff de linhas que ninguém mudou.
+- **Checkout da main é compartilhado:** os agentes também commitam o quadro ali. Commite seus documentos logo depois de editar, e os agentes devem dar `git add` só em `docs/TAREFAS.md` (em 2026-10-24 um `git add` amplo do Agente B levou junto documentos do coordenador ainda não commitados).
 - **Python não está instalado.** Para edições em lote, use `perl -0pi -e` ou `sed`.
 - **`node_modules`:** `npm ci` em cada worktree; junção não funciona.
 - **Cache velho:** `.next/types` e `.next/dev/types` geram erros falsos de `tsc` ao trocar de branch.
@@ -124,7 +125,7 @@ npm run dev -- -p 3002   # confira as telas tocadas em 390 px e 1440 px
 ## 8. Onde paramos (2026-10-24)
 
 - **Main** `82be103`: toda a Fase 6.2 mesclada, exceto a B6-21. 643 testes.
-- **Agente B:** em B6-21 (resposta imediata), branch `b/B6-21-resposta-imediata` no worktree `controle-gastos-b`. Quando o PR chegar, revise pela seção 4 da spec `docs/tarefas/fase-6-2-visual.md`.
+- **Agente B:** B6-21 (resposta imediata) entregue no **PR #104** (`b/B6-21-resposta-imediata`), aguardando revisão pelo checklist (§4) e pelos critérios da seção B6-21 de `docs/tarefas/fase-6-2-visual.md`. É o próximo passo do coordenador.
 - **Agente A:** sem tarefa reservada. O worktree `controle-gastos-a` ainda está na branch mesclada `a/A6-11-faster-reads`.
 - **Próximos passos possíveis** (decidir com o usuário):
   1. Fase 5, deploy: P5-00, depois de H-06;

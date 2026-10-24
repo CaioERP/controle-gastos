@@ -23,7 +23,7 @@ Leia junto com:
 | 4 | Limites e metas, alertas, notificações, assinaturas, projeção de caixa | ✅ (perguntas com IA fora do escopo) |
 | 5 | Deploy (Supabase, cron, CI) | ⬜ com o usuário (H-06, P5-00) |
 | 6 / 6.1 | Novo Início com abas, barra inferior, PWA, push, horário das transações | ✅ |
-| 6.2 | Refinamento visual do site inteiro + backend mais firme + estabelecimentos | ✅, exceto **B6-21** (resposta imediata), em andamento com o Agente B |
+| 6.2 | Refinamento visual do site inteiro + backend mais firme + estabelecimentos | ✅, exceto **B6-21** (resposta imediata), em revisão no PR #104 |
 
 **IA desligada** por decisão do usuário (A1-10): nada chama a Claude API. O valor `'llm'` continua no enum `CATEGORY_SOURCES` só por contrato.
 
@@ -306,7 +306,7 @@ Maquetes aprovadas: `docs/design/fase-6-2/` (direção "livro-caixa calmo").
 
 ## 8. Em aberto e fora do escopo
 
-- **B6-21** (Agente B, em andamento): toggle da rosca sem ida ao servidor, sinal de carregando, `Suspense`, esqueletos e `next/dynamic`.
+- **B6-21** (Agente B, PR #104 em revisão): toggle da rosca sem ida ao servidor, sinal de carregando, `Suspense`, esqueletos e `next/dynamic`.
 - **Depende do usuário:**
   - F0-07 e I1-01: conta real no Pluggy;
   - A2-02 (fatura em PDF) e P2-01: amostras em `.data/samples/`;

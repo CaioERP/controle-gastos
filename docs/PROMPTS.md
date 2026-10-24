@@ -33,7 +33,7 @@
 | C | Coordenador (conversa nova) | Assumir a coordenação: revisar, integrar, planejar a próxima rodada | nenhum | A e B |
 | A/B | Agente A ou B (conversa nova) | Continuar uma tarefa já reservada ou pegar a próxima livre | spec da tarefa pronta | o outro agente |
 
-> **Ordem atual (2026-10-24):** Fase 6.2 mesclada, exceto a B6-21 (Agente B, em andamento). Próxima rodada a decidir com o usuário (ver `COORDENACAO.md` §8). O deploy (prompts 12 a 14) fica com o usuário. Para abrir conversas novas, use os prompts da seção "Conversa nova" no fim deste arquivo.
+> **Ordem atual (2026-10-24):** Fase 6.2 mesclada, exceto a B6-21 (PR #104 aguardando revisão). Próxima rodada a decidir com o usuário (ver `COORDENACAO.md` §8). O deploy (prompts 12 a 14) fica com o usuário. Para abrir conversas novas, use os prompts da seção "Conversa nova" no fim deste arquivo.
 
 ---
 
