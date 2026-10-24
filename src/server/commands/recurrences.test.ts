@@ -14,6 +14,7 @@ import { runJob } from '../jobs/registry';
 import {
   deleteRecurrence,
   detectRecurrences,
+  setRecurrenceStatus,
   upsertRecurrence,
 } from './recurrences';
 
@@ -178,5 +179,78 @@ describe('recurrences commands (A4-01)', () => {
     expect(recs).toHaveLength(1);
     expect(recs[0]?.description).toContain('Amazon Prime');
     expect(recs[0]?.isSubscription).toBe(true);
+  });
+
+  it('setRecurrenceStatus alterna status sem alterar outros campos e devolve NOT_FOUND se inexistente', async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    const [cat] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.kind, 'expense'))
+      .limit(1);
+
+    const { recurrenceId } = await upsertRecurrence(db, {
+      description: 'Academia Mensal',
+      amountCents: 12900,
+      frequency: 'monthly',
+      expectedDay: 10,
+      categoryId: cat!.id,
+      isSubscription: true,
+      status: 'active',
+    });
+
+    // Pausa a recorrência
+    await setRecurrenceStatus(db, { id: recurrenceId, status: 'paused' });
+
+    const [paused] = await db
+      .select()
+      .from(recurrences)
+      .where(eq(recurrences.id, recurrenceId));
+    expect(paused).toBeDefined();
+    expect(paused!.status).toBe('paused');
+    expect(paused!.description).toBe('Academia Mensal');
+    expect(paused!.amountCents).toBe(12900);
+    expect(paused!.expectedDay).toBe(10);
+    expect(paused!.categoryId).toBe(cat!.id);
+    expect(paused!.isSubscription).toBe(true);
+
+    // Cancela a recorrência
+    await setRecurrenceStatus(db, { id: recurrenceId, status: 'cancelled' });
+
+    const [cancelled] = await db
+      .select()
+      .from(recurrences)
+      .where(eq(recurrences.id, recurrenceId));
+    expect(cancelled!.status).toBe('cancelled');
+
+    // Reativa a recorrência
+    await setRecurrenceStatus(db, { id: recurrenceId, status: 'active' });
+
+    const [reactivated] = await db
+      .select()
+      .from(recurrences)
+      .where(eq(recurrences.id, recurrenceId));
+    expect(reactivated!.status).toBe('active');
+
+    // ID inexistente lança NOT_FOUND
+    await expect(
+      setRecurrenceStatus(db, {
+        id: '00000000-0000-0000-0000-000000000000',
+        status: 'paused',
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Recorrência não encontrada',
+    });
+
+    // ID inválido lança erro de validação (ZodError)
+    await expect(
+      setRecurrenceStatus(db, {
+        id: 'invalido',
+        status: 'paused',
+      }),
+    ).rejects.toThrow();
   });
 });
