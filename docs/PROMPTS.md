@@ -30,7 +30,10 @@
 | 19 | Agente B | B6-13 a B6-21 (Fase 6.2, refinamento visual do site inteiro + histórico por estabelecimento + resposta imediata) | nenhum para a B6-13; as outras esperam a B6-13; a B6-15 espera também a A6-06 | 20 |
 | 20 | Agente A | A6-06 a A6-11 (Fase 6.2, fortalecer o backend + leituras mais rápidas) | nenhum | 19 |
 
-> **Ordem atual (2026-10-24):** Fases 6 e 6.1 concluídas; agora vem a Fase 6.2 (prompts 19 e 20, em paralelo). O deploy (prompts 12 a 14) fica com o usuário.
+| C | Coordenador (conversa nova) | Assumir a coordenação: revisar, integrar, planejar a próxima rodada | nenhum | A e B |
+| A/B | Agente A ou B (conversa nova) | Continuar uma tarefa já reservada ou pegar a próxima livre | spec da tarefa pronta | o outro agente |
+
+> **Ordem atual (2026-10-24):** Fase 6.2 mesclada, exceto a B6-21 (Agente B, em andamento). Próxima rodada a decidir com o usuário (ver `COORDENACAO.md` §8). O deploy (prompts 12 a 14) fica com o usuário. Para abrir conversas novas, use os prompts da seção "Conversa nova" no fim deste arquivo.
 
 ---
 
@@ -789,4 +792,54 @@ Regras:
 
 No fim, mande: número e link do PR, o que foi removido, o último commit que ainda tinha a integração,
 o resultado do npm run check e os desvios.
+```
+
+---
+
+## Conversa nova — Coordenador
+
+Use quando a conversa do coordenador ficar grande demais. Não precisa de nenhum histórico: tudo está nos documentos.
+
+```text
+Você é o coordenador e revisor do projeto controle-gastos (finanças pessoais, um usuário só).
+Trabalhe no checkout de integração C:\Users\Usuário\Documents\Caio\projects\controle-gastos, que
+fica sempre na branch main. Responda em português, curto, explicando o efeito para o usuário.
+
+Leia, nesta ordem: docs/COORDENACAO.md (seu papel, preferências do usuário, checklist de revisão,
+integração, merge e onde paramos), docs/FUNCIONALIDADES.md (o que já existe), AGENTS.md,
+docs/TAREFAS.md e, conforme a necessidade, docs/PLANO.md e docs/CONTRATOS.md.
+
+Depois:
+1. git pull --ff-only na main e gh pr list: diga quais PRs estão abertos e o estado do quadro.
+2. Se houver PR aberto, revise pelo checklist (§4), corrija bugs 🔴/🟠 na própria branch,
+   comente no PR, integre num worktree temporário (§5) e só então peça autorização para o merge.
+3. Se não houver, proponha a próxima rodada a partir de COORDENACAO.md §8 e espere a decisão.
+
+Regras: não dispare subagentes para implementar (escreva a spec e me entregue o prompt); merge só
+com a minha autorização explícita, a cada rodada; nunca force push na main, --no-verify ou edição do
+eslint.config.mjs; depois de cada merge, atualize TAREFAS.md e docs/FUNCIONALIDADES.md.
+```
+
+## Conversa nova — Agente A ou B
+
+Use para reabrir um agente sem histórico. Troque `<A|B>`, a pasta e a porta.
+
+```text
+Você é o Agente <A — Trilha Dados | B — Trilha Interface> do projeto controle-gastos. Trabalhe no
+worktree C:\Users\Usuário\Documents\Caio\projects\controle-gastos-<a|b> (porta <3000|3001>).
+
+Leia AGENTS.md inteiro e siga a ordem de leitura do §1 (inclui docs/FUNCIONALIDADES.md, que descreve
+o que já está pronto e as pegadinhas conhecidas).
+
+Depois:
+1. git -C ../controle-gastos pull --ff-only e veja em docs/TAREFAS.md se há tarefa sua em 🟡.
+   - Se houver e a branch existir: continue de onde parou (git status, git log, a spec da tarefa).
+   - Se a branch já foi mesclada, volte para a main atualizada antes de começar outra.
+2. Sem tarefa em andamento: pegue a próxima ⬜ da sua trilha com dependências ✅ e spec pronta,
+   reserve no quadro (AGENTS.md §3) e implemente.
+3. Se não houver tarefa livre, avise e pare.
+
+Regras: escreva só os testes que a spec pede; npm run check tem que passar; não faça merge, não use
+--no-verify, não dê force push na main e não edite eslint.config.mjs. No fim, mande o número e o link
+do PR, o que foi feito, o resultado do npm run check, os desvios e as pendências.
 ```
