@@ -104,8 +104,8 @@ export async function recategorize(db: Db, input: z.infer<typeof recategorizeInp
           merchantId: transactions.merchantId,
           merchantName: merchants.name,
         })
-        // Busca transações similares pelo mesmo estabelecimento para recategorização em lote
-    .from(transactions)
+        // Consulta interna por ID da transação a recategorizar: não usa recorte do livro-razão
+        .from(transactions)
         .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
         .where(eq(transactions.id, transactionId));
       if (!current) throw new CommandError('NOT_FOUND', 'Transação não encontrada');
