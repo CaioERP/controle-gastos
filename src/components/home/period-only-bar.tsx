@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { PeriodPicker } from '@/components/filters/period-picker';
 import { mergeFilterParams, parseFilters } from '@/server/queries/url-filters';
 import type { TxFilters } from '@/server/domain/filters';
@@ -17,6 +18,7 @@ export function PeriodOnlyBar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = React.useTransition();
 
   const filters = React.useMemo(() => {
     return parseFilters(searchParams);
@@ -25,7 +27,9 @@ export function PeriodOnlyBar({
   const updateFilters = React.useCallback(
     (patch: Partial<TxFilters>) => {
       const qs = mergeFilterParams(searchParams.toString(), patch, filters);
-      router.push(qs ? `${pathname}?${qs}` : pathname);
+      startTransition(() => {
+        router.push(qs ? `${pathname}?${qs}` : pathname);
+      });
     },
     [filters, pathname, router, searchParams],
   );
@@ -41,6 +45,9 @@ export function PeriodOnlyBar({
         variant={compact ? 'compact' : 'default'}
         onChange={({ from, to }) => updateFilters({ from, to })}
       />
+      {isPending && (
+        <Loader2 className="size-3.5 animate-spin text-muted-foreground shrink-0" />
+      )}
     </div>
   );
 }

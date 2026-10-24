@@ -1,3 +1,4 @@
+import * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getDb } from '@/server/db/client';
@@ -13,19 +14,31 @@ import { getMonthlyLimitsSummary } from '@/server/home/limits-summary';
 import { parseFilters, withFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
 import { StatStrip } from '@/components/layout/stat-strip';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   accountsTotals,
   parentCategoryIds,
 } from '@/components/charts/links';
+import dynamic from 'next/dynamic';
 import { SectionCard } from '@/components/charts/section-card';
-import { BreakdownDonut } from '@/components/charts/breakdown-donut';
+import { BreakdownDonutSkeleton } from '@/components/charts/breakdown-donut';
+import { MonthlyStackedSkeleton } from '@/components/dashboard/monthly-stacked';
 import { PaymentMethodBars } from '@/components/dashboard/payment-method-bars';
-import { MonthlyStacked } from '@/components/dashboard/monthly-stacked';
 import { TopMerchants, topMerchants } from '@/components/dashboard/top-merchants';
 import { UpcomingInvoices } from '@/components/dashboard/upcoming-invoices';
 import { PaceChart } from '@/components/home/overview/pace-chart';
 import { LimitsSummaryCard } from '@/components/home/overview/limits-summary-card';
 import { Money } from '@/components/format/money';
+
+const DynamicBreakdownDonut = dynamic(
+  () => import('@/components/charts/breakdown-donut').then((m) => m.BreakdownDonut),
+  { loading: () => <BreakdownDonutSkeleton /> },
+);
+
+const DynamicMonthlyStacked = dynamic(
+  () => import('@/components/dashboard/monthly-stacked').then((m) => m.MonthlyStacked),
+  { loading: () => <MonthlyStackedSkeleton /> },
+);
 
 export type OverviewTabProps = {
   searchParams: Record<string, string | string[] | undefined>;
@@ -83,7 +96,9 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
       {/* BLOCO DO CELULAR (md:hidden) */}
       <div className="md:hidden space-y-4">
         {/* 1. Gráfico de ritmo */}
-        <PaceChart pace={pace} from={filters.from} />
+        <React.Suspense fallback={<Skeleton className="h-56 rounded-2xl w-full border border-border/60" />}>
+          <PaceChart pace={pace} from={filters.from} />
+        </React.Suspense>
 
         {/* 2. Linha Receitas R$ X · Sobra R$ Y */}
         <div data-testid="mobile-kpi-summary" className="flex items-center justify-between rounded-lg border bg-card p-3.5 text-sm shadow-xs">
@@ -99,7 +114,11 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
         </div>
 
         {/* 3. Card de metas (não renderiza nada se considered === 0) */}
-        {limitsSummary.considered > 0 && <LimitsSummaryCard summary={limitsSummary} />}
+        {limitsSummary.considered > 0 && (
+          <React.Suspense fallback={<Skeleton className="h-56 rounded-2xl w-full border border-border/60" />}>
+            <LimitsSummaryCard summary={limitsSummary} />
+          </React.Suspense>
+        )}
 
         {/* 4. Link Ver análise completa */}
         <Link
@@ -111,7 +130,7 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
         </Link>
 
         {/* 5. Rosca no fim */}
-        <BreakdownDonut
+        <DynamicBreakdownDonut
           title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
           description="Clique para ver as transações."
           mode={roscaMode}
@@ -188,15 +207,19 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
         {/* Ritmo e Card de metas */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2">
-            <PaceChart pace={pace} from={filters.from} />
+            <React.Suspense fallback={<Skeleton className="h-56 rounded-2xl w-full border border-border/60" />}>
+              <PaceChart pace={pace} from={filters.from} />
+            </React.Suspense>
           </div>
           <div className="xl:col-span-1">
-            <LimitsSummaryCard summary={limitsSummary} />
+            <React.Suspense fallback={<Skeleton className="h-56 rounded-2xl w-full border border-border/60" />}>
+              <LimitsSummaryCard summary={limitsSummary} />
+            </React.Suspense>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <BreakdownDonut
+          <DynamicBreakdownDonut
             title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
             description="Clique para ver as transações."
             mode={roscaMode}
@@ -218,7 +241,7 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
         </div>
 
         <SectionCard title="Evolução mensal" description="Últimos 6 meses, empilhado por categoria.">
-          <MonthlyStacked series={monthly} />
+          <DynamicMonthlyStacked series={monthly} />
         </SectionCard>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

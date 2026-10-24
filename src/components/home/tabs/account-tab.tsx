@@ -11,13 +11,20 @@ import { parseFilters } from '@/server/queries/url-filters';
 import { getRequestAccountsOverview } from '@/server/queries/request-cache';
 import type { AttentionItem } from '@/server/home/attention';
 import { accountsTotals, parentCategoryIds } from '@/components/charts/links';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/components/ui/skeleton';
 import { BalanceHero } from '@/components/home/account/balance-hero';
 import { BalanceChart } from '@/components/home/account/balance-chart';
 import { CashFlowCard } from '@/components/home/account/cash-flow-card';
 import { RecentTransactions } from '@/components/home/account/recent-transactions';
 import { AttentionStrip } from '@/components/home/attention-strip';
-import { BreakdownDonut } from '@/components/charts/breakdown-donut';
+import { BreakdownDonutSkeleton } from '@/components/charts/breakdown-donut';
 import { EmptyState } from '@/components/states/empty-state';
+
+const DynamicBreakdownDonut = dynamic(
+  () => import('@/components/charts/breakdown-donut').then((m) => m.BreakdownDonut),
+  { loading: () => <BreakdownDonutSkeleton /> },
+);
 
 export type AccountTabProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -81,37 +88,45 @@ export async function AccountTab({ searchParams = {}, attention = [] }: AccountT
 
       {/* 3. Saldo 90 dias: abaixo do herói / atenção no celular, coluna esquerda no desktop */}
       <div className="md:col-span-7 md:col-start-1">
-        <BalanceChart history={tab.history} />
+        <React.Suspense fallback={<Skeleton className="h-64 rounded-2xl w-full border border-border/60" />}>
+          <BalanceChart history={tab.history} />
+        </React.Suspense>
       </div>
 
       {/* 4. Fluxo das contas: após saldo no celular, coluna direita (5/12) linha 1 no desktop */}
       <div className="md:col-span-5 md:col-start-8 md:row-start-1">
-        <CashFlowCard flow={tab.flow} />
+        <React.Suspense fallback={<Skeleton className="h-36 rounded-2xl w-full border border-border/60" />}>
+          <CashFlowCard flow={tab.flow} />
+        </React.Suspense>
       </div>
 
       {/* 5. Últimas transações: após fluxo no celular, coluna direita linha 2 no desktop */}
       <div className="md:col-span-5 md:col-start-8 md:row-start-2 md:row-span-2">
-        <RecentTransactions
-          transactions={txList.items}
-          categories={categories}
-          tags={tags}
-          accountIds={tab.accountIds}
-          filters={filters}
-        />
+        <React.Suspense fallback={<Skeleton className="h-72 rounded-2xl w-full border border-border/60" />}>
+          <RecentTransactions
+            transactions={txList.items}
+            categories={categories}
+            tags={tags}
+            accountIds={tab.accountIds}
+            filters={filters}
+          />
+        </React.Suspense>
       </div>
 
       {/* 6. Rosca: no fim no celular, coluna esquerda abaixo do gráfico no desktop */}
       <div className="md:col-span-7 md:col-start-1">
-        <BreakdownDonut
-          title="Para onde foi o dinheiro da conta"
-          description="Clique numa categoria para ver as transações."
-          mode={roscaMode}
-          byCategory={byCategory}
-          byPaymentMethod={byPaymentMethod}
-          filters={accountFilters}
-          linkOptions={linkOpts}
-          totalCents={totalCents}
-        />
+        <React.Suspense fallback={<BreakdownDonutSkeleton />}>
+          <DynamicBreakdownDonut
+            title="Para onde foi o dinheiro da conta"
+            description="Clique numa categoria para ver as transações."
+            mode={roscaMode}
+            byCategory={byCategory}
+            byPaymentMethod={byPaymentMethod}
+            filters={accountFilters}
+            linkOptions={linkOpts}
+            totalCents={totalCents}
+          />
+        </React.Suspense>
       </div>
     </div>
   );

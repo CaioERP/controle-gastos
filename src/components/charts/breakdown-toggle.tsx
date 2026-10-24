@@ -10,6 +10,7 @@ export type BreakdownToggleProps = {
   param: 'rosca' | 'barras' | string;
   value?: BreakdownDimension;
   defaultValue?: BreakdownDimension;
+  onChange?: (next: BreakdownDimension) => void;
   className?: string;
 };
 
@@ -21,6 +22,7 @@ export function BreakdownToggle({
   param,
   value,
   defaultValue = 'categoria',
+  onChange,
   className,
 }: BreakdownToggleProps) {
   const router = useRouter();
@@ -32,6 +34,16 @@ export function BreakdownToggle({
 
   function setMode(next: BreakdownDimension) {
     if (next === active) return;
+    if (onChange) {
+      onChange(next);
+      if (typeof window !== 'undefined') {
+        const sp = new URLSearchParams(window.location.search);
+        sp.set(param, next);
+        const newUrl = `${window.location.pathname}?${sp.toString()}`;
+        window.history.replaceState(null, '', newUrl);
+      }
+      return;
+    }
     const sp = new URLSearchParams(searchParams.toString());
     sp.set(param, next);
     router.replace(`${pathname}?${sp.toString()}`, { scroll: false });

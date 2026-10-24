@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 import { HorizontalBars, type HorizontalBarItem } from '@/components/charts/horizontal-bars';
 import { categoryTransactionsHref, paymentMethodTransactionsHref } from '@/components/charts/links';
@@ -25,7 +27,7 @@ type PaymentMethodBarsProps = {
  * Padrão é forma de pagamento. Fica oculto no celular (hidden md:block).
  */
 export function PaymentMethodBars({
-  mode = 'forma',
+  mode: initialMode = 'forma',
   byPaymentMethod,
   byCategory = [],
   totalCents,
@@ -34,8 +36,18 @@ export function PaymentMethodBars({
   parentIds,
   className,
 }: PaymentMethodBarsProps) {
+  const [selectedMode, setSelectedMode] = React.useState<BreakdownDimension | null>(null);
+  const [prevInitialMode, setPrevInitialMode] = React.useState(initialMode);
+
+  if (initialMode !== prevInitialMode) {
+    setPrevInitialMode(initialMode);
+    setSelectedMode(null);
+  }
+
+  const currentMode = selectedMode ?? initialMode;
+
   const linkOpts = totalsAccountIds ? { totalsAccountIds } : undefined;
-  const isCategory = mode === 'categoria';
+  const isCategory = currentMode === 'categoria';
   const title = isCategory ? 'Gastos por categoria' : 'Gastos por forma de pagamento';
 
   let items: HorizontalBarItem[] = [];
@@ -64,7 +76,7 @@ export function PaymentMethodBars({
   return (
     <SectionCard
       title={title}
-      action={<BreakdownToggle param="barras" value={mode} defaultValue="forma" />}
+      action={<BreakdownToggle param="barras" value={currentMode} defaultValue="forma" onChange={setSelectedMode} />}
       className={cn('hidden md:block', className)}
     >
       {items.length > 0 ? (

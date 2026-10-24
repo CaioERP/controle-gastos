@@ -10,6 +10,7 @@ import { formatShare } from '@/components/charts/format';
 import { formatBRL } from '@/server/domain/money';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { BreakdownToggle, type BreakdownDimension } from '@/components/charts/breakdown-toggle';
 import { toDonutSlices, type DonutSlice } from '@/components/charts/donut-slices';
 import { cn } from '@/lib/utils';
@@ -220,7 +221,7 @@ function DonutView({ slices, totalCents, ariaLabel, variant }: DonutViewProps) {
 export function BreakdownDonut({
   title,
   description,
-  mode,
+  mode: initialMode = 'categoria',
   byCategory,
   byPaymentMethod,
   filters,
@@ -228,6 +229,16 @@ export function BreakdownDonut({
   totalCents,
   className,
 }: BreakdownDonutProps) {
+  const [selectedMode, setSelectedMode] = React.useState<BreakdownDimension | null>(null);
+  const [prevInitialMode, setPrevInitialMode] = React.useState(initialMode);
+
+  if (initialMode !== prevInitialMode) {
+    setPrevInitialMode(initialMode);
+    setSelectedMode(null);
+  }
+
+  const currentMode = selectedMode ?? initialMode;
+
   const desktopCategory = React.useMemo(
     () => toDonutSlices({ items: byCategory, dimension: 'categoria', filters, linkOptions, limit: 7 }),
     [byCategory, filters, linkOptions]
@@ -245,15 +256,15 @@ export function BreakdownDonut({
     [byPaymentMethod, filters, linkOptions]
   );
 
-  const desktopSlices = mode === 'forma' ? desktopPm : desktopCategory;
-  const mobileSlices = mode === 'forma' ? mobilePm : mobileCategory;
-  const activeLabel = mode === 'forma' ? 'gastos por forma de pagamento' : 'gastos por categoria';
+  const desktopSlices = currentMode === 'forma' ? desktopPm : desktopCategory;
+  const mobileSlices = currentMode === 'forma' ? mobilePm : mobileCategory;
+  const activeLabel = currentMode === 'forma' ? 'gastos por forma de pagamento' : 'gastos por categoria';
 
   return (
     <SectionCard
       title={title}
       description={description}
-      action={<BreakdownToggle param="rosca" value={mode} />}
+      action={<BreakdownToggle param="rosca" value={currentMode} onChange={setSelectedMode} />}
       className={className}
     >
       {desktopSlices.length === 0 ? (
@@ -279,5 +290,29 @@ export function BreakdownDonut({
         </>
       )}
     </SectionCard>
+  );
+}
+
+export function BreakdownDonutSkeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border border-border/60 bg-card p-6 h-[340px] flex flex-col justify-between',
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-7 w-28 rounded-lg" />
+      </div>
+      <div className="flex items-center justify-center py-4">
+        <Skeleton className="size-44 rounded-full" />
+      </div>
+      <div className="flex items-center justify-center gap-4">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+    </div>
   );
 }

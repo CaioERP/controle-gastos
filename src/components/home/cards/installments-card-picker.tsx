@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export type InstallmentsCardOption = { id: string; name: string; institutionName: string };
 
@@ -16,17 +17,20 @@ export function InstallmentsCardPicker({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = React.useTransition();
 
   function onChange(id: string) {
     const sp = new URLSearchParams(searchParams.toString());
     if (id) sp.set('parcelas', id);
     else sp.delete('parcelas');
     const qs = sp.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    startTransition(() => {
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    });
   }
 
   return (
-    <>
+    <div className="flex items-center gap-1.5">
       <label htmlFor="installments-card" className="sr-only">
         Cartão das parcelas
       </label>
@@ -43,6 +47,9 @@ export function InstallmentsCardPicker({
           </option>
         ))}
       </select>
-    </>
+      {isPending && (
+        <Loader2 className="size-3 animate-spin text-muted-foreground shrink-0" />
+      )}
+    </div>
   );
 }
