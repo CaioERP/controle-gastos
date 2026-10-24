@@ -120,7 +120,7 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 | B6-20 | Histórico por estabelecimento: páginas `/estabelecimentos` e `/estabelecimentos/[id]` (12 meses, por mês, formas de pagamento, histórico), filtro `estab` (contract: `merchantIds`) e links em todo lugar onde aparece um estabelecimento | B | B6-13, B6-14 | ⬜ |
 | B6-21 | Resposta imediata: toggle da rosca sem ida ao servidor, sinal de carregando em filtros e abas (`useTransition`/`useLinkStatus`), streaming com `Suspense` e esqueletos, gráficos abaixo da dobra com `next/dynamic` | B | B6-13 | ⬜ |
 | A6-06 | Resumo de contas uma vez por requisição (`getRequestAccountsOverview` com `cache`); funções do Início aceitam `overview` | A | — | 🟡 Agente A — PR #90 em revisão |
-| A6-07 | Livro-razão `src/server/ledger/`: recortes nomeados (`txLive`, `txPosted`…) usados por toda consulta; corrige busca, contagem da revisão e itens de fatura com mães divididas | A | — | 🟡 Agente A |
+| A6-07 | Livro-razão `src/server/ledger/`: recortes nomeados (`txLive`, `txPosted`…) usados por toda consulta; corrige busca, contagem da revisão e itens de fatura com mães divididas | A | — | 🟡 Agente A — PR #92 em revisão |
 | A6-08 | Mesclagem única (R9): `mergeIncoming` puro usado por `persist` e `dedupe` | A | — | ⬜ |
 | A6-09 | Comandos `setSpendingLimitActive` e `setRecurrenceStatus` (contract:); actions sem acesso direto ao banco | A | — | ⬜ |
 | A6-10 | Falhas visíveis: `logServerError` com redação de segredos; job com falha recente no "Precisa de você" | A | — | ⬜ |
