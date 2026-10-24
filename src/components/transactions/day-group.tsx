@@ -25,7 +25,7 @@ export function DayGroup({ group, showYear = false, categories, onOpen, onRecate
           {formatDayHeader(group.date, showYear)}
         </h2>
         <span className="text-muted-foreground">
-          Saldo do dia: <Money cents={group.balanceCents} signed colored />
+          Total do dia: <Money cents={group.balanceCents} signed colored tone="flow" />
         </span>
       </div>
       <ul className="divide-y">
