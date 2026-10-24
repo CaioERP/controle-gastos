@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { PlugZap } from 'lucide-react';
 import { getDb } from '@/server/db/client';
-import { getAccountsOverview } from '@/server/queries/accounts';
+import { getRequestAccountsOverview } from '@/server/queries/request-cache';
 import { getAttentionItems } from '@/server/home/attention';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
 import { buttonVariants } from '@/components/ui/button';
 import { AttentionStrip } from '@/components/home/attention-strip';
 import { HomeTabs, type HomeTab } from '@/components/home/home-tabs';
+import { PeriodOnlyBar } from '@/components/home/period-only-bar';
 import { OverviewTab } from '@/components/home/tabs/overview-tab';
 import { AccountTab } from '@/components/home/tabs/account-tab';
 import { CardsTab } from '@/components/home/tabs/cards-tab';
@@ -30,10 +31,8 @@ export default async function HomePage({ searchParams }: Props) {
   const tab: HomeTab = isValidTab(rawTab) ? rawTab : DEFAULT_TAB;
 
   const db = getDb();
-  const [overview, attention] = await Promise.all([
-    getAccountsOverview(db),
-    getAttentionItems(db),
-  ]);
+  const overview = await getRequestAccountsOverview();
+  const attention = await getAttentionItems(db, { overview });
 
   if (overview.length === 0) {
     return (
@@ -60,10 +59,21 @@ export default async function HomePage({ searchParams }: Props) {
         description="Visão consolidada do período, por categoria e forma de pagamento."
         className="hidden md:block"
       />
-      <AttentionStrip items={attention} />
-      <HomeTabs active={tab} />
+
+      {/* Desktop: Precisa de você abaixo do cabeçalho */}
+      <AttentionStrip items={attention} mode="desktop-only" />
+
+      {/* Abas e período na mesma linha */}
+      <div className="flex items-center justify-between gap-2">
+        <HomeTabs active={tab} className="flex-1 md:flex-initial" />
+        <PeriodOnlyBar compact className={tab === 'geral' ? 'md:hidden' : undefined} />
+      </div>
+
+      {/* Celular: se não for a aba conta, mostra o Precisa de você aqui no topo */}
+      {tab !== 'conta' && <AttentionStrip items={attention} mode="mobile-only" />}
+
       {tab === 'geral' && <OverviewTab searchParams={sp} />}
-      {tab === 'conta' && <AccountTab searchParams={sp} />}
+      {tab === 'conta' && <AccountTab searchParams={sp} attention={attention} />}
       {tab === 'cartoes' && <CardsTab searchParams={sp} />}
     </div>
   );

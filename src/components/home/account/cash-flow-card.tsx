@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Money } from '@/components/format/money';
 import type { CashFlowBreakdown } from '@/server/home/cash-accounts';
+import { cn } from '@/lib/utils';
 
 export type CashFlowCardProps = {
   flow: CashFlowBreakdown;
@@ -10,55 +10,79 @@ export type CashFlowCardProps = {
 
 export function CashFlowCard({ flow, className }: CashFlowCardProps) {
   const breakdownItems = [
-    { label: 'Gastos', amountCents: flow.out.expenseCents },
-    { label: 'Pagamento de faturas', amountCents: flow.out.invoicePaymentCents },
-    { label: 'Investimentos', amountCents: flow.out.investmentCents },
-    { label: 'Outros', amountCents: flow.out.otherCents },
+    { label: 'Gastos', amountCents: flow.out.expenseCents, bgClass: 'bg-foreground' },
+    { label: 'Pagamento de faturas', amountCents: flow.out.invoicePaymentCents, bgClass: 'bg-muted-foreground' },
+    { label: 'Investimentos', amountCents: flow.out.investmentCents, bgClass: 'bg-muted-foreground/50' },
+    { label: 'Outros', amountCents: flow.out.otherCents, bgClass: 'bg-muted-foreground/25' },
   ].filter((item) => item.amountCents > 0);
 
+  const totalOutCents = Math.max(flow.outCents, 1);
+
   return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Fluxo das contas</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Entradas, Saídas e Saldo do mês */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60">
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground block">Entradas</span>
-            <Money cents={flow.inCents} colored className="text-xl font-bold tracking-tight block" />
-          </div>
+    <section
+      aria-label="Fluxo das contas"
+      className={cn('rounded-2xl bg-muted/40 p-4 sm:p-5', className)}
+    >
+      <h2 className="text-sm sm:text-base font-semibold text-foreground">Fluxo das contas</h2>
 
-          <div className="pt-2 sm:pt-0 sm:pl-3 space-y-1">
-            <span className="text-xs text-muted-foreground block">Saídas</span>
-            <Money cents={flow.outCents} className="text-xl font-bold tracking-tight block text-red-600 dark:text-red-400" />
-          </div>
-
-          <div className="pt-2 sm:pt-0 sm:pl-3 space-y-1">
-            <span className="text-xs text-muted-foreground block">Saldo do mês</span>
-            <Money cents={flow.netCents} colored signed className="text-xl font-bold tracking-tight block" />
-          </div>
+      {/* 3 colunas: Entradas, Saídas, Sobra */}
+      <div className="mt-3.5 grid grid-cols-3 gap-2 sm:gap-3">
+        <div>
+          <div className="text-xs text-muted-foreground">Entradas</div>
+          <Money
+            cents={flow.inCents}
+            signed
+            colored
+            className="text-base sm:text-xl font-semibold tracking-tight block"
+          />
         </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Saídas</div>
+          <Money
+            cents={flow.outCents}
+            className="text-base sm:text-xl font-semibold tracking-tight text-foreground block"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Sobra</div>
+          <Money
+            cents={flow.netCents}
+            signed
+            colored
+            className="text-base sm:text-xl font-semibold tracking-tight block"
+          />
+        </div>
+      </div>
 
-        {/* Quebra das saídas */}
-        {breakdownItems.length > 0 && (
-          <div className="pt-3 border-t border-border/50 space-y-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-              Detalhamento das saídas
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {breakdownItems.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-1.5 rounded-md bg-muted/30">
-                  <span className="text-muted-foreground">{item.label}</span>
-                  <span className="font-medium text-foreground">
-                    <Money cents={item.amountCents} />
-                  </span>
-                </div>
-              ))}
-            </div>
+      {/* Barra empilhada das saídas em tons neutros */}
+      {breakdownItems.length > 0 && (
+        <>
+          <div className="mt-3.5 h-2 rounded-full bg-muted flex overflow-hidden gap-0.5">
+            {breakdownItems.map((item, idx) => {
+              const pct = Math.min(100, Math.max(1, (item.amountCents / totalOutCents) * 100));
+              return (
+                <span
+                  key={idx}
+                  className={cn('h-full transition-all', item.bgClass)}
+                  style={{ width: `${pct}%` }}
+                />
+              );
+            })}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <ul className="mt-3 space-y-1.5 text-xs sm:text-sm">
+            {breakdownItems.map((item, idx) => (
+              <li key={idx} className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <span className={cn('size-2 rounded-xs', item.bgClass)} aria-hidden />
+                  <span>{item.label}</span>
+                </span>
+                <Money cents={item.amountCents} className="font-medium text-foreground" />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }
