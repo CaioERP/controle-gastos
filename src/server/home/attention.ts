@@ -2,7 +2,7 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import type { Db } from '@/server/db/client';
 import { addDaysISO, today as getToday } from '@/server/domain/dates';
 import type { ConnectionStatus } from '@/server/domain/enums';
-import { getAccountsOverview } from '@/server/queries/accounts';
+import { getAccountsOverview, type InstitutionWithAccounts } from '@/server/queries/accounts';
 import { listConnections } from '@/server/queries/connections';
 import { summarizeAccounts } from '@/server/queries/dashboard';
 import { getLimitsOverview } from '@/server/queries/limits';
@@ -37,7 +37,7 @@ export type AttentionItem =
 
 export async function getAttentionItems(
   db: Db,
-  opts: { today?: string } = {},
+  opts: { today?: string; overview?: InstitutionWithAccounts[] } = {},
 ): Promise<AttentionItem[]> {
   const todayStr = opts.today ?? getToday();
   const maxDue = addDaysISO(todayStr, 7);
@@ -45,7 +45,7 @@ export async function getAttentionItems(
   const [reviewCount, accountsOverview, connectionsList, limitsOverview] =
     await Promise.all([
       getReviewCount(db),
-      getAccountsOverview(db, { today: todayStr }),
+      opts.overview ?? getAccountsOverview(db, { today: todayStr }),
       listConnections(db),
       getLimitsOverview(db, todayStr),
     ]);
