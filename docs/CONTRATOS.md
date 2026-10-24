@@ -276,7 +276,7 @@ Seed completo na tarefa F0-03.
 | user_edited_fields | text[] | R9; default `{}` |
 | deleted_at | timestamptz null | soft delete |
 
-Índices: `(account_id, date)`, `(date)`, `(category_id)`, `(installment_group_id)`, `(invoice_id)`, `(parent_transaction_id)`.
+Índices: `(account_id, date)`, `(date)`, `(category_id)`, `(merchant_id)`, `(installment_group_id)`, `(invoice_id)`, `(parent_transaction_id)`.
 
 ### `transaction_sources` — origem de cada transação (R10)
 | Coluna | Tipo | Observação |
@@ -766,3 +766,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-21 | Coordenador | Fase 6 | Pastas novas do Agente A: `src/server/home/` (leituras do Início com regra de negócio) e `src/server/push/`. Especificação da tabela `push_subscriptions` e da coluna `notifications.push_sent_at` (aditivo; migration gerada na A6-04) |
 | 2026-10-21 | Agente A | A6-04 | Migration 0005 gerada e aplicada (`push_subscriptions` e `notifications.push_sent_at`) |
 | 2026-10-23 | Coordenador | A6-05 | Coluna `transactions.occurred_at` (timestamptz null, horário da transação) e migration 0006 (aditivo) |
+| 2026-10-24 | Agente B | B6-20 | Índice `transactions_merchant_idx` em `transactions(merchant_id)` (migration 0007) e campo `merchantIds` no `txFiltersSchema` (aditivo) |
