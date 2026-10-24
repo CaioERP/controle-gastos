@@ -12,7 +12,10 @@ Leia nesta ordem e **não pule**:
 1. `docs/PLANO.md` — visão, decisões e **regras de negócio R1–R12**
 2. `docs/CONTRATOS.md` — schema, enums, interfaces, pastas e responsáveis
 3. `docs/TAREFAS.md` — quadro de status e dependências
-4. O arquivo da sua tarefa em `docs/tarefas/` — especificação passo a passo
+4. `docs/FUNCIONALIDADES.md` — o que já está pronto: telas, parâmetros de URL, onde fica cada coisa e as pegadinhas conhecidas
+5. O arquivo da sua tarefa em `docs/tarefas/` — especificação passo a passo
+
+Coordenador/revisor (planeja rodadas, revisa e faz merge): leia também `docs/COORDENACAO.md`.
 
 Se a especificação da tarefa contradiz `CONTRATOS.md` ou `PLANO.md`, **pare** e registre em `docs/TAREFAS.md` → *Pendências de coordenação*. Não escolha sozinho.
 

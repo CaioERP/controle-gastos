@@ -119,11 +119,14 @@ O projeto foi desenvolvido com agentes de IA trabalhando em paralelo; os documen
 
 | Documento | Conteúdo |
 |---|---|
+| [`docs/FUNCIONALIDADES.md`](docs/FUNCIONALIDADES.md) | **Comece aqui:** tudo o que está pronto, tela por tela, e onde fica no código |
 | [`docs/PLANO.md`](docs/PLANO.md) | Visão, decisões técnicas, arquitetura, regras de negócio, fases |
 | [`docs/CONTRATOS.md`](docs/CONTRATOS.md) | Schema, enums, interfaces e responsáveis por pasta |
 | [`docs/TAREFAS.md`](docs/TAREFAS.md) | Quadro de tarefas, dependências e status |
 | [`docs/tarefas/`](docs/tarefas/) | Especificação passo a passo de cada tarefa |
 | [`docs/MELHORIAS.md`](docs/MELHORIAS.md) | Ideias futuras com custo, esforço e pré-requisitos |
+| [`docs/PROMPTS.md`](docs/PROMPTS.md) | Prompts de cada rodada e para abrir uma conversa nova |
+| [`docs/COORDENACAO.md`](docs/COORDENACAO.md) | Como planejar rodadas, revisar e integrar os PRs |
 | [`AGENTS.md`](AGENTS.md) | Regras de trabalho para os agentes de IA |
 
 ## Licença
