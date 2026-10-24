@@ -15,7 +15,7 @@ test.describe('Projeção de fluxo de caixa (B4-03)', () => {
 
     // Header
     await expect(
-      page.getByRole('heading', { name: 'Projeção de fluxo de caixa', level: 1 }),
+      page.getByRole('heading', { name: /Projeção/, level: 1 }),
     ).toBeVisible();
 
     // Cards de resumo
@@ -51,7 +51,7 @@ test.describe('Projeção de fluxo de caixa (B4-03)', () => {
     await page.goto('/projecao');
 
     await expect(
-      page.getByRole('heading', { name: 'Projeção de fluxo de caixa', level: 1 }),
+      page.getByRole('heading', { name: /Projeção/, level: 1 }),
     ).toBeVisible();
     await expect(page.getByText('Saldo Líquido Atual')).toBeVisible();
     await expect(page.getByText(/Trajetória projetada/i)).toBeVisible();

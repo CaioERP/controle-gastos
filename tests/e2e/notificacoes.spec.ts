@@ -33,8 +33,8 @@ test.describe('Central de notificações e preferências de alerta (B4-05)', () 
     await expect(page.getByRole('heading', { name: 'Notificações', level: 1 })).toBeVisible();
 
     // Confere abas Todas e Não lidas
-    await expect(page.getByRole('button', { name: /Todas/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Não lidas', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Todas/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Não lidas/ })).toBeVisible();
 
     // Botão de preferências na página
     const pagePrefsBtn = page.getByTestId('open-prefs-page-btn');

@@ -13,7 +13,7 @@ type SectionCardProps = {
 /** Cartão padrão das seções analíticas (dashboard e análise). */
 export function SectionCard({ title, description, action, className, children }: SectionCardProps) {
   return (
-    <Card className={cn('min-w-0', className)}>
+    <Card className={cn('min-w-0 border-border/60 shadow-none rounded-2xl ring-0', className)}>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}

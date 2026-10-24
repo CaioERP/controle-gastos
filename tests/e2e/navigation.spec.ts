@@ -29,13 +29,13 @@ test.describe('Navegação Desktop', () => {
 
   test('abre dashboard e navega por todas as rotas pelo menu lateral', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toHaveText('Início');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Início');
 
     for (const route of routes.slice(1)) {
       await expandNavGroups(page, 'aside');
       await page.click(`aside a[href="${route.href}"]`);
       await expect(page).toHaveURL(route.href);
-      await expect(page.locator('h1')).toHaveText(route.title);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(route.title);
     }
   });
 });
@@ -45,7 +45,7 @@ test.describe('Navegação Mobile', () => {
 
   test('abre menu deslizante e navega pelas rotas sem overflow horizontal', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toHaveText('Início');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Início');
 
     // Verifica que não há rolagem horizontal
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -58,7 +58,7 @@ test.describe('Navegação Mobile', () => {
       await expandNavGroups(page, 'div[role="dialog"]');
       await page.click(`div[role="dialog"] a[href="${route.href}"]`);
       await expect(page).toHaveURL(route.href);
-      await expect(page.locator('h1')).toHaveText(route.title);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(route.title);
     }
   });
 });
@@ -71,7 +71,7 @@ test('aplica a fonte Geist (e não a fonte padrão do navegador)', async ({ page
 
 test('busca global (Ctrl+K) abre a busca e navega para tela ao pressionar Enter', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('h1')).toHaveText('Início');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Início');
 
   // Abre com Ctrl+K
   await page.keyboard.press('Control+k');
@@ -84,5 +84,5 @@ test('busca global (Ctrl+K) abre a busca e navega para tela ao pressionar Enter'
 
   // A URL passa a ser /transacoes
   await expect(page).toHaveURL('/transacoes');
-  await expect(page.locator('h1')).toHaveText('Transações');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Transações');
 });
