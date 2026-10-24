@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { CreditCard } from 'lucide-react';
 import { getDb } from '@/server/db/client';
-import { getAccountsOverview } from '@/server/queries/accounts';
+import { getRequestAccountsOverview } from '@/server/queries/request-cache';
 import { creditCardAccountIds } from '@/server/home/accounts';
 import { summarizeAccounts } from '@/server/queries/dashboard';
 import { getFutureInstallments } from '@/server/queries/installments';
@@ -14,7 +14,6 @@ import {
   accountsTotals,
   parentCategoryIds,
 } from '@/components/charts/links';
-import { PeriodOnlyBar } from '@/components/home/period-only-bar';
 import { InvoicesHero } from '@/components/home/cards/invoices-hero';
 import { CardTile, type CardTileAccount } from '@/components/home/cards/card-tile';
 import { FutureInstallmentsChart } from '@/components/invoices/future-installments-chart';
@@ -34,7 +33,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
   const catDim = categoryDimensionFor(filters);
 
   const db = getDb();
-  const overview = await getAccountsOverview(db);
+  const overview = await getRequestAccountsOverview();
 
   const cardAccountIds = creditCardAccountIds(overview);
   const cardAccounts: CardTileAccount[] = [];
@@ -59,14 +58,11 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
 
   if (cardAccounts.length === 0) {
     return (
-      <div className="space-y-4">
-        <PeriodOnlyBar />
-        <EmptyState
-          icon={CreditCard}
-          title="Nenhum cartão conectado"
-          description="Assim que houver um cartão de crédito conectado, suas faturas, limites e parcelas aparecem aqui."
-        />
-      </div>
+      <EmptyState
+        icon={CreditCard}
+        title="Nenhum cartão conectado"
+        description="Assim que houver um cartão de crédito conectado, suas faturas, limites e parcelas aparecem aqui."
+      />
     );
   }
 
@@ -95,15 +91,13 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
 
   return (
     <div className="space-y-6">
-      <PeriodOnlyBar />
-
       <InvoicesHero
         openInvoicesCents={snapshot.openInvoicesCents}
         upcomingInvoices={snapshot.upcomingInvoices}
       />
 
       <section aria-label="Cartões de crédito">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-3">
           {cardAccounts.map((account) => (
             <CardTile key={account.id} account={account} />
           ))}

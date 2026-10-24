@@ -9,6 +9,7 @@ export type HomeTab = 'conta' | 'cartoes' | 'geral';
 
 interface HomeTabsProps {
   active: HomeTab;
+  className?: string;
 }
 
 interface TabItem {
@@ -30,7 +31,7 @@ const TABS: TabItem[] = [
   },
 ];
 
-export function HomeTabs({ active }: HomeTabsProps) {
+export function HomeTabs({ active, className }: HomeTabsProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -46,7 +47,10 @@ export function HomeTabs({ active }: HomeTabsProps) {
   return (
     <nav
       aria-label="Abas do Início"
-      className="inline-flex w-full md:w-fit items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground h-9"
+      className={cn(
+        'inline-flex w-full md:w-fit items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground h-9',
+        className,
+      )}
     >
       <div className="flex w-full md:w-fit items-center gap-1">
         {TABS.map((tab) => {

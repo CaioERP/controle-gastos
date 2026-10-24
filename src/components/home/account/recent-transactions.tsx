@@ -4,7 +4,6 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TransactionRow } from '@/components/transactions/transaction-row';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
 import type { RecategorizeHandler } from '@/components/transactions/category-cell';
@@ -15,6 +14,7 @@ import type { CategoryTree, TagWithCount } from '@/server/queries/catalog';
 import type { TransactionRow as Tx } from '@/server/queries/transaction-row';
 import { withFilters } from '@/server/queries/url-filters';
 import type { TxFilters } from '@/server/domain/filters';
+import { cn } from '@/lib/utils';
 
 export type RecentTransactionsProps = {
   transactions: Tx[];
@@ -67,38 +67,37 @@ export function RecentTransactions({
 
   return (
     <>
-      <Card className={className}>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base font-semibold">Últimas transações da conta</CardTitle>
+      <section aria-label="Últimas transações da conta" className={cn('space-y-2', className)}>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm sm:text-base font-semibold text-foreground">Últimas transações</h2>
           <Link
             href={viewAllHref}
             className="text-xs text-muted-foreground hover:underline inline-flex items-center gap-1"
           >
             <span>Ver todas</span>
-            <ArrowRight className="size-3.5" aria-hidden />
+            <ArrowRight className="size-3" aria-hidden />
           </Link>
-        </CardHeader>
-        <CardContent className="p-0">
-          {transactions.length > 0 ? (
-            <ul className="divide-y divide-border/50">
-              {transactions.map((tx) => (
-                <TransactionRow
-                  key={tx.id}
-                  tx={tx}
-                  categories={categories}
-                  onOpen={handleOpen}
-                  onRecategorize={handleRecategorize}
-                  showDate
-                />
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-muted-foreground p-4 text-center">
-              Nenhuma transação recente nestas contas.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {transactions.length > 0 ? (
+          <ul className="divide-y divide-border/40">
+            {transactions.map((tx) => (
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                categories={categories}
+                onOpen={handleOpen}
+                onRecategorize={handleRecategorize}
+                showDate
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground py-4 text-center">
+            Nenhuma transação recente nestas contas.
+          </p>
+        )}
+      </section>
 
       <TransactionSheet
         tx={selectedTx}

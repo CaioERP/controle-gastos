@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getDb } from '@/server/db/client';
-import { getAccountsOverview } from '@/server/queries/accounts';
+import { getRequestAccountsOverview } from '@/server/queries/request-cache';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories, listTags } from '@/server/queries/catalog';
 import { getDashboardKpis } from '@/server/queries/dashboard';
@@ -12,13 +12,12 @@ import { getSpendingPace } from '@/server/home/pace';
 import { getMonthlyLimitsSummary } from '@/server/home/limits-summary';
 import { parseFilters, withFilters } from '@/server/queries/url-filters';
 import { FilterBar } from '@/components/filters';
-import { PeriodOnlyBar } from '@/components/home/period-only-bar';
+import { StatStrip } from '@/components/layout/stat-strip';
 import {
   accountsTotals,
   parentCategoryIds,
 } from '@/components/charts/links';
 import { SectionCard } from '@/components/charts/section-card';
-import { KpiCard } from '@/components/dashboard/kpi-card';
 import { BreakdownDonut } from '@/components/charts/breakdown-donut';
 import { PaymentMethodBars } from '@/components/dashboard/payment-method-bars';
 import { MonthlyStacked } from '@/components/dashboard/monthly-stacked';
@@ -43,9 +42,8 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
   const catDim = categoryDimensionFor(filters);
   const db = getDb();
 
-  const overviewPromise = getAccountsOverview(db);
+  const overview = await getRequestAccountsOverview();
   const [
-    overview,
     kpis,
     categories,
     tags,
@@ -56,8 +54,7 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
     pace,
     limitsSummary,
   ] = await Promise.all([
-    overviewPromise,
-    overviewPromise.then((o) => getDashboardKpis(db, filters, { overview: o })),
+    getDashboardKpis(db, filters, { overview }),
     listCategories(db),
     listTags(db),
     getBreakdown(db, filters, catDim),
@@ -78,12 +75,9 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Filtros completos no desktop, apenas seletor de período no celular */}
+      {/* Filtros completos no desktop */}
       <div className="hidden md:block">
         <FilterBar accounts={overview} categories={categories} tags={tags} />
-      </div>
-      <div className="md:hidden">
-        <PeriodOnlyBar />
       </div>
 
       {/* BLOCO DO CELULAR (md:hidden) */}
@@ -131,44 +125,65 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
 
       {/* BLOCO DO DESKTOP (hidden md:block) */}
       <div className="hidden md:block space-y-6">
-        <section aria-label="Indicadores" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-          <KpiCard
-            title="Gastos"
-            cents={kpis.expenseCents}
-            variation={{
-              current: kpis.expenseCents,
-              previous: kpis.previousExpenseCents,
-              previousLabel: prevLabel,
-              increaseIsBad: true,
-            }}
-          />
-          <KpiCard
-            title="Receitas"
-            cents={kpis.incomeCents}
-            variation={{
-              current: kpis.incomeCents,
-              previous: kpis.previousIncomeCents,
-              previousLabel: prevLabel,
-              increaseIsBad: false,
-            }}
-          />
-          <KpiCard title="Saldo do período" cents={kpis.netCents} colored hint="Receitas − gastos" />
-          <KpiCard
-            title="Saldo em contas"
-            cents={kpis.balanceCents}
-            hint={`${kpis.institutionCount} ${kpis.institutionCount === 1 ? 'instituição' : 'instituições'} · situação atual`}
-          />
-          <KpiCard
-            title="Faturas abertas"
-            cents={kpis.openInvoicesCents}
-            hint={`${kpis.cardCount} ${kpis.cardCount === 1 ? 'cartão' : 'cartões'} · situação atual`}
-          />
-          <KpiCard
-            title="Parcelas futuras"
-            cents={kpis.futureInstallmentsCents}
-            hint="Próximos 12 meses · independe do período"
-          />
-        </section>
+        <StatStrip
+          items={[
+            {
+              label: 'Gastos',
+              value: <Money cents={kpis.expenseCents} />,
+              hint:
+                kpis.previousExpenseCents !== null
+                  ? `${kpis.expenseCents > kpis.previousExpenseCents ? '+' : ''}${Math.round(
+                      ((kpis.expenseCents - kpis.previousExpenseCents) /
+                        (kpis.previousExpenseCents || 1)) *
+                        100,
+                    )}% vs ${prevLabel}`
+                  : undefined,
+              tone: 'flow',
+              testId: 'kpi-gastos',
+            },
+            {
+              label: 'Receitas',
+              value: <Money cents={kpis.incomeCents} />,
+              hint:
+                kpis.previousIncomeCents !== null
+                  ? `${kpis.incomeCents > kpis.previousIncomeCents ? '+' : ''}${Math.round(
+                      ((kpis.incomeCents - kpis.previousIncomeCents) /
+                        (kpis.previousIncomeCents || 1)) *
+                        100,
+                    )}% vs ${prevLabel}`
+                  : undefined,
+              tone: 'positive',
+              testId: 'kpi-receitas',
+            },
+            {
+              label: 'Saldo do período',
+              value: <Money cents={kpis.netCents} colored />,
+              hint: 'Receitas − gastos',
+              tone: kpis.netCents >= 0 ? 'positive' : 'negative',
+              testId: 'kpi-saldo-do-periodo',
+            },
+            {
+              label: 'Saldo em contas',
+              value: <Money cents={kpis.balanceCents} />,
+              hint: `${kpis.institutionCount} ${kpis.institutionCount === 1 ? 'instituição' : 'instituições'} · situação atual`,
+              testId: 'kpi-saldo-em-contas',
+            },
+            {
+              label: 'Faturas abertas',
+              value: <Money cents={kpis.openInvoicesCents} />,
+              hint: `${kpis.cardCount} ${kpis.cardCount === 1 ? 'cartão' : 'cartões'} · situação atual`,
+              tone: 'warning',
+              testId: 'kpi-faturas-abertas',
+            },
+            {
+              label: 'Parcelas futuras',
+              value: <Money cents={kpis.futureInstallmentsCents} />,
+              hint: 'Próximos 12 meses · independe do período',
+              tone: 'flow',
+              testId: 'kpi-parcelas-futuras',
+            },
+          ]}
+        />
 
         {/* Ritmo e Card de metas */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

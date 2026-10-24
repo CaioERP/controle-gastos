@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ChevronDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { addMonthsISO, formatDateBR, formatMonthBR, monthEnd, monthStart, today } from '@/server/domain/dates';
@@ -14,9 +14,22 @@ type PeriodPickerProps = {
   from: string;
   to: string;
   onChange: (range: { from: string; to: string }) => void;
+  variant?: 'default' | 'compact';
 };
 
-export function PeriodPicker({ from, to, onChange }: PeriodPickerProps) {
+function formatShortMonthBR(dateStr: string): string {
+  try {
+    const d = parseISO(dateStr);
+    const m = format(d, 'MMM', { locale: ptBR }).replace('.', '');
+    const capitalized = m.charAt(0).toUpperCase() + m.slice(1);
+    const yy = format(d, 'yy');
+    return `${capitalized}/${yy}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+export function PeriodPicker({ from, to, onChange, variant = 'default' }: PeriodPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [customRange, setCustomRange] = React.useState<DateRange | undefined>(() => ({
     from: parseISO(from),
@@ -27,6 +40,10 @@ export function PeriodPicker({ from, to, onChange }: PeriodPickerProps) {
   const label = isFullMonth
     ? formatMonthBR(from)
     : `${formatDateBR(from)} – ${formatDateBR(to)}`;
+
+  const shortLabel = isFullMonth
+    ? formatShortMonthBR(from)
+    : `${format(parseISO(from), 'dd/MM')}–${format(parseISO(to), 'dd/MM')}`;
 
   const handlePrevMonth = () => {
     const prev = addMonthsISO(from, -1);
@@ -82,6 +99,148 @@ export function PeriodPicker({ from, to, onChange }: PeriodPickerProps) {
     }
   };
 
+  const renderPopoverBody = () => (
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          className="justify-start text-xs"
+          onClick={() => applyShortcut('current_month')}
+        >
+          Este mês
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="justify-start text-xs"
+          onClick={() => applyShortcut('last_month')}
+        >
+          Mês passado
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="justify-start text-xs"
+          onClick={() => applyShortcut('last_3')}
+        >
+          Últimos 3 meses
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="justify-start text-xs"
+          onClick={() => applyShortcut('last_6')}
+        >
+          Últimos 6 meses
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="justify-start text-xs"
+          onClick={() => applyShortcut('last_12')}
+        >
+          Últimos 12 meses
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="justify-start text-xs"
+          onClick={() => applyShortcut('this_year')}
+        >
+          Este ano
+        </Button>
+      </div>
+
+      <div className="border-t pt-2 mt-1">
+        <p className="text-xs font-medium text-muted-foreground mb-1.5">Personalizado:</p>
+        <Calendar
+          mode="range"
+          selected={customRange}
+          onSelect={setCustomRange}
+          locale={ptBR}
+          numberOfMonths={1}
+          className="rounded-md border p-1"
+        />
+        <Button
+          size="sm"
+          className="w-full mt-2"
+          disabled={!customRange?.from || !customRange?.to}
+          onClick={handleCustomApply}
+        >
+          Aplicar intervalo
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (variant === 'compact') {
+    return (
+      <>
+        {/* Mobile: botão compacto Out/26 ▾ */}
+        <div className="md:hidden">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-2.5 font-medium text-foreground gap-1 text-xs shrink-0 rounded-lg"
+                >
+                  <span>{shortLabel}</span>
+                  <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              }
+            />
+            <PopoverContent className="w-auto p-3" align="end">
+              {renderPopoverBody()}
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Desktop: seletor com setas ‹ Outubro de 2026 › */}
+        <div className="hidden md:flex items-center rounded-lg border bg-card p-0.5 shadow-2xs">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePrevMonth}
+            aria-label="Mês anterior"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </Button>
+
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2.5 font-medium text-foreground hover:bg-muted/80 capitalize text-xs"
+                >
+                  <span>{label}</span>
+                </Button>
+              }
+            />
+            <PopoverContent className="w-auto p-3" align="end">
+              {renderPopoverBody()}
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNextMonth}
+            aria-label="Próximo mês"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="flex items-center rounded-lg border bg-card p-0.5 shadow-xs">
       <Button
@@ -108,78 +267,7 @@ export function PeriodPicker({ from, to, onChange }: PeriodPickerProps) {
           }
         />
         <PopoverContent className="w-auto p-3" align="start">
-          <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start text-xs"
-                onClick={() => applyShortcut('current_month')}
-              >
-                Este mês
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start text-xs"
-                onClick={() => applyShortcut('last_month')}
-              >
-                Mês passado
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start text-xs"
-                onClick={() => applyShortcut('last_3')}
-              >
-                Últimos 3 meses
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start text-xs"
-                onClick={() => applyShortcut('last_6')}
-              >
-                Últimos 6 meses
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start text-xs"
-                onClick={() => applyShortcut('last_12')}
-              >
-                Últimos 12 meses
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start text-xs"
-                onClick={() => applyShortcut('this_year')}
-              >
-                Este ano
-              </Button>
-            </div>
-
-            <div className="border-t pt-2 mt-1">
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">Personalizado:</p>
-              <Calendar
-                mode="range"
-                selected={customRange}
-                onSelect={setCustomRange}
-                locale={ptBR}
-                numberOfMonths={1}
-                className="rounded-md border p-1"
-              />
-              <Button
-                size="sm"
-                className="w-full mt-2"
-                disabled={!customRange?.from || !customRange?.to}
-                onClick={handleCustomApply}
-              >
-                Aplicar intervalo
-              </Button>
-            </div>
-          </div>
+          {renderPopoverBody()}
         </PopoverContent>
       </Popover>
 
