@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   differenceInCalendarDays,
   endOfWeek,
@@ -25,7 +25,8 @@ import { addDaysISO, formatDateBR, monthEnd, monthStart, today as getToday } fro
 import type { LimitPeriod, NotificationType, PaymentMethod } from '@/server/domain/enums';
 import { formatBRL } from '@/server/domain/money';
 import { buildTxWhere, spendValue } from '@/server/queries/base';
-import { notSplitParent } from '@/server/queries/split-filter';
+import { txLive } from '@/server/ledger';
+import type { SpentRow } from './spent';
 
 export type LimitPeriodRange = {
   from: string; // YYYY-MM-DD
@@ -142,6 +143,42 @@ export async function getLimitSpent(
     .where(where);
 
   return Number(row?.spentCents ?? 0);
+}
+
+/**
+ * Gasto da janela agrupado por categoria, categoria pai, forma de pagamento e conta, para calcular
+ * várias metas com `spentForLimit` numa consulta só. Inclui contas fora dos totais (marcadas em
+ * `inTotals`), que só contam em metas da própria conta, como em `getLimitSpent`.
+ */
+export async function getSpentRows(db: Db, dateRange: { from: string; to: string }): Promise<SpentRow[]> {
+  const where = buildTxWhere(
+    { from: dateRange.from, to: dateRange.to, basis: 'accrual' },
+    { forTotals: false },
+  );
+
+  const rows = await db
+    .select({
+      categoryId: transactions.categoryId,
+      categoryParentId: categories.parentId,
+      paymentMethod: transactions.paymentMethod,
+      accountId: transactions.accountId,
+      inTotals: accounts.includeInTotals,
+      spentCents: sql<number>`coalesce(sum(${spendValue}), 0)`,
+    })
+    .from(transactions)
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+    .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
+    .leftJoin(categories, eq(categories.id, transactions.categoryId))
+    .where(where)
+    .groupBy(
+      transactions.categoryId,
+      categories.parentId,
+      transactions.paymentMethod,
+      transactions.accountId,
+      accounts.includeInTotals,
+    );
+
+  return rows.map((r) => ({ ...r, spentCents: Number(r.spentCents ?? 0) }));
 }
 
 /**
@@ -458,9 +495,8 @@ export async function evaluateSystemAlerts(
   if (isTypeEnabled('unusual_expense')) {
     // Transações elegíveis: despesa recente >= R$ 100 (amountCents <= -10000)
     const txConds = [
+      txLive,
       eq(transactions.kind, 'expense'),
-      isNull(transactions.deletedAt),
-      notSplitParent,
       sql`${transactions.amountCents} <= -10000`,
       sql`${transactions.categoryId} is not null`,
     ];
@@ -498,10 +534,9 @@ export async function evaluateSystemAlerts(
         .from(transactions)
         .where(
           and(
+            txLive,
             eq(transactions.categoryId, tx.categoryId),
             eq(transactions.kind, 'expense'),
-            isNull(transactions.deletedAt),
-            notSplitParent,
             sql`${transactions.date} >= ${windowStart}`,
             sql`${transactions.date} <= ${tx.date}`,
             sql`${transactions.id} <> ${tx.id}`,

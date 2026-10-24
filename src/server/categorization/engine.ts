@@ -78,6 +78,7 @@ export async function categorizeTransactions(
       })
       .from(transactions)
       .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
+      // Consulta interna por lote de IDs recebidos da ingestão: não usa recorte do livro-razão
       .where(and(inArray(transactions.id, txIds), isNull(transactions.deletedAt))),
     db.select().from(categorizationRules).where(eq(categorizationRules.enabled, true)),
     db

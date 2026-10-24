@@ -1,15 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
 import { getDb } from '@/server/db/client';
-import { spendingLimits } from '@/server/db/schema';
 import {
   deleteSpendingLimit,
+  setSpendingLimitActive,
   upsertSpendingLimit,
   type UpsertSpendingLimitInput,
 } from '@/server/commands/limits';
-import { CommandError } from '@/server/domain/errors';
 import { runAction } from '@/lib/action';
 
 function revalidateLimits() {
@@ -33,28 +31,9 @@ export async function toggleSpendingLimitActiveAction(input: {
   limitId: string;
   isActive: boolean;
 }) {
-  const result = await runAction(async () => {
-    const db = getDb();
-    const [existing] = await db
-      .select()
-      .from(spendingLimits)
-      .where(eq(spendingLimits.id, input.limitId));
-    if (!existing) {
-      throw new CommandError('NOT_FOUND', 'Limite de gastos não encontrado');
-    }
-    return upsertSpendingLimit(db, {
-      id: existing.id,
-      name: existing.name,
-      categoryId: existing.categoryId,
-      paymentMethod: existing.paymentMethod,
-      accountId: existing.accountId,
-      period: existing.period,
-      amountCents: existing.amountCents,
-      thresholds: existing.thresholds,
-      notifyPace: existing.notifyPace,
-      isActive: input.isActive,
-    });
-  });
+  const result = await runAction(() =>
+    setSpendingLimitActive(getDb(), { id: input.limitId, isActive: input.isActive }),
+  );
   if (result.ok) revalidateLimits();
   return result;
 }

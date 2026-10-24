@@ -2,13 +2,13 @@ import * as React from 'react';
 import Link from 'next/link';
 import type { TxFilters } from '@/server/domain/filters';
 import { ANALYSIS_DIMS, ANALYSIS_DIM_LABELS, type AnalysisDim } from '@/server/queries/analysis';
-import { analysisHref } from './links';
+import { analysisHref, type AnalysisSection } from './links';
 import { cn } from '@/lib/utils';
 
-type DimensionSelectProps = { value: AnalysisDim; filters: TxFilters };
+type DimensionSelectProps = { value: AnalysisDim; filters: TxFilters; secao?: AnalysisSection };
 
 /** Seletor da dimensão da evolução mensal (`dim` na URL), feito de links: funciona sem JavaScript. */
-export function DimensionSelect({ value, filters }: DimensionSelectProps) {
+export function DimensionSelect({ value, filters, secao = 'evolucao' }: DimensionSelectProps) {
   return (
     <nav
       aria-label="Dimensão da evolução"
@@ -17,7 +17,7 @@ export function DimensionSelect({ value, filters }: DimensionSelectProps) {
       {ANALYSIS_DIMS.map((dim) => (
         <Link
           key={dim}
-          href={analysisHref(filters, {}, dim)}
+          href={analysisHref(filters, {}, dim, secao)}
           scroll={false}
           aria-current={dim === value ? 'true' : undefined}
           className={cn(

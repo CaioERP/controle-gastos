@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { CreditCard } from 'lucide-react';
 import { getDb } from '@/server/db/client';
-import { getAccountsOverview } from '@/server/queries/accounts';
+import { getRequestAccountsOverview } from '@/server/queries/request-cache';
 import { creditCardAccountIds } from '@/server/home/accounts';
-import { summarizeAccounts, topWithOthers } from '@/server/queries/dashboard';
+import { summarizeAccounts } from '@/server/queries/dashboard';
 import { getFutureInstallments } from '@/server/queries/installments';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories } from '@/server/queries/catalog';
@@ -12,12 +12,8 @@ import { parseFilters } from '@/server/queries/url-filters';
 import { today } from '@/server/domain/dates';
 import {
   accountsTotals,
-  categoryTransactionsHref,
   parentCategoryIds,
-  paymentMethodTransactionsHref,
 } from '@/components/charts/links';
-import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
-import { PeriodOnlyBar } from '@/components/home/period-only-bar';
 import { InvoicesHero } from '@/components/home/cards/invoices-hero';
 import { CardTile, type CardTileAccount } from '@/components/home/cards/card-tile';
 import { FutureInstallmentsChart } from '@/components/invoices/future-installments-chart';
@@ -37,7 +33,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
   const catDim = categoryDimensionFor(filters);
 
   const db = getDb();
-  const overview = await getAccountsOverview(db);
+  const overview = await getRequestAccountsOverview();
 
   const cardAccountIds = creditCardAccountIds(overview);
   const cardAccounts: CardTileAccount[] = [];
@@ -62,14 +58,11 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
 
   if (cardAccounts.length === 0) {
     return (
-      <div className="space-y-4">
-        <PeriodOnlyBar />
-        <EmptyState
-          icon={CreditCard}
-          title="Nenhum cartão conectado"
-          description="Assim que houver um cartão de crédito conectado, suas faturas, limites e parcelas aparecem aqui."
-        />
-      </div>
+      <EmptyState
+        icon={CreditCard}
+        title="Nenhum cartão conectado"
+        description="Assim que houver um cartão de crédito conectado, suas faturas, limites e parcelas aparecem aqui."
+      />
     );
   }
 
@@ -96,55 +89,15 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
 
   const totalCents = byCategory.reduce((acc, c) => acc + c.totalCents, 0);
 
-  const categorySlices = topWithOthers(byCategory, 7).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
-  const pmSlices = topWithOthers(byPaymentMethod, 7).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const pmSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(cardFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
   return (
     <div className="space-y-6">
-      <PeriodOnlyBar />
-
       <InvoicesHero
         openInvoicesCents={snapshot.openInvoicesCents}
         upcomingInvoices={snapshot.upcomingInvoices}
       />
 
       <section aria-label="Cartões de crédito">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-3">
           {cardAccounts.map((account) => (
             <CardTile key={account.id} account={account} />
           ))}
@@ -173,10 +126,10 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
         title="Gastos no cartão"
         description="Clique para ver os lançamentos no período."
         mode={roscaMode}
-        byCategory={categorySlices}
-        byPaymentMethod={pmSlices}
-        byCategoryMobile={categorySlicesMobile}
-        byPaymentMethodMobile={pmSlicesMobile}
+        byCategory={byCategory}
+        byPaymentMethod={byPaymentMethod}
+        filters={cardFilters}
+        linkOptions={linkOpts}
         totalCents={totalCents}
       />
     </div>

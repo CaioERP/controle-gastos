@@ -5,8 +5,15 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PeriodPicker } from '@/components/filters/period-picker';
 import { mergeFilterParams, parseFilters } from '@/server/queries/url-filters';
 import type { TxFilters } from '@/server/domain/filters';
+import { cn } from '@/lib/utils';
 
-export function PeriodOnlyBar() {
+export function PeriodOnlyBar({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+} = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -24,10 +31,14 @@ export function PeriodOnlyBar() {
   );
 
   return (
-    <div className="flex items-center gap-2 w-full pb-2" data-slot="period-only-bar">
+    <div
+      className={cn('flex items-center gap-2', !compact && 'w-full pb-2', className)}
+      data-slot="period-only-bar"
+    >
       <PeriodPicker
         from={filters.from}
         to={filters.to}
+        variant={compact ? 'compact' : 'default'}
         onChange={({ from, to }) => updateFilters({ from, to })}
       />
     </div>

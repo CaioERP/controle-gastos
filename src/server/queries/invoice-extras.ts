@@ -1,6 +1,7 @@
-import { and, asc, eq, isNull, lt, ne } from 'drizzle-orm';
+import { and, asc, eq, lt, ne } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { invoices, transactions } from '@/server/db/schema';
+import { txLive } from '@/server/ledger';
 
 export type InvoiceExtras = {
   minimumPaymentCents: number | null;
@@ -34,7 +35,7 @@ export async function getInvoiceExtras(db: Db, invoiceId: string): Promise<Invoi
       and(
         eq(transactions.invoiceId, invoiceId),
         eq(transactions.kind, 'invoice_payment'),
-        isNull(transactions.deletedAt),
+        txLive,
         // Só a saída da conta pagadora (R6). O crédito "Pagamento recebido" na própria conta-cartão
         // também é invoice_payment da fatura e, se entrasse, dobraria o valor.
         lt(transactions.amountCents, 0),

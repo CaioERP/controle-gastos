@@ -212,6 +212,7 @@ export async function updateManualTransaction(
           parentTransactionId: transactions.parentTransactionId,
           deletedAt: transactions.deletedAt,
         })
+        // Consulta interna por ID específico de transação manual para atualização
         .from(transactions)
         .where(eq(transactions.id, transactionId));
 
@@ -285,6 +286,7 @@ export async function deleteManualTransaction(
           parentTransactionId: transactions.parentTransactionId,
           deletedAt: transactions.deletedAt,
         })
+        // Consulta interna por ID específico de transação manual para atualização
         .from(transactions)
         .where(eq(transactions.id, transactionId));
 
