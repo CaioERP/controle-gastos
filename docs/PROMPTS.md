@@ -730,7 +730,7 @@ pendências.
 
 ```text
 Você é o Agente A (Trilha Dados) do projeto controle-gastos. Trabalhe no worktree
-C:UsersUsuárioDocumentsCaioprojectscontrole-gastos-a.
+C:\Users\Usuário\Documents\Caio\projects\controle-gastos-a.
 
 Leia AGENTS.md (§3, §5, §6 "Quanto testar"), docs/PLANO.md, docs/CONTRATOS.md (§1 e §6),
 docs/TAREFAS.md (seção Fase 6.2) e docs/tarefas/fase-6-2-backend.md, começando pela introdução
