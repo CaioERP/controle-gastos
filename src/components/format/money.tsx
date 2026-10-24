@@ -6,6 +6,7 @@ export interface MoneyProps extends React.HTMLAttributes<HTMLSpanElement> {
   cents: number;
   signed?: boolean;
   colored?: boolean;
+  tone?: 'performance' | 'flow';
   /**
    * Trocado por "R$ •••••" no modo "esconder valores" (padrão). Use `false` só em valores
    * soltos, como o de um lançamento individual; totais, saldos e limites ficam sensíveis.
@@ -26,7 +27,15 @@ export function Sensitive({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Money({ cents, signed = false, colored = false, sensitive = true, className, ...props }: MoneyProps) {
+export function Money({
+  cents,
+  signed = false,
+  colored = false,
+  tone = 'performance',
+  sensitive = true,
+  className,
+  ...props
+}: MoneyProps) {
   const formatted = formatBRL(Math.abs(cents));
   const isPositive = cents > 0;
   const isNegative = cents < 0;
@@ -39,13 +48,22 @@ export function Money({ cents, signed = false, colored = false, sensitive = true
     display = `-${formatted}`;
   }
 
-  const colorClass = colored
-    ? isPositive
-      ? 'text-emerald-600 dark:text-emerald-400'
-      : isNegative
-        ? 'text-red-600 dark:text-red-400'
-        : 'text-muted-foreground'
-    : '';
+  let colorClass = '';
+  if (colored) {
+    if (tone === 'flow') {
+      colorClass = isPositive
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : isNegative
+          ? ''
+          : 'text-muted-foreground';
+    } else {
+      colorClass = isPositive
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : isNegative
+          ? 'text-red-600 dark:text-red-400'
+          : 'text-muted-foreground';
+    }
+  }
 
   return (
     <span
