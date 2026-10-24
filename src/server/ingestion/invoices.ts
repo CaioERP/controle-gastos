@@ -1,9 +1,10 @@
-import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { accounts, invoices, transactions, transactionSources } from '@/server/db/schema';
 import { addDaysISO, addMonthsISO, monthStart, today as getToday } from '@/server/domain/dates';
 import type { InvoiceStatus } from '@/server/domain/enums';
 import { getInvoiceCycle } from '@/server/domain/invoice-cycle';
+import { txLive } from '@/server/ledger';
 import type { PipelineContext } from './pipeline';
 import { onePerTransaction } from './source-raw';
 import type { RawInvoice } from './types';
@@ -229,6 +230,7 @@ export async function assignInvoices(
       })
       .from(transactions)
       .leftJoin(transactionSources, eq(transactionSources.transactionId, transactions.id))
+      // Consulta interna por conta para associar faturas: reavalia todas as transações ativas da conta
       .where(and(eq(transactions.accountId, accountId), isNull(transactions.deletedAt)));
     // Uma linha por transação: a fonte com billId (Pluggy) vence o ciclo calculado
     const txRows = onePerTransaction(
@@ -329,13 +331,8 @@ export async function recalculateInvoices(
     .where(
       and(
         inArray(transactions.accountId, uniqueAccountIds),
-        isNull(transactions.deletedAt),
+        txLive,
         ne(transactions.kind, 'invoice_payment'),
-        sql`not exists (
-          select 1 from ${transactions} child
-          where child.parent_transaction_id = ${transactions.id}
-            and child.deleted_at is null
-        )`,
       ),
     );
 

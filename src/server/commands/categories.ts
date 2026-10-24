@@ -216,6 +216,7 @@ export async function archiveCategory(
           .set({ categoryId: moveTransactionsTo })
           .where(inArray(providerCategoryMap.categoryId, ids));
       } else {
+        // Consulta interna por categoryId para validação antes de arquivar: confere se categoria possui transações
         const [inUse] = await tx
           .select({ id: transactions.id })
           .from(transactions)
