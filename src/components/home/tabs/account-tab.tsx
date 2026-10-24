@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Landmark } from 'lucide-react';
 import { getDb } from '@/server/db/client';
+import { today as getToday } from '@/server/domain/dates';
 import { getCashAccountsTab } from '@/server/home/cash-accounts';
 import { getFreeToSpend } from '@/server/home/free-to-spend';
 import { listTransactions } from '@/server/queries/transactions';
@@ -49,7 +50,8 @@ export async function AccountTab({ searchParams = {}, attention = [] }: AccountT
 
   const [freeToSpend, txList, categories, tags, byCategory, byPaymentMethod] =
     await Promise.all([
-      getFreeToSpend(db, { today: filters.to, overview }),
+      // No mês corrente o período vai até o fim do mês; o livre para gastar parte de hoje, senão ignora as contas fixas que ainda vão vencer
+      getFreeToSpend(db, { today: filters.to < getToday() ? filters.to : undefined, overview }),
       listTransactions(db, accountFilters, { limit: 5 }),
       listCategories(db),
       listTags(db),

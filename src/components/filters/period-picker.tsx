@@ -31,6 +31,8 @@ function formatShortMonthBR(dateStr: string): string {
 
 export function PeriodPicker({ from, to, onChange, variant = 'default' }: PeriodPickerProps) {
   const [open, setOpen] = React.useState(false);
+  // O compacto tem dois gatilhos (celular e desktop); cada Popover precisa do seu estado, senão os dois abrem juntos
+  const [mobileOpen, setMobileOpen] = React.useState(false);
   const [customRange, setCustomRange] = React.useState<DateRange | undefined>(() => ({
     from: parseISO(from),
     to: parseISO(to),
@@ -88,6 +90,7 @@ export function PeriodPicker({ from, to, onChange, variant = 'default' }: Period
       }
     }
     setOpen(false);
+    setMobileOpen(false);
   };
 
   const handleCustomApply = () => {
@@ -96,6 +99,7 @@ export function PeriodPicker({ from, to, onChange, variant = 'default' }: Period
       const tStr = format(customRange.to, 'yyyy-MM-dd');
       onChange({ from: fStr <= tStr ? fStr : tStr, to: fStr <= tStr ? tStr : fStr });
       setOpen(false);
+      setMobileOpen(false);
     }
   };
 
@@ -179,7 +183,7 @@ export function PeriodPicker({ from, to, onChange, variant = 'default' }: Period
       <>
         {/* Mobile: botão compacto Out/26 ▾ */}
         <div className="md:hidden">
-          <Popover open={open} onOpenChange={setOpen}>
+          <Popover open={mobileOpen} onOpenChange={setMobileOpen}>
             <PopoverTrigger
               render={
                 <Button
