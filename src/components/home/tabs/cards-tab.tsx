@@ -10,17 +10,28 @@ import { listCategories } from '@/server/queries/catalog';
 import { categoryDimensionFor } from '@/server/queries/stats';
 import { parseFilters } from '@/server/queries/url-filters';
 import { today } from '@/server/domain/dates';
+import dynamic from 'next/dynamic';
 import {
   accountsTotals,
   parentCategoryIds,
 } from '@/components/charts/links';
 import { InvoicesHero } from '@/components/home/cards/invoices-hero';
 import { CardTile, type CardTileAccount } from '@/components/home/cards/card-tile';
-import { FutureInstallmentsChart } from '@/components/invoices/future-installments-chart';
+import { FutureInstallmentsChartSkeleton } from '@/components/invoices/future-installments-chart';
 import { InstallmentsCardPicker } from '@/components/home/cards/installments-card-picker';
 import { fillInstallmentMonths } from '@/components/invoices/invoice-summary';
-import { BreakdownDonut } from '@/components/charts/breakdown-donut';
+import { BreakdownDonutSkeleton } from '@/components/charts/breakdown-donut';
 import { EmptyState } from '@/components/states/empty-state';
+
+const DynamicBreakdownDonut = dynamic(
+  () => import('@/components/charts/breakdown-donut').then((m) => m.BreakdownDonut),
+  { loading: () => <BreakdownDonutSkeleton /> },
+);
+
+const DynamicFutureInstallmentsChart = dynamic(
+  () => import('@/components/invoices/future-installments-chart').then((m) => m.FutureInstallmentsChart),
+  { loading: () => <FutureInstallmentsChartSkeleton /> },
+);
 
 export type CardsTabProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -104,7 +115,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
         </div>
       </section>
 
-      <FutureInstallmentsChart
+      <DynamicFutureInstallmentsChart
         card={installmentsCard ? fillInstallmentMonths(selectedInstallmentsRaw, today()) : filledInstallments}
         all={filledInstallments}
         cardName={installmentsCard ? (installmentsCard.displayName ?? installmentsCard.name) : 'todos os cartões'}
@@ -122,7 +133,7 @@ export async function CardsTab({ searchParams = {} }: CardsTabProps) {
         }
       />
 
-      <BreakdownDonut
+      <DynamicBreakdownDonut
         title="Gastos no cartão"
         description="Clique para ver os lançamentos no período."
         mode={roscaMode}

@@ -1,16 +1,21 @@
-import Link from 'next/link';
+'use client';
+
+import * as React from 'react';
+import Link, { useLinkStatus } from 'next/link';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CATALOG_TABS, type CatalogTab } from './catalog-tab-types';
 
-export const CATALOG_TABS = [
-  { value: 'categorias', label: 'Categorias' },
-  { value: 'regras', label: 'Regras' },
-  { value: 'estabelecimentos', label: 'Estabelecimentos' },
-] as const;
+export { CATALOG_TABS, parseCatalogTab, type CatalogTab } from './catalog-tab-types';
 
-export type CatalogTab = (typeof CATALOG_TABS)[number]['value'];
-
-export function parseCatalogTab(value: string | undefined): CatalogTab {
-  return CATALOG_TABS.find((t) => t.value === value)?.value ?? 'categorias';
+function TabInner({ label }: { label: string }) {
+  const { pending } = useLinkStatus();
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {pending && <Loader2 className="size-3 animate-spin shrink-0" />}
+      <span>{label}</span>
+    </span>
+  );
 }
 
 /** Abas controladas pela URL (aba=...), como links para funcionar sem JavaScript. */
@@ -27,7 +32,7 @@ export function CatalogTabs({ active }: { active: CatalogTab }) {
             t.value === active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
           )}
         >
-          {t.label}
+          <TabInner label={t.label} />
         </Link>
       ))}
     </nav>

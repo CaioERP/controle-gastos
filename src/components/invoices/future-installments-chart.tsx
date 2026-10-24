@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Money, Sensitive } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
 import type { FutureInstallmentMonth } from '@/server/queries/installments';
@@ -108,5 +109,26 @@ export function FutureInstallmentsChart({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export function FutureInstallmentsChartSkeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border border-border/60 bg-card p-4 sm:p-6 h-64 flex flex-col justify-between',
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-7 w-28 rounded-lg" />
+      </div>
+      <div className="flex items-end justify-between gap-3 h-40 pt-4">
+        {[20, 50, 40, 75, 45, 30, 20, 15, 10, 5, 0, 0].map((h, i) => (
+          <Skeleton key={i} className="flex-1 rounded-t-md" style={{ height: `${Math.max(h, 8)}%` }} />
+        ))}
+      </div>
+    </div>
   );
 }

@@ -1,5 +1,8 @@
+'use client';
+
 import * as React from 'react';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
+import { Loader2 } from 'lucide-react';
 import type { TxFilters } from '@/server/domain/filters';
 import type { AnalysisDim } from '@/server/queries/analysis';
 import { analysisHref, type AnalysisSection } from './links';
@@ -12,6 +15,16 @@ export const ANALYSIS_SECTIONS: { id: AnalysisSection; label: string; mobileLabe
   { id: 'evolucao', label: 'Evolução', mobileLabel: 'Evolução' },
   { id: 'comparar', label: 'Comparar períodos', mobileLabel: 'Comparar' },
 ];
+
+function TabInner({ children }: { children: React.ReactNode }) {
+  const { pending } = useLinkStatus();
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {pending && <Loader2 className="size-3 animate-spin shrink-0" />}
+      {children}
+    </span>
+  );
+}
 
 type SectionTabsProps = {
   currentSection: AnalysisSection;
@@ -39,7 +52,7 @@ export function SectionTabs({ currentSection, filters, dim }: SectionTabsProps) 
                   : 'bg-muted text-muted-foreground hover:text-foreground'
               )}
             >
-              {section.mobileLabel}
+              <TabInner>{section.mobileLabel}</TabInner>
             </Link>
           );
         })}
@@ -62,7 +75,7 @@ export function SectionTabs({ currentSection, filters, dim }: SectionTabsProps) 
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              {section.label}
+              <TabInner>{section.label}</TabInner>
             </Link>
           );
         })}

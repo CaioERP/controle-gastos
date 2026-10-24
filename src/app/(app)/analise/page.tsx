@@ -1,3 +1,4 @@
+import * as React from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { getDb } from '@/server/db/client';
@@ -8,6 +9,7 @@ import {
   comparePeriods,
   merchantRanking,
   parseAnalysisDim,
+  type AnalysisDim,
 } from '@/server/queries/analysis';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories, listTags, type CategoryTree } from '@/server/queries/catalog';
@@ -17,10 +19,12 @@ import { previousPeriodLabel } from '@/server/queries/period-label';
 import { categoryDimensionFor, percentChange, trailingMonthsRange } from '@/server/queries/stats';
 import { getSpendingSummary, previousRange } from '@/server/queries/summary';
 import { parseFilters } from '@/server/queries/url-filters';
+import type { TxFilters } from '@/server/domain/filters';
 import { formatMonthBR } from '@/server/domain/dates';
 import { FilterBar } from '@/components/filters';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/states/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Money } from '@/components/format/money';
 import { formatPercentInt, formatShare } from '@/components/charts/format';
 import {
@@ -40,7 +44,7 @@ import { PeriodComparison } from '@/components/analysis/period-comparison';
 import { SectionTabs } from '@/components/analysis/section-tabs';
 import { CategoryBreakdownList } from '@/components/analysis/category-breakdown-list';
 import { TopChanges } from '@/components/analysis/top-changes';
-import { analysisHref, parseAnalysisSection } from '@/components/analysis/links';
+import { analysisHref, parseAnalysisSection, type AnalysisSection } from '@/components/analysis/links';
 import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -62,10 +66,6 @@ export default async function AnalisePage({ searchParams }: Props) {
   const filters = parseFilters(params);
   const dim = parseAnalysisDim(params.dim);
   const secao = parseAnalysisSection(params.secao);
-  const catDim = categoryDimensionFor(filters);
-  const drilled = catDim === 'category';
-  const prev = previousRange(filters.from, filters.to);
-  const prevLabel = previousPeriodLabel(filters);
   const db = getDb();
 
   // Dados comuns para filtros e cabeçalho
@@ -83,6 +83,71 @@ export default async function AnalisePage({ searchParams }: Props) {
       </div>
     );
   }
+
+  return (
+    <div className="space-y-6">
+      <FilterBar accounts={overview} categories={categories} tags={tags} />
+      <PageHeader
+        title="Análise"
+        description="Gastos por tipo e categoria, matriz, evolução, rankings e comparação."
+      />
+
+      <SectionTabs currentSection={secao} filters={filters} dim={dim} />
+
+      <React.Suspense fallback={<AnalysisSectionSkeleton />}>
+        <AnalysisSectionContent
+          secao={secao}
+          filters={filters}
+          dim={dim}
+          overview={overview}
+          categories={categories}
+        />
+      </React.Suspense>
+    </div>
+  );
+}
+
+function AnalysisSectionSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-10">
+        <div className="flex-[7_1_440px] space-y-4">
+          <Skeleton className="h-6 w-36" />
+          <div className="rounded-2xl border border-border/60 bg-card p-5 space-y-3">
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        </div>
+
+        <div className="flex-[5_1_320px] space-y-6">
+          <Skeleton className="h-44 rounded-2xl border border-border/40 bg-muted/40" />
+          <Skeleton className="h-56 rounded-2xl border border-border/60 bg-card" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function AnalysisSectionContent({
+  secao,
+  filters,
+  dim,
+  overview,
+  categories,
+}: {
+  secao: AnalysisSection;
+  filters: TxFilters;
+  dim: AnalysisDim;
+  overview: Awaited<ReturnType<typeof getAccountsOverview>>;
+  categories: CategoryTree[];
+}) {
+  const db = getDb();
+  const drilled = Boolean(filters.categoryIds && filters.categoryIds.length > 0);
+  const catDim = drilled ? 'category' : categoryDimensionFor(filters);
+  const prev = previousRange(filters.from, filters.to);
+  const prevLabel = previousPeriodLabel(filters);
 
   const { totalsAccountIds, hasExcluded } = accountsTotals(overview);
   const linkOpts = {
@@ -160,15 +225,7 @@ export default async function AnalisePage({ searchParams }: Props) {
   const positivePayments = byPayment.filter((p) => p.totalCents > 0);
 
   return (
-    <div className="space-y-6">
-      <FilterBar accounts={overview} categories={categories} tags={tags} />
-      <PageHeader
-        title="Análise"
-        description="Gastos por tipo e categoria, matriz, evolução, rankings e comparação."
-      />
-
-      <SectionTabs currentSection={secao} filters={filters} dim={dim} />
-
+    <>
       {secao === 'categorias' && (
         <>
           {drilled && (
@@ -351,6 +408,6 @@ export default async function AnalisePage({ searchParams }: Props) {
           <PeriodComparison rows={comparison} previousLabel={prevLabel} />
         </Section>
       )}
-    </div>
+    </>
   );
 }

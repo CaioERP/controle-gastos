@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type HomeTab = 'conta' | 'cartoes' | 'geral';
@@ -15,6 +16,16 @@ interface HomeTabsProps {
 interface TabItem {
   id: HomeTab;
   label: React.ReactNode;
+}
+
+function TabInner({ children }: { children: React.ReactNode }) {
+  const { pending } = useLinkStatus();
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {pending && <Loader2 className="size-3 animate-spin shrink-0" />}
+      {children}
+    </span>
+  );
 }
 
 const TABS: TabItem[] = [
@@ -67,7 +78,7 @@ export function HomeTabs({ active, className }: HomeTabsProps) {
                   : 'hover:text-foreground text-muted-foreground',
               )}
             >
-              {tab.label}
+              <TabInner>{tab.label}</TabInner>
             </Link>
           );
         })}

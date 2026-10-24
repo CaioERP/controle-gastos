@@ -16,11 +16,12 @@ type LimitsViewProps = {
   overview: LimitsOverview;
   categories: CategoryTree[];
   accounts: AccountOption[];
+  suggestionsSlot?: React.ReactNode;
 };
 
 type TabFilter = 'all' | 'active' | 'paused';
 
-export function LimitsView({ overview, categories, accounts }: LimitsViewProps) {
+export function LimitsView({ overview, categories, accounts, suggestionsSlot }: LimitsViewProps) {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingLimit, setEditingLimit] = React.useState<SpendingLimitRow | null>(null);
   const [tab, setTab] = React.useState<TabFilter>('all');
@@ -68,7 +69,7 @@ export function LimitsView({ overview, categories, accounts }: LimitsViewProps) 
       />
 
       {/* Banner de Sugestões de Orçamento */}
-      <SuggestedBudgetsBanner suggestions={overview.suggestions} />
+      {suggestionsSlot ?? <SuggestedBudgetsBanner suggestions={overview.suggestions} />}
 
       {/* Listagem de Limites */}
       <div className="space-y-4">

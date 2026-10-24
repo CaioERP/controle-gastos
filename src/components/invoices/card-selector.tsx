@@ -1,7 +1,9 @@
 'use client';
 
-import Link from 'next/link';
+import * as React from 'react';
+import Link, { useLinkStatus } from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type CardOption = {
@@ -16,9 +18,34 @@ type CardSelectorProps = {
   selectedId: string;
 };
 
+function CardTabInner({
+  color,
+  name,
+}: {
+  color: string;
+  name: string;
+}) {
+  const { pending } = useLinkStatus();
+  return (
+    <>
+      {pending ? (
+        <Loader2 className="size-2.5 animate-spin" />
+      ) : (
+        <span
+          aria-hidden
+          className="size-2.5 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+      )}
+      <span>{name}</span>
+    </>
+  );
+}
+
 /** Abas de cartões no desktop; select nativo no celular. Trocar de cartão limpa `fatura=` (volta à aberta). */
 export function CardSelector({ cards, selectedId }: CardSelectorProps) {
   const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
   const href = (id: string) => `/faturas?cartao=${id}`;
 
   return (
@@ -27,18 +54,26 @@ export function CardSelector({ cards, selectedId }: CardSelectorProps) {
         <label htmlFor="card-select" className="sr-only">
           Cartão
         </label>
-        <select
-          id="card-select"
-          value={selectedId}
-          onChange={(e) => router.push(href(e.target.value))}
-          className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm dark:bg-input/30"
-        >
-          {cards.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} · {c.institutionName}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1.5">
+          <select
+            id="card-select"
+            value={selectedId}
+            onChange={(e) => {
+              const target = href(e.target.value);
+              startTransition(() => {
+                router.push(target);
+              });
+            }}
+            className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm dark:bg-input/30"
+          >
+            {cards.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} · {c.institutionName}
+              </option>
+            ))}
+          </select>
+          {isPending && <Loader2 className="size-4 animate-spin text-muted-foreground shrink-0" />}
+        </div>
       </div>
 
       <div className="hidden sm:inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
@@ -54,12 +89,7 @@ export function CardSelector({ cards, selectedId }: CardSelectorProps) {
                 active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <span
-                aria-hidden
-                className="size-2.5 rounded-full"
-                style={{ backgroundColor: c.institutionColor }}
-              />
-              {c.name}
+              <CardTabInner color={c.institutionColor} name={c.name} />
             </Link>
           );
         })}

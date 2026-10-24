@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { PeriodPicker } from './period-picker';
 import { ViewSelector } from './view-selector';
 import { BasisToggle } from './basis-toggle';
@@ -12,6 +13,7 @@ import type { TxFilters } from '@/server/domain/filters';
 import { REPORTABLE_KINDS, type TxKind } from '@/server/domain/enums';
 import type { InstitutionWithAccounts } from '@/server/queries/accounts';
 import type { CategoryTree } from '@/server/queries/catalog';
+import { cn } from '@/lib/utils';
 
 type FilterBarProps = {
   accounts: InstitutionWithAccounts[];
@@ -43,11 +45,15 @@ export function FilterBar({
     return parseFilters(searchParams);
   }, [searchParams]);
 
+  const [isPending, startTransition] = React.useTransition();
+
   // Reescreve só os parâmetros de filtro; os da página (dim, cartao, fatura, aba...) são preservados
   const updateFilters = React.useCallback(
     (patch: Partial<TxFilters>) => {
       const qs = mergeFilterParams(searchParams.toString(), patch, filters);
-      router.push(qs ? `${pathname}?${qs}` : pathname);
+      startTransition(() => {
+        router.push(qs ? `${pathname}?${qs}` : pathname);
+      });
     },
     [filters, pathname, router, searchParams]
   );
@@ -105,17 +111,26 @@ export function FilterBar({
         />
 
         {children && <div className="flex-1 min-w-[200px]">{children}</div>}
+
+        {isPending && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto animate-pulse">
+            <Loader2 className="size-3.5 animate-spin" />
+            <span className="hidden sm:inline">Atualizando…</span>
+          </div>
+        )}
       </div>
 
-      <ActiveFilterChips
-        filters={filters}
-        accounts={accounts}
-        categories={categories}
-        tags={tags}
-        merchants={merchants}
-        onRemove={(patch) => updateFilters(patch)}
-        onClear={clearExtraFilters}
-      />
+      <div className={cn(isPending && 'opacity-60 transition-opacity pointer-events-none')}>
+        <ActiveFilterChips
+          filters={filters}
+          accounts={accounts}
+          categories={categories}
+          tags={tags}
+          merchants={merchants}
+          onRemove={(patch) => updateFilters(patch)}
+          onClear={clearExtraFilters}
+        />
+      </div>
     </div>
   );
 }
