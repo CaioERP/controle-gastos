@@ -27,8 +27,8 @@
 | 16 | Agente B | B6-01 a B6-08 (Fase 6, mobile e início) | nenhum para B6-02, B6-06 e B6-07; as outras esperam as dependências | 15 |
 | 17 | Agente A | A6-05 (Fase 6.1, horário das transações) | nenhum | 18 |
 | 18 | Agente B | B6-09 a B6-12 (Fase 6.1, ajustes de uso) | nenhum para B6-10, B6-11 e B6-12; a B6-09 espera a A6-05 | 17 |
-| 19 | Agente B | B6-13 a B6-20 (Fase 6.2, refinamento visual do site inteiro + histórico por estabelecimento) | nenhum para a B6-13; as outras esperam a B6-13; a B6-15 espera também a A6-06 | 20 |
-| 20 | Agente A | A6-06 a A6-10 (Fase 6.2, fortalecer o backend) | nenhum | 19 |
+| 19 | Agente B | B6-13 a B6-21 (Fase 6.2, refinamento visual do site inteiro + histórico por estabelecimento + resposta imediata) | nenhum para a B6-13; as outras esperam a B6-13; a B6-15 espera também a A6-06 | 20 |
+| 20 | Agente A | A6-06 a A6-11 (Fase 6.2, fortalecer o backend + leituras mais rápidas) | nenhum | 19 |
 
 > **Ordem atual (2026-10-24):** Fases 6 e 6.1 concluídas; agora vem a Fase 6.2 (prompts 19 e 20, em paralelo). O deploy (prompts 12 a 14) fica com o usuário.
 
@@ -695,6 +695,7 @@ Tarefas, nesta ordem, um PR cada:
 7. B6-18: demais páginas
 8. B6-20: histórico por estabelecimento (feature nova; o filtro merchantIds em TxFilters vai antes,
    num commit "contract:" isolado na main, como manda o CONTRATOS.md §6)
+9. B6-21: resposta imediata (toggle sem ida ao servidor, sinal de carregando, streaming e esqueletos)
 
 O Agente A trabalha em paralelo no backend (docs/tarefas/fase-6-2-backend.md) e mexe em poucas linhas
 de arquivos seus (cláusulas where em queries/, duas actions de alternar, um case no attention-strip).
@@ -746,6 +747,7 @@ Tarefas, nesta ordem, um PR cada:
 3. A6-08: mesclagem única (R9)
 4. A6-09: comandos de alternar (commit "contract:" com as assinaturas novas)
 5. A6-10: falhas visíveis (log com redação de segredos + item no "Precisa de você")
+6. A6-11: leituras mais rápidas (meça no build de produção como a spec descreve; traga antes e depois)
 
 Regras:
 - Reserve cada tarefa no quadro (checkout de integração) antes de começar e atualize o status no fim.

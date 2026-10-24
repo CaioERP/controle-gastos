@@ -97,7 +97,7 @@ Onda 2                                            │  B6-09 data e horário na 
 
 ## Fase 6.2 — Refinamento visual + backend · specs: [`tarefas/fase-6-2-visual.md`](./tarefas/fase-6-2-visual.md) e [`tarefas/fase-6-2-backend.md`](./tarefas/fase-6-2-backend.md)
 
-> Aprovada pelo usuário em 2026-10-24 a partir do canvas de design (maquetes em `docs/design/fase-6-2/`). Direção "livro-caixa calmo": vermelho só para alerta, menos molduras (faixa de números no lugar de 4 cartões), linha de transação compacta, Início com "Livre para gastar" em destaque, Contas por tipo, Análise por seções. No desktop, a tabela categoria × forma de pagamento continua visível na Análise. Em paralelo, o Agente A fortalece o backend (avaliação de arquitetura de 2026-10-24): regra única de transações, mesclagem única da R9, resumo de contas em cache, actions sem acesso direto ao banco e falhas de job visíveis.
+> Aprovada pelo usuário em 2026-10-24 a partir do canvas de design (maquetes em `docs/design/fase-6-2/`). Direção "livro-caixa calmo": vermelho só para alerta, menos molduras (faixa de números no lugar de 4 cartões), linha de transação compacta, Início com "Livre para gastar" em destaque, Contas por tipo, Análise por seções. No desktop, a tabela categoria × forma de pagamento continua visível na Análise. Em paralelo, o Agente A fortalece o backend (avaliação de arquitetura de 2026-10-24): regra única de transações, mesclagem única da R9, resumo de contas em cache, actions sem acesso direto ao banco e falhas de job visíveis. Desempenho (medido em 2026-10-24): o app fica de 5 a 60 vezes mais lento em `npm run dev`; para o dia a dia use `npm run build && npm start` (README). A6-11 e B6-21 cuidam do que pesa mesmo em produção.
 
 ```
             Agente A (Dados)                          Agente B (Interface)
@@ -105,7 +105,7 @@ Onda 1   A6-06 resumo de contas em cache          │  B6-13 fundação (Money t
          A6-07 livro-razão (regra única)          │
 Onda 2   A6-08 mesclagem única (R9)               │  B6-19 rosca · B6-14 Transações · B6-16 Contas · B6-17 Análise · B6-18 demais
          A6-09 comandos de alternar               │
-Onda 3   A6-10 falhas visíveis                    │  B6-15 Início (precisa B6-14, B6-19 e A6-06) · B6-20 histórico por estabelecimento
+Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa B6-14, B6-19 e A6-06) · B6-20 estabelecimentos · B6-21 resposta imediata
 ```
 
 | ID | Tarefa | Agente | Depende de | Status |
@@ -118,11 +118,13 @@ Onda 3   A6-10 falhas visíveis                    │  B6-15 Início (precisa B
 | B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | ⬜ |
 | B6-19 | Rosca com interface profunda: `toDonutSlices` puro e `BreakdownDonut` recebendo itens brutos (fim das 13 cópias nas abas) | B | B6-13 | ⬜ |
 | B6-20 | Histórico por estabelecimento: páginas `/estabelecimentos` e `/estabelecimentos/[id]` (12 meses, por mês, formas de pagamento, histórico), filtro `estab` (contract: `merchantIds`) e links em todo lugar onde aparece um estabelecimento | B | B6-13, B6-14 | ⬜ |
+| B6-21 | Resposta imediata: toggle da rosca sem ida ao servidor, sinal de carregando em filtros e abas (`useTransition`/`useLinkStatus`), streaming com `Suspense` e esqueletos, gráficos abaixo da dobra com `next/dynamic` | B | B6-13 | ⬜ |
 | A6-06 | Resumo de contas uma vez por requisição (`getRequestAccountsOverview` com `cache`); funções do Início aceitam `overview` | A | — | ⬜ |
 | A6-07 | Livro-razão `src/server/ledger/`: recortes nomeados (`txLive`, `txPosted`…) usados por toda consulta; corrige busca, contagem da revisão e itens de fatura com mães divididas | A | — | ⬜ |
 | A6-08 | Mesclagem única (R9): `mergeIncoming` puro usado por `persist` e `dedupe` | A | — | ⬜ |
 | A6-09 | Comandos `setSpendingLimitActive` e `setRecurrenceStatus` (contract:); actions sem acesso direto ao banco | A | — | ⬜ |
 | A6-10 | Falhas visíveis: `logServerError` com redação de segredos; job com falha recente no "Precisa de você" | A | — | ⬜ |
+| A6-11 | Leituras mais rápidas: sugestões de orçamento só na página de Limites, gasto das metas em lote (fim do N+1), duas consultas mais caras da Visão geral; metas de tempo no build de produção | A | A6-06 | ⬜ |
 
 ---
 

@@ -59,6 +59,17 @@ Sem Pluggy, o app funciona com **importação de arquivos** (tela Importar): ext
 
 Para atualizar preços de ações, FIIs e cripto na tela de investimentos, preencha `BRAPI_TOKEN` ([brapi.dev](https://brapi.dev)) e `COINGECKO_API_KEY` ([CoinGecko](https://www.coingecko.com/en/api)). Sem eles, o resto do app funciona normalmente.
 
+### 5. Uso no dia a dia: rode em modo de produção
+
+O `npm run dev` serve para programar: ele compila cada tela na hora e fica de 5 a 60 vezes mais lento. Medido com os dados fictícios, o Início leva ~1,1 s em dev e ~0,18 s em produção. Para usar o app no dia a dia na sua máquina:
+
+```bash
+npm run build   # de novo só quando atualizar o código
+npm start       # http://localhost:3000
+```
+
+Em produção o login é obrigatório, mesmo localmente: configure `APP_PASSWORD_HASH` e `SESSION_SECRET` (seção "Segurança e login"). O agendador interno roda junto.
+
 ## Pondo online
 
 O app pode ficar na internet desde que o login esteja configurado (próxima seção). Em produção ele **não abre** sem `APP_PASSWORD_HASH` e `SESSION_SECRET`.

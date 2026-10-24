@@ -1,4 +1,4 @@
-# Fase 6.2 — Refinamento visual do site inteiro (B6-13 a B6-20)
+# Fase 6.2 — Refinamento visual do site inteiro (B6-13 a B6-21)
 
 > Aprovado pelo usuário em 2026-10-24, a partir de um canvas de design com as telas de hoje e as propostas, no celular (390 px) e no desktop (1440 px). Vale para o site todo.
 > **Referência visual no repositório:** `docs/design/fase-6-2/` tem a marcação HTML das 8 telas propostas: celular e desktop de Início, Transações, Contas e Análise. Abra no navegador ou leia o HTML para ver espaçamentos, tamanhos e cores. São maquetes com dados fictícios: **não copie a marcação**. Reproduza o visual com os componentes do projeto (Tailwind, shadcn, `<Money />`). Os links entre os arquivos (`*.dc.html`) não funcionam fora do canvas; ignore.
@@ -329,7 +329,7 @@ Aplique a fundação, ou seja, `StatStrip`, `Section`, `tone="flow"` nos valores
   A rota não entra no menu: o "Estabelecimentos" de Categorias leva para `/estabelecimentos`.
 
 ### Arquivos
-- **Contrato (commit `contract:` isolado na main, protocolo do `CONTRATOS.md` §6):** `src/server/domain/filters.ts` (`merchantIds?: string[]` no `txFiltersSchema`) e `docs/CONTRATOS.md` (filtro novo + log §7)
+- **Contrato (commit `contract:` isolado na main, protocolo do `CONTRATOS.md` §6):** `src/server/domain/filters.ts` (`merchantIds?: string[]` no `txFiltersSchema`), índice `transactions_merchant_idx` em `transactions(merchant_id)` no `schema.ts` com migration via `npm run db:generate`, e `docs/CONTRATOS.md` (filtro e índice novos + log §7)
 - **Editar:**
   - `src/server/queries/base.ts` (`buildTxWhere`: `f.merchantIds?.length ? inArray(transactions.merchantId, f.merchantIds) : undefined`);
   - `src/server/queries/url-filters.ts` (parâmetro `estab`, lido e escrito como `contas`);
@@ -364,3 +364,35 @@ export async function listMerchantsWithSpend(db: Db, opts: { today?: string; sea
 - [ ] "Ver no extrato" abre Transações filtrado só por ele.
 - [ ] Valores sensíveis somem no modo "esconder valores".
 - [ ] Funciona em 390 px e 1440 px.
+
+---
+
+## B6-21 — Resposta imediata na interface
+
+**Depende de:** B6-13 (e, para o passo 3 do Início, B6-15) · **Tamanho:** médio
+
+> O usuário achou o app "lagado". Medindo (2026-10-24), a maior parte vinha do `npm run dev`, e o README agora orienta usar o build de produção. Mesmo em produção, porém, cada clique em filtro, toggle ou aba recarrega a página inteira no servidor **sem nenhum sinal na tela**, e por isso o clique parece não ter funcionado.
+
+### Passo a passo
+1. **Toggles sem ida ao servidor.** O `BreakdownToggle` (rosca e barras) hoje chama `router.replace`, que recalcula a página toda. Os dois conjuntos (categoria e forma) já chegam ao cliente. Então:
+   - o modo passa a ser estado local no `BreakdownDonut` e no `PaymentMethodBars`, com o valor inicial vindo da URL;
+   - o clique troca o estado e atualiza a URL com `window.history.replaceState(null, '', novaUrl)`, que o Next 16 integra ao `useSearchParams` sem refazer a requisição. Confira na documentação do Next 16 (seção sobre `window.history`) antes de usar.
+
+   Recarregar a página continua respeitando `rosca` e `barras`.
+2. **Sinal imediato em toda navegação que vai ao servidor:**
+   - **Filtros** (`FilterBar`, `PeriodOnlyBar`), **seletor de cartão das parcelas** e **ações que chamam `router.push`/`replace`:** envolva a navegação em `useTransition`. Enquanto `isPending`, o controle mostra um spinner pequeno e o conteúdo abaixo fica com `opacity-60 transition-opacity`.
+   - **Abas que são `<Link>`** (`HomeTabs`, abas da Análise da B6-17, `CardSelector`): use `useLinkStatus` do `next/link` (confira na documentação do Next 16) para mostrar o estado de carregando na própria aba.
+3. **Streaming das partes pesadas.** Separe em Server Components assíncronos, cada um dentro de `<Suspense fallback={<Skeleton …/>}>`, as seções que fazem consultas próprias:
+   - **Início:** gráfico de saldo, rosca, ritmo, metas e evolução mensal. O herói e o "Precisa de você" aparecem primeiro.
+   - **Análise:** o conteúdo da seção ativa.
+   - **Limites:** o banner de sugestões.
+
+   Cada esqueleto deve ter a mesma altura do conteúdo, para nada pular quando ele chega.
+4. **`loading.tsx` por rota pesada** (`/`, `/analise`, `/transacoes`, `/limites`): esqueleto com o layout novo (cabeçalho, faixa de números, blocos), no lugar do carregando genérico de `(app)/loading.tsx`.
+5. **Gráficos abaixo da dobra.** Os gráficos que não aparecem na primeira tela (rosca, evolução mensal, parcelas futuras) são carregados com `next/dynamic` e um esqueleto do mesmo tamanho, para reduzir o JavaScript inicial. Não use isso no gráfico de saldo nem no de ritmo, que ficam na primeira tela.
+
+### Critérios de aceite
+- [ ] Trocar categoria ↔ forma de pagamento na rosca é instantâneo e não gera requisição ao servidor (confira na aba Network).
+- [ ] Todo clique em filtro, período ou aba mostra sinal de carregando em menos de 100 ms.
+- [ ] No Início, herói e "Precisa de você" aparecem antes dos gráficos (streaming visível com rede lenta 3G no DevTools).
+- [ ] Nada pula de lugar quando o conteúdo chega.

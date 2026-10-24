@@ -1,4 +1,4 @@
-# Fase 6.2 — Trilha Dados: fortalecer o backend (A6-06 a A6-10)
+# Fase 6.2 — Trilha Dados: fortalecer o backend (A6-06 a A6-11)
 
 > Roda **em paralelo** com o refinamento visual da Fase 6.2 (`fase-6-2-visual.md`, Agente B). Pedido do usuário em 2026-10-24, depois de uma avaliação de arquitetura.
 > A escrita de dados (`commands`) está bem amarrada: Zod, `CommandError`, contrato e testes. Os problemas estão na leitura e na ingestão:
@@ -257,3 +257,38 @@ Hoje, para pausar uma meta ou uma recorrência, as actions leem a linha inteira 
 ### Critérios de aceite
 - [ ] Nenhum `console.error`/`console.warn` sobra em `src/server/` (exceto em `log.ts` e scripts).
 - [ ] Falha recente de job aparece no "Precisa de você" e some quando o job volta a funcionar.
+
+---
+
+## A6-11 — Leituras mais rápidas
+
+**Depende de:** A6-06 · **Tamanho:** médio
+
+### Medição de referência (2026-10-24, dados fictícios, build de produção)
+
+| Página | Tempo no servidor |
+|---|---|
+| Início, Visão geral | ~280 ms |
+| Início, Conta | ~180 ms |
+| Início, Cartões | ~150 ms |
+| Limites | ~130 ms |
+| Análise, Transações, Faturas, Contas | 15–50 ms |
+
+No `npm run dev`, tudo fica de 5 a 60 vezes mais lento. Por isso o README passou a recomendar `npm run build && npm start` no dia a dia.
+
+### Passo a passo
+1. **Sugestões só quando pedidas.** `getLimitsOverview(db, refDate, opts?: { withSuggestions?: boolean })`, com padrão `true` para a página de Limites não mudar. As funções do Início (`getMonthlyLimitsSummary` e `getAttentionItems`) passam `{ withSuggestions: false }`. Hoje o Início calcula as sugestões de orçamento à toa a cada carregamento. Autorizado editar `src/server/queries/limits.ts` só para isso e para o passo 2.
+2. **Gasto das metas em lote.** Hoje `getLimitsOverview` chama `getLimitSpent` uma vez por meta (N+1).
+   - Agrupe as metas pela janela do período (semana, mês, ano) e, para cada janela, faça **uma** consulta com `buildTxWhere` e `sum(spendValue)` agrupada por `category_id`, `categories.parent_id`, `payment_method` e `account_id`.
+   - Depois, calcule o gasto de cada meta em JS com uma função pura `spentForLimit(limit, rows)` em `src/server/limits/spent.ts`. Categoria pai inclui as filhas, como no `buildTxWhere`.
+   - **Teste:** com os dados fictícios e algumas metas (categoria, categoria pai, forma de pagamento, conta), o resultado de `spentForLimit` é igual ao de `getLimitSpent` para cada meta. `getLimitSpent` continua existindo para o motor de alertas.
+3. **Visão geral do Início.** Meça com um log temporário (não commite) quais consultas da aba pesam mais. Hoje são: KPIs, 3 quebras, série de 6 meses, ritmo e metas. Ataque as duas mais caras, por exemplo reaproveitando a quebra por categoria entre a rosca e as barras, ou somando as 3 quebras numa consulta só. Registre no PR o antes e o depois.
+4. **Como medir** (o mesmo método da referência acima):
+   - `npm run build && npm start` com `APP_PASSWORD_HASH` e `SESSION_SECRET` de teste no `.env.local` do seu worktree (nunca commite);
+   - gere um cookie de sessão com `createSessionToken` (veja `src/server/auth/session.ts`);
+   - meça com `curl -b "cg_session=<token>" -w '%{time_total}'`, três vezes cada página depois de uma chamada de aquecimento.
+
+### Critérios de aceite
+- [ ] No build de produção com os dados fictícios: Início Visão geral < 150 ms, Conta e Cartões < 100 ms, Limites < 60 ms.
+- [ ] Os valores das metas não mudam (teste de equivalência).
+- [ ] O PR traz a tabela de antes e depois.
