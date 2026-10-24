@@ -41,6 +41,7 @@ async function similarTransactionIds(
       description: transactions.description,
       installmentTotal: transactions.installmentTotal,
     })
+    // Busca transações similares pelo mesmo estabelecimento para recategorização em lote
     .from(transactions)
     .where(
       and(
@@ -103,7 +104,8 @@ export async function recategorize(db: Db, input: z.infer<typeof recategorizeInp
           merchantId: transactions.merchantId,
           merchantName: merchants.name,
         })
-        .from(transactions)
+        // Busca transações similares pelo mesmo estabelecimento para recategorização em lote
+    .from(transactions)
         .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
         .where(eq(transactions.id, transactionId));
       if (!current) throw new CommandError('NOT_FOUND', 'Transação não encontrada');
@@ -182,7 +184,7 @@ export async function updateTransaction(db: Db, input: z.infer<typeof updateTran
           .returning({ id: transactions.id });
         if (res.length === 0) throw new CommandError('NOT_FOUND', 'Transação não encontrada');
       } else {
-        // Verifica se a transação existe
+        // Verifica se a transação existe (consulta interna por ID)
         const [existing] = await tx.select({ id: transactions.id }).from(transactions).where(eq(transactions.id, transactionId));
         if (!existing) throw new CommandError('NOT_FOUND', 'Transação não encontrada');
       }
