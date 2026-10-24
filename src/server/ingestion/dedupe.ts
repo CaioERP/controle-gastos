@@ -287,9 +287,25 @@ export async function linkSourceToTransaction(
     cardId = existingTx.cardId;
   }
 
+  // Pluggy sobre arquivo sem parcela ou categoria do banco: mantém o que o arquivo trouxe, em vez de apagar
+  const installment =
+    incoming.installment ??
+    (existingTx.installmentNumber != null && existingTx.installmentTotal != null
+      ? {
+          number: existingTx.installmentNumber,
+          total: existingTx.installmentTotal,
+          purchaseDate: null,
+          totalAmountCents: null,
+        }
+      : null);
   const { patch, changed: updated } = mergeIncoming(
     existingTx,
-    { ...incoming, cardId },
+    {
+      ...incoming,
+      installment,
+      providerCategoryId: incoming.providerCategoryId ?? existingTx.providerCategoryId,
+      cardId,
+    },
     policy,
   );
 
