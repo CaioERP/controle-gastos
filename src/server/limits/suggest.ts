@@ -2,7 +2,8 @@ import { and, eq } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { categories, spendingLimits } from '@/server/db/schema';
 import { addMonthsISO, monthEnd, monthStart, today as getToday } from '@/server/domain/dates';
-import { getLimitSpent } from './engine';
+import { getSpentRows } from './engine';
+import { spentForLimit } from './spent';
 
 export type SuggestedBudget = {
   categoryId: string;
@@ -79,13 +80,16 @@ export async function suggestBudgets(
     }
   }
 
+  // Busca gastos dos 3 meses em lote (elimina N+1 de 3 consultas por categoria)
+  const rowsByMonth = await Promise.all(months.map((m) => getSpentRows(db, m)));
+
   const suggestions: SuggestedBudget[] = [];
 
   for (const cat of activeCategories) {
     const monthlySpends: number[] = [];
 
-    for (const m of months) {
-      const spent = await getLimitSpent(db, { categoryId: cat.id }, m);
+    for (const monthRows of rowsByMonth) {
+      const spent = spentForLimit({ categoryId: cat.id }, monthRows);
       if (spent > 0) {
         monthlySpends.push(spent);
       }

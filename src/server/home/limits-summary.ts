@@ -40,7 +40,7 @@ export async function getMonthlyLimitsSummary(
   db: Db,
   opts: { today?: string } = {},
 ): Promise<MonthlyLimitsSummary> {
-  const overview = await getLimitsOverview(db, opts.today);
+  const overview = await getLimitsOverview(db, opts.today, { withSuggestions: false });
 
   // Filtro: isActive && period === 'monthly' && categoryId !== null && paymentMethod === null && accountId === null
   const filtered = overview.limits.filter(

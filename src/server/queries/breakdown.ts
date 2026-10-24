@@ -36,6 +36,14 @@ export async function getBreakdown(
   const valueExpr = measure === 'expense' ? spendValue : incomeValue;
   const dim = dimensionSql(by);
 
+  const needsCategories =
+    by === 'category' || by === 'parentCategory' || Boolean(f.categoryIds?.length);
+  const needsParentCategories =
+    by === 'parentCategory' || Boolean(f.categoryIds?.length);
+  const needsInstitutions =
+    by === 'institution' || by === 'account' || Boolean(f.institutionIds?.length);
+  const needsMerchants = by === 'merchant';
+
   let query = db
     .select({
       key: dim.key,
@@ -47,12 +55,21 @@ export async function getBreakdown(
     .from(transactions)
     .innerJoin(accounts, eq(accounts.id, transactions.accountId))
     .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
-    .leftJoin(institutions, eq(institutions.id, accounts.institutionId))
-    .leftJoin(categories, eq(categories.id, transactions.categoryId))
-    .leftJoin(parentCategories, eq(parentCategories.id, categories.parentId))
-    .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
     .$dynamic();
 
+  if (needsCategories) {
+    query = query.leftJoin(categories, eq(categories.id, transactions.categoryId));
+  }
+  if (needsParentCategories) {
+    query = query.leftJoin(parentCategories, eq(parentCategories.id, categories.parentId));
+  }
+  if (needsInstitutions) {
+    query = query.leftJoin(institutions, eq(institutions.id, accounts.institutionId));
+  }
+  if (needsMerchants) {
+    query = query.leftJoin(merchants, eq(merchants.id, transactions.merchantId));
+  }
+  // O filtro de etiqueta já é um exists no buildTxWhere; o join só serve para agrupar por etiqueta (senão duplica as somas)
   if (by === 'tag') {
     query = query
       .innerJoin(transactionTags, eq(transactionTags.transactionId, transactions.id))
