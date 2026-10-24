@@ -145,6 +145,37 @@ export const deleteRecurrenceInput = z.object({
   recurrenceId: z.string().uuid(),
 });
 
+export const setRecurrenceStatusInput = z.object({
+  id: z.string().uuid(),
+  status: z.enum(RECURRENCE_STATUSES),
+});
+
+export type SetRecurrenceStatusInput = z.infer<typeof setRecurrenceStatusInput>;
+
+export async function setRecurrenceStatus(
+  db: Db,
+  input: SetRecurrenceStatusInput,
+): Promise<void> {
+  try {
+    const data = setRecurrenceStatusInput.parse(input);
+
+    const updated = await db
+      .update(recurrences)
+      .set({
+        status: data.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(recurrences.id, data.id))
+      .returning({ id: recurrences.id });
+
+    if (updated.length === 0) {
+      throw new CommandError('NOT_FOUND', 'Recorrência não encontrada');
+    }
+  } catch (err) {
+    throw toCommandError(err);
+  }
+}
+
 export type DeleteRecurrenceInput = z.input<typeof deleteRecurrenceInput>;
 
 export async function deleteRecurrence(

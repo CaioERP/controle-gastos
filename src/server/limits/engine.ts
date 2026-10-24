@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   differenceInCalendarDays,
   endOfWeek,
@@ -25,7 +25,7 @@ import { addDaysISO, formatDateBR, monthEnd, monthStart, today as getToday } fro
 import type { LimitPeriod, NotificationType, PaymentMethod } from '@/server/domain/enums';
 import { formatBRL } from '@/server/domain/money';
 import { buildTxWhere, spendValue } from '@/server/queries/base';
-import { notSplitParent } from '@/server/queries/split-filter';
+import { txLive } from '@/server/ledger';
 import type { SpentRow } from './spent';
 
 export type LimitPeriodRange = {
@@ -495,9 +495,8 @@ export async function evaluateSystemAlerts(
   if (isTypeEnabled('unusual_expense')) {
     // Transações elegíveis: despesa recente >= R$ 100 (amountCents <= -10000)
     const txConds = [
+      txLive,
       eq(transactions.kind, 'expense'),
-      isNull(transactions.deletedAt),
-      notSplitParent,
       sql`${transactions.amountCents} <= -10000`,
       sql`${transactions.categoryId} is not null`,
     ];
@@ -535,10 +534,9 @@ export async function evaluateSystemAlerts(
         .from(transactions)
         .where(
           and(
+            txLive,
             eq(transactions.categoryId, tx.categoryId),
             eq(transactions.kind, 'expense'),
-            isNull(transactions.deletedAt),
-            notSplitParent,
             sql`${transactions.date} >= ${windowStart}`,
             sql`${transactions.date} <= ${tx.date}`,
             sql`${transactions.id} <> ${tx.id}`,

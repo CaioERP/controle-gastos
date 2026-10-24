@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('Filtros de transações e visão', () => {
   test('fluxo completo: selecionar instituição, mudar mês, aplicar filtro e remover chip', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?aba=geral');
 
     const filterBar = page.locator('div[data-slot="filter-bar"]');
     await expect(filterBar).toBeVisible();
@@ -37,7 +37,7 @@ test.describe('Filtros de transações e visão', () => {
 
     // 2. Mudar o mês com a seta anterior atualiza o rótulo e URL.
     // Depois do reload o HTML do servidor aparece antes da hidratação: um clique nesse intervalo se perde.
-    const prevMonthButton = page.locator('button[aria-label="Mês anterior"]');
+    const prevMonthButton = filterBar.locator('button[aria-label="Mês anterior"]');
     await waitForHydration(prevMonthButton);
     await prevMonthButton.click();
     await expect(page).toHaveURL(/mes=/, NAV);

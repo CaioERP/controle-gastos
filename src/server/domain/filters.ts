@@ -26,6 +26,7 @@ export const txFiltersSchema = z
     paymentMethods: z.array(z.enum(PAYMENT_METHODS)).optional(),
     categoryIds: z.array(z.string().uuid()).optional(),
     tagIds: z.array(z.string().uuid()).optional(),
+    merchantIds: z.array(z.string().uuid()).optional(),
     search: z.string().max(200).optional(),
     basis: z.enum(['accrual', 'cash']).optional(),
     includeProjected: z.boolean().optional(),

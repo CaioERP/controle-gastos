@@ -1,5 +1,5 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { and, eq, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -17,7 +17,7 @@ import type {
 } from '@/server/domain/enums';
 import { formatBRL } from '@/server/domain/money';
 import { normalizeForMatch, toDisplayCase } from '@/server/ingestion/strings';
-import { notSplitParent } from '@/server/queries/split-filter';
+import { txPosted } from '@/server/ledger';
 
 export const KNOWN_SUBSCRIPTION_KEYWORDS = [
   'netflix',
@@ -367,14 +367,12 @@ export async function runRecurrenceDetection(
     .leftJoin(accounts, eq(transactions.accountId, accounts.id))
     .where(
       and(
+        txPosted,
         eq(transactions.kind, 'expense'),
         or(isNull(accounts.id), eq(accounts.includeInTotals, true)), // R11
         isNull(transactions.installmentGroupId), // parcelas não são assinatura
-        ne(transactions.status, 'projected'),
-        isNull(transactions.deletedAt),
         sql`${transactions.date} >= ${historyStart}`,
         sql`${transactions.date} <= ${todayDate}`,
-        notSplitParent,
       ),
     );
 

@@ -16,6 +16,7 @@ import { CommandError } from '../domain/errors';
 import {
   deleteSpendingLimit,
   evaluateSpendingLimits,
+  setSpendingLimitActive,
   upsertSpendingLimit,
 } from './limits';
 import {
@@ -226,5 +227,69 @@ describe('limits and notifications commands (A4-02)', () => {
     const notifs = await db.select().from(notifications);
     expect(notifs).toHaveLength(1);
     expect(notifs[0]!.type).toBe('threshold_80');
+  });
+
+  it('setSpendingLimitActive alterna status sem alterar outros campos e devolve NOT_FOUND se inexistente', async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    const [cat] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.kind, 'expense'))
+      .limit(1);
+
+    const { limitId } = await upsertSpendingLimit(db, {
+      name: 'Supermercado',
+      categoryId: cat!.id,
+      amountCents: 100000,
+      thresholds: [80, 100],
+      period: 'monthly',
+      notifyPace: true,
+      isActive: true,
+    });
+
+    // Desativa o limite
+    await setSpendingLimitActive(db, { id: limitId, isActive: false });
+
+    const [afterDeactivate] = await db
+      .select()
+      .from(spendingLimits)
+      .where(eq(spendingLimits.id, limitId));
+    expect(afterDeactivate).toBeDefined();
+    expect(afterDeactivate!.isActive).toBe(false);
+    expect(afterDeactivate!.name).toBe('Supermercado');
+    expect(afterDeactivate!.categoryId).toBe(cat!.id);
+    expect(afterDeactivate!.amountCents).toBe(100000);
+    expect(afterDeactivate!.thresholds).toEqual([80, 100]);
+    expect(afterDeactivate!.notifyPace).toBe(true);
+
+    // Reativa o limite
+    await setSpendingLimitActive(db, { id: limitId, isActive: true });
+
+    const [afterReactivate] = await db
+      .select()
+      .from(spendingLimits)
+      .where(eq(spendingLimits.id, limitId));
+    expect(afterReactivate!.isActive).toBe(true);
+
+    // ID inexistente lança NOT_FOUND
+    await expect(
+      setSpendingLimitActive(db, {
+        id: '00000000-0000-0000-0000-000000000000',
+        isActive: false,
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Limite de gastos não encontrado',
+    });
+
+    // ID inválido lança erro de validação (ZodError)
+    await expect(
+      setSpendingLimitActive(db, {
+        id: 'invalido',
+        isActive: false,
+      }),
+    ).rejects.toThrow();
   });
 });

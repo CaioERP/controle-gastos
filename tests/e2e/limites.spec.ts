@@ -32,7 +32,7 @@ test.describe('Limites e orçamentos (B4-01)', () => {
     await expect(page.getByRole('heading', { name: 'Nova Meta de Gastos' })).not.toBeVisible();
 
     // Acessa o dashboard e confere o widget de limites
-    await page.goto('/');
-    await expect(page.getByTestId('dashboard-limits-widget')).toBeVisible();
+    await page.goto('/?aba=geral');
+    await expect(page.getByText('Metas do mês').filter({ visible: true })).toBeVisible();
   });
 });

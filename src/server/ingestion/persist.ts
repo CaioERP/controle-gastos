@@ -3,6 +3,7 @@ import type { Db } from '@/server/db/client';
 import { accounts, cards, transactions, transactionSources } from '@/server/db/schema';
 import { findCrossSourceMatches, linkSourceToTransaction } from './dedupe';
 import { resolveInstitution } from './institutions';
+import { mergeIncoming } from './merge';
 import { findOrCreateMerchant } from './merchants';
 import type { NormalizedTransaction, RawAccount } from './types';
 
@@ -210,39 +211,11 @@ export async function upsertTransaction(
     throw new Error(`Transação ${existingSource.transactionId} referenciada por fonte não encontrada`);
   }
 
-  const edited = new Set(existingTx.userEditedFields);
-  const patch: Partial<typeof transactions.$inferInsert> = {};
-  let changed = false;
-
-  const candidates = {
-    date: n.date,
-    amountCents: n.amountCents,
-    status: n.status,
-    descriptionRaw: n.descriptionRaw,
-    description: n.description,
-    paymentMethod: n.paymentMethod,
-    installmentNumber,
-    installmentTotal,
-    providerCategoryId: n.providerCategoryId,
-    merchantId,
-    cardId,
-  } as const;
-
-  for (const [key, nextVal] of Object.entries(candidates) as Array<
-    [keyof typeof candidates, (typeof candidates)[keyof typeof candidates]]
-  >) {
-    if (edited.has(key)) continue;
-    if (existingTx[key] !== nextVal) {
-      (patch as Record<string, unknown>)[key] = nextVal;
-      changed = true;
-    }
-  }
-
-  // Horário: só preenche quando ainda não há; nunca troca um já gravado.
-  if (!existingTx.occurredAt && n.occurredAt) {
-    patch.occurredAt = new Date(n.occurredAt);
-    changed = true;
-  }
+  const { patch, changed } = mergeIncoming(
+    existingTx,
+    { ...n, merchantId, cardId },
+    'replace',
+  );
 
   if (patch.amountCents !== undefined) {
     await flagSplitMismatch(db, existingTx.id, patch.amountCents);
