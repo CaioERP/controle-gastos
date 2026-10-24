@@ -1,13 +1,5 @@
 import * as React from 'react';
-import {
-  Wallet,
-  TrendingUp,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { StatStrip, type StatItem } from '@/components/layout/stat-strip';
 import { Money } from '@/components/format/money';
 import { formatMonthBR } from '@/server/domain/dates';
 import type { CashFlowProjection } from '@/server/queries/cashflow';
@@ -28,7 +20,6 @@ export function CashFlowSummaryCards({ projection }: CashFlowSummaryCardsProps) 
   const finalPoint = points[points.length - 1];
   const finalProjectedBalanceCents = finalPoint?.projectedBalanceCents ?? currentBalanceCents;
   const netVariationCents = finalProjectedBalanceCents - currentBalanceCents;
-  const isNetPositive = netVariationCents >= 0;
   const isLowestNegative = lowestProjectedBalanceCents < 0;
 
   const lowestMonthLabel = lowestBalanceMonth
@@ -39,99 +30,47 @@ export function CashFlowSummaryCards({ projection }: CashFlowSummaryCardsProps) 
     ? formatMonthBR(`${finalPoint.month}-01`)
     : `${horizonMonths} meses`;
 
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* 1. Saldo Líquido Atual */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Saldo Líquido Atual</CardTitle>
-          <Wallet className="size-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tracking-tight">
-            <Money cents={currentBalanceCents} />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Disponível em contas correntes, carteiras e poupança
-          </p>
-        </CardContent>
-      </Card>
+  const items: StatItem[] = [
+    {
+      label: 'Saldo Líquido Atual',
+      value: <Money cents={currentBalanceCents} />,
+      hint: 'Disponível em contas correntes e carteiras',
+    },
+    {
+      label: `Saldo Projetado (${horizonMonths} Meses)`,
+      value: (
+        <span className={finalProjectedBalanceCents < 0 ? 'text-red-600 dark:text-red-400 font-semibold' : undefined}>
+          <Money cents={finalProjectedBalanceCents} />
+        </span>
+      ),
+      hint: `Previsão para ${finalMonthLabel}`,
+      tone: finalProjectedBalanceCents < 0 ? 'negative' : 'default',
+    },
+    {
+      label: 'Menor Saldo Previsto',
+      value: (
+        <span className={isLowestNegative ? 'text-red-600 dark:text-red-400 font-semibold' : undefined}>
+          <Money cents={lowestProjectedBalanceCents} />
+        </span>
+      ),
+      hint: isLowestNegative
+        ? `Risco de déficit em ${lowestMonthLabel}`
+        : `Menor liquidez em ${lowestMonthLabel}`,
+      tone: isLowestNegative ? 'negative' : 'default',
+    },
+    {
+      label: 'Variação no Semestre',
+      value: (
+        <Money
+          cents={netVariationCents}
+          signed
+          className={netVariationCents >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}
+        />
+      ),
+      hint: netVariationCents >= 0 ? 'Superávit líquido acumulado' : 'Redução líquida de caixa',
+      tone: netVariationCents >= 0 ? 'positive' : 'negative',
+    },
+  ];
 
-      {/* 2. Saldo Projetado em 6 Meses */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Saldo Projetado ({horizonMonths} Meses)
-          </CardTitle>
-          <TrendingUp className="size-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tracking-tight">
-            <Money cents={finalProjectedBalanceCents} colored />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Previsão para {finalMonthLabel}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* 3. Menor Saldo Previsto */}
-      <Card className={isLowestNegative ? 'border-destructive/40 bg-destructive/5' : undefined}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Menor Saldo Previsto</CardTitle>
-          {isLowestNegative ? (
-            <AlertTriangle className="size-4 text-destructive" />
-          ) : (
-            <ArrowDownRight className="size-4 text-muted-foreground" />
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-baseline justify-between gap-2">
-            <div
-              className={
-                isLowestNegative
-                  ? 'text-2xl font-bold tracking-tight text-destructive'
-                  : 'text-2xl font-bold tracking-tight'
-              }
-            >
-              <Money cents={lowestProjectedBalanceCents} />
-            </div>
-            <Badge
-              variant={isLowestNegative ? 'destructive' : 'secondary'}
-              className="text-xs"
-            >
-              {lowestMonthLabel}
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {isLowestNegative
-              ? 'Risco de déficit identificado'
-              : 'Ponto de menor liquidez projetado'}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* 4. Variação Líquida no Semestre */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Variação no Semestre</CardTitle>
-          {isNetPositive ? (
-            <ArrowUpRight className="size-4 text-emerald-600 dark:text-emerald-400" />
-          ) : (
-            <ArrowDownRight className="size-4 text-red-600 dark:text-red-400" />
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tracking-tight">
-            <Money cents={netVariationCents} signed colored />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {isNetPositive
-              ? 'Superávit líquido acumulado previsto'
-              : 'Redução líquida de caixa prevista'}
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <StatStrip items={items} />;
 }

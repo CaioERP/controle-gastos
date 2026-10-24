@@ -30,7 +30,7 @@ export function CashFlowBreakdownTable({ points }: CashFlowBreakdownTableProps) 
   const totalVariable = points.reduce((acc, p) => acc + p.variableExpensesCents, 0);
 
   return (
-    <Card>
+    <Card className="border border-border/60 shadow-none">
       <CardHeader>
         <CardTitle className="text-base font-semibold">Detalhamento mês a mês</CardTitle>
         <CardDescription className="text-xs">
@@ -87,15 +87,15 @@ export function CashFlowBreakdownTable({ points }: CashFlowBreakdownTableProps) 
                     </TableCell>
 
                     <TableCell className="text-right text-muted-foreground">
-                      <Money cents={pt.fixedExpensesCents} />
+                      <Money cents={pt.fixedExpensesCents} tone="flow" />
                     </TableCell>
 
                     <TableCell className="text-right text-muted-foreground">
-                      <Money cents={pt.cardInstallmentsCents} />
+                      <Money cents={pt.cardInstallmentsCents} tone="flow" />
                     </TableCell>
 
                     <TableCell className="text-right text-muted-foreground">
-                      <Money cents={pt.variableExpensesCents} />
+                      <Money cents={pt.variableExpensesCents} tone="flow" />
                     </TableCell>
 
                     <TableCell className="text-right font-semibold">
@@ -117,13 +117,13 @@ export function CashFlowBreakdownTable({ points }: CashFlowBreakdownTableProps) 
                   <Money cents={totalIncome} />
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">
-                  <Money cents={totalFixed} />
+                  <Money cents={totalFixed} tone="flow" />
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">
-                  <Money cents={totalCard} />
+                  <Money cents={totalCard} tone="flow" />
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">
-                  <Money cents={totalVariable} />
+                  <Money cents={totalVariable} tone="flow" />
                 </TableCell>
                 <TableCell className="text-right text-foreground">
                   <Money

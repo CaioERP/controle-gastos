@@ -71,7 +71,7 @@ export const ReviewCard = React.forwardRef<HTMLElement, ReviewCardProps>(functio
           </h3>
           <p className="break-all font-mono text-xs text-muted-foreground">{tx.descriptionRaw}</p>
         </div>
-        <Money sensitive={false} cents={tx.amountCents} colored className="shrink-0 text-base" />
+        <Money sensitive={false} cents={tx.amountCents} tone="flow" className="shrink-0 text-base font-semibold" />
       </div>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">

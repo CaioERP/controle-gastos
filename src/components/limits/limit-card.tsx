@@ -92,7 +92,7 @@ export function LimitCard({ limit, onEdit }: LimitCardProps) {
     <Card
       data-testid={`limit-card-${limit.id}`}
       className={cn(
-        'relative overflow-hidden transition-all',
+        'relative overflow-hidden transition-all border border-border/60 shadow-none',
         !limit.isActive && 'opacity-60 bg-muted/30 border-dashed',
       )}
     >
@@ -187,7 +187,7 @@ export function LimitCard({ limit, onEdit }: LimitCardProps) {
           <div className="flex items-baseline justify-between gap-2">
             <div className="text-sm text-muted-foreground">
               <span className="font-semibold text-foreground text-base">
-                <Money cents={limit.spentCents} />
+                <Money cents={limit.spentCents} tone="flow" />
               </span>{' '}
               de <Money cents={limit.amountCents} />
             </div>

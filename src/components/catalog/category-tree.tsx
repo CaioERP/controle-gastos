@@ -4,7 +4,7 @@ import * as React from 'react';
 import { ArchiveIcon, MoreVerticalIcon, PencilIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Section } from '@/components/layout/section';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,39 +46,40 @@ export function CategoryTree({ roots }: CategoryTreeProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-2">
         {columns.map((col) => (
-          <Card key={col.kind} aria-label={col.title}>
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle className="text-base">{col.title}</CardTitle>
+          <Section
+            key={col.kind}
+            aria-label={col.title}
+            title={col.title}
+            action={
               <Button size="sm" variant="outline" onClick={() => setDialog({ type: 'create', kind: col.kind, parent: null })}>
                 <PlusIcon />
                 Nova categoria
               </Button>
-            </CardHeader>
-            <CardContent>
-              {col.items.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma categoria ativa.</p>
-              ) : (
-                <ul className="divide-y">
-                  {col.items.map((root) => (
-                    <li key={root.id} className="py-1.5" data-testid="category-root" data-name={root.name}>
-                      <CategoryRow category={root} actions={actions} />
-                      {root.children.length > 0 && (
-                        <ul className="ml-5 border-l pl-3">
-                          {root.children.map((child) => (
-                            <li key={child.id} data-testid="category-child" data-name={child.name}>
-                              <CategoryRow category={child} actions={actions} child />
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+            }
+          >
+            {col.items.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma categoria ativa.</p>
+            ) : (
+              <ul className="divide-y divide-border/40">
+                {col.items.map((root) => (
+                  <li key={root.id} className="py-1.5" data-testid="category-root" data-name={root.name}>
+                    <CategoryRow category={root} actions={actions} />
+                    {root.children.length > 0 && (
+                      <ul className="ml-5 border-l border-border/40 pl-3">
+                        {root.children.map((child) => (
+                          <li key={child.id} data-testid="category-child" data-name={child.name}>
+                            <CategoryRow category={child} actions={actions} child />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
         ))}
       </div>
 
