@@ -1,4 +1,4 @@
-# Fase 6.2 — Refinamento visual do site inteiro (B6-13 a B6-19)
+# Fase 6.2 — Refinamento visual do site inteiro (B6-13 a B6-20)
 
 > Aprovado pelo usuário em 2026-10-24, a partir de um canvas de design com as telas de hoje e as propostas, no celular (390 px) e no desktop (1440 px). Vale para o site todo.
 > **Referência visual no repositório:** `docs/design/fase-6-2/` tem a marcação HTML das 8 telas propostas: celular e desktop de Início, Transações, Contas e Análise. Abra no navegador ou leia o HTML para ver espaçamentos, tamanhos e cores. São maquetes com dados fictícios: **não copie a marcação**. Reproduza o visual com os componentes do projeto (Tailwind, shadcn, `<Money />`). Os links entre os arquivos (`*.dc.html`) não funcionam fora do canvas; ignore.
@@ -302,3 +302,65 @@ Aplique a fundação, ou seja, `StatStrip`, `Section`, `tone="flow"` nos valores
 - [ ] Nenhuma página com 4 cartões de KPI separados; todas usam `StatStrip`.
 - [ ] Valores de gasto comum sem vermelho em todo o site; vermelho só em alertas e desempenho negativo.
 - [ ] `npm run check` passa; e2e ajustados.
+
+---
+
+## B6-20 — Histórico por estabelecimento (feature nova)
+
+**Depende de:** B6-13 (estilo) e B6-14 (linha de transação) · **Tamanho:** médio
+
+> Pedido do usuário em 2026-10-24: "poder selecionar um estabelecimento e ver meu histórico de gastos naquele local".
+
+### O que o usuário vê
+- **Página `/estabelecimentos/[id]`:**
+  - **Cabeçalho:** nome do estabelecimento, categoria padrão (chip) e as ações "Ver no extrato" (abre `/transacoes?estab=<id>`, com o período cobrindo do primeiro ao último lançamento) e ⋯ (renomear e categoria padrão, que já existem na aba Estabelecimentos de Categorias).
+  - **`StatStrip`:** "Gasto em 12 meses", "Compras" (quantidade em 12 meses), "Ticket médio" e "Última compra" (data, com "cliente desde <mês/ano>" na dica).
+  - **Gasto por mês:** barras verticais dos últimos 12 meses, com `data-sensitive-axis`; o mês atual fica destacado.
+  - **Como você paga ali:** barras horizontais por forma de pagamento e, ao lado no desktop, por conta ou cartão (reaproveite `HorizontalBars`).
+  - **Histórico:** a lista de transações do estabelecimento com a linha compacta, agrupada por dia, da mais nova para a mais antiga e com "carregar mais". Reaproveite a `TransactionList` com os filtros `{ merchantIds: [id], from: <primeira compra>, to: hoje }`. Recategorizar e abrir o detalhe continuam funcionando.
+  - Celular em uma coluna; desktop com o gráfico de meses e as formas de pagamento lado a lado.
+- **Página `/estabelecimentos`** (seleção): campo de busca e lista dos estabelecimentos com gasto nos últimos 12 meses, ordenada pelo total (nome, categoria, total, compras e última compra). Cada linha abre a página do estabelecimento.
+- **Portas de entrada** (todas viram link para `/estabelecimentos/[id]`):
+  - o nome do estabelecimento no detalhe da transação (`transaction-sheet.tsx`) e na linha cinza da transação, quando aparece;
+  - o ranking de lojas da Análise (`merchant-ranking.tsx`) e o "Top 5 estabelecimentos" do Início;
+  - a tabela da aba Estabelecimentos em Categorias (`merchants-table.tsx`);
+  - os resultados de estabelecimento da busca global (Ctrl K).
+
+  A rota não entra no menu: o "Estabelecimentos" de Categorias leva para `/estabelecimentos`.
+
+### Arquivos
+- **Contrato (commit `contract:` isolado na main, protocolo do `CONTRATOS.md` §6):** `src/server/domain/filters.ts` (`merchantIds?: string[]` no `txFiltersSchema`) e `docs/CONTRATOS.md` (filtro novo + log §7)
+- **Editar:**
+  - `src/server/queries/base.ts` (`buildTxWhere`: `f.merchantIds?.length ? inArray(transactions.merchantId, f.merchantIds) : undefined`);
+  - `src/server/queries/url-filters.ts` (parâmetro `estab`, lido e escrito como `contas`);
+  - a `FilterBar`, mostrando o estabelecimento ativo como chip removível quando `estab` estiver na URL;
+  - os componentes das portas de entrada.
+- **Criar:** `src/server/queries/merchant-history.ts` (+ teste), `src/app/(app)/estabelecimentos/page.tsx`, `src/app/(app)/estabelecimentos/[id]/page.tsx`, `src/components/merchants/*`
+
+### Consulta
+```ts
+export type MerchantHistory = {
+  merchant: { id: string; name: string; defaultCategory: { id: string; name: string; color: string } | null };
+  last12: { totalCents: number; count: number; averageCents: number };
+  firstDate: string | null;   // primeira compra (qualquer período)
+  lastDate: string | null;
+  monthly: Array<{ month: string; totalCents: number }>; // 12 meses, terminando no mês de hoje, com zeros
+  byPaymentMethod: BreakdownItem[];  // últimos 12 meses
+  byAccount: BreakdownItem[];        // últimos 12 meses
+};
+export async function getMerchantHistory(db: Db, merchantId: string, opts: { today?: string } = {}): Promise<MerchantHistory | null>
+export async function listMerchantsWithSpend(db: Db, opts: { today?: string; search?: string } = {}): Promise<Array<{ id: string; name: string; categoryName: string | null; totalCents: number; count: number; lastDate: string }>>
+```
+- Somas com `buildTxWhere({ ...filtros dos últimos 12 meses, merchantIds: [id] }, { forTotals: true })` e `spendValue`, como as outras consultas de gasto. Assim a regra de quais transações contam (e o livro-razão da A6-07, quando entrar) vale aqui também.
+- Estabelecimento inexistente devolve `null`; a página mostra `notFound()`.
+
+### Testes
+- `merchant-history.test.ts` com os dados fictícios: num estabelecimento conhecido (ex.: "Renner"), o total de 12 meses bate com a soma das transações dele e `monthly` tem 12 itens.
+- `url-filters`: `estab` vai e volta na URL.
+- No máximo um e2e de fumaça: abrir `/estabelecimentos`, clicar no primeiro e ver o cabeçalho com o nome.
+
+### Critérios de aceite
+- [ ] Clicar num estabelecimento (detalhe da transação, ranking, top 5, Categorias, busca) abre o histórico dele.
+- [ ] "Ver no extrato" abre Transações filtrado só por ele.
+- [ ] Valores sensíveis somem no modo "esconder valores".
+- [ ] Funciona em 390 px e 1440 px.

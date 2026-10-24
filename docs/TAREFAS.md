@@ -105,7 +105,7 @@ Onda 1   A6-06 resumo de contas em cache          │  B6-13 fundação (Money t
          A6-07 livro-razão (regra única)          │
 Onda 2   A6-08 mesclagem única (R9)               │  B6-19 rosca · B6-14 Transações · B6-16 Contas · B6-17 Análise · B6-18 demais
          A6-09 comandos de alternar               │
-Onda 3   A6-10 falhas visíveis                    │  B6-15 Início (precisa B6-14, B6-19 e A6-06)
+Onda 3   A6-10 falhas visíveis                    │  B6-15 Início (precisa B6-14, B6-19 e A6-06) · B6-20 histórico por estabelecimento
 ```
 
 | ID | Tarefa | Agente | Depende de | Status |
@@ -117,6 +117,7 @@ Onda 3   A6-10 falhas visíveis                    │  B6-15 Início (precisa B
 | B6-17 | Análise por seções (`secao`): Categorias com lista + barra por forma, total e "o que mais mudou"; tabela categoria × forma mantida no desktop | B | B6-13 | ⬜ |
 | B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | ⬜ |
 | B6-19 | Rosca com interface profunda: `toDonutSlices` puro e `BreakdownDonut` recebendo itens brutos (fim das 13 cópias nas abas) | B | B6-13 | ⬜ |
+| B6-20 | Histórico por estabelecimento: páginas `/estabelecimentos` e `/estabelecimentos/[id]` (12 meses, por mês, formas de pagamento, histórico), filtro `estab` (contract: `merchantIds`) e links em todo lugar onde aparece um estabelecimento | B | B6-13, B6-14 | ⬜ |
 | A6-06 | Resumo de contas uma vez por requisição (`getRequestAccountsOverview` com `cache`); funções do Início aceitam `overview` | A | — | ⬜ |
 | A6-07 | Livro-razão `src/server/ledger/`: recortes nomeados (`txLive`, `txPosted`…) usados por toda consulta; corrige busca, contagem da revisão e itens de fatura com mães divididas | A | — | ⬜ |
 | A6-08 | Mesclagem única (R9): `mergeIncoming` puro usado por `persist` e `dedupe` | A | — | ⬜ |
