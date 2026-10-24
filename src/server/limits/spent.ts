@@ -3,6 +3,8 @@ export type SpentRow = {
   categoryParentId: string | null;
   paymentMethod: string | null;
   accountId: string | null;
+  /** A conta entra nos totais (`include_in_totals`) */
+  inTotals: boolean;
   spentCents: number;
 };
 
@@ -15,13 +17,14 @@ export type LimitCriteria = {
 /**
  * Calcula o gasto total de uma meta em memória a partir das linhas agrupadas por categoria,
  * categoria pai, forma de pagamento e conta. Categoria pai inclui as filhas.
+ * Como no `buildTxWhere`, contas fora dos totais só contam em metas da própria conta.
  */
 export function spentForLimit(limit: LimitCriteria, rows: SpentRow[]): number {
   let total = 0;
   for (const row of rows) {
+    if (!limit.accountId && !row.inTotals) continue;
     if (limit.categoryId) {
-      const matchCat =
-        row.categoryId === limit.categoryId || row.categoryParentId === limit.categoryId;
+      const matchCat = row.categoryId === limit.categoryId || row.categoryParentId === limit.categoryId;
       if (!matchCat) continue;
     }
     if (limit.paymentMethod && row.paymentMethod !== limit.paymentMethod) {

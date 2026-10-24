@@ -69,7 +69,8 @@ export async function getBreakdown(
   if (needsMerchants) {
     query = query.leftJoin(merchants, eq(merchants.id, transactions.merchantId));
   }
-  if (by === 'tag' || Boolean(f.tagIds?.length)) {
+  // O filtro de etiqueta já é um exists no buildTxWhere; o join só serve para agrupar por etiqueta (senão duplica as somas)
+  if (by === 'tag') {
     query = query
       .innerJoin(transactionTags, eq(transactionTags.transactionId, transactions.id))
       .innerJoin(tags, eq(tags.id, transactionTags.tagId));

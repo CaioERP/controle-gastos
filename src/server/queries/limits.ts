@@ -1,14 +1,13 @@
 import { eq, sql } from 'drizzle-orm';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import type { Db } from '@/server/db/client';
-import { accounts, categories, invoices, spendingLimits, transactions } from '@/server/db/schema';
+import { accounts, categories, spendingLimits } from '@/server/db/schema';
 import { today as getToday } from '@/server/domain/dates';
 import type { LimitPeriod, PaymentMethod } from '@/server/domain/enums';
 import { PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
-import { buildLimitActionUrl, getLimitPeriodRange } from '@/server/limits/engine';
+import { buildLimitActionUrl, getLimitPeriodRange, getSpentRows } from '@/server/limits/engine';
 import { suggestBudgets } from '@/server/limits/suggest';
 import { spentForLimit, type SpentRow } from '@/server/limits/spent';
-import { buildTxWhere, spendValue } from '@/server/queries/base';
 
 export type SpendingLimitRow = {
   id: string;
@@ -96,46 +95,7 @@ export async function getLimitsOverview(
 
   await Promise.all(
     uniquePeriods.map(async (period) => {
-      const range = getLimitPeriodRange(period, refDate);
-      const where = buildTxWhere(
-        {
-          from: range.from,
-          to: range.to,
-          basis: 'accrual',
-        },
-        { forTotals: true },
-      );
-
-      const rows = await db
-        .select({
-          categoryId: transactions.categoryId,
-          categoryParentId: categories.parentId,
-          paymentMethod: transactions.paymentMethod,
-          accountId: transactions.accountId,
-          spentCents: sql<number>`coalesce(sum(${spendValue}), 0)`,
-        })
-        .from(transactions)
-        .innerJoin(accounts, eq(accounts.id, transactions.accountId))
-        .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
-        .leftJoin(categories, eq(categories.id, transactions.categoryId))
-        .where(where)
-        .groupBy(
-          transactions.categoryId,
-          categories.parentId,
-          transactions.paymentMethod,
-          transactions.accountId,
-        );
-
-      rowsByPeriod.set(
-        period,
-        rows.map((r) => ({
-          categoryId: r.categoryId,
-          categoryParentId: r.categoryParentId,
-          paymentMethod: r.paymentMethod,
-          accountId: r.accountId,
-          spentCents: Number(r.spentCents ?? 0),
-        })),
-      );
+      rowsByPeriod.set(period, await getSpentRows(db, getLimitPeriodRange(period, refDate)));
     }),
   );
 
