@@ -13,8 +13,8 @@ import {
 import { REPORTABLE_KINDS } from '@/server/domain/enums';
 import type { Dimension, TxFilters } from '@/server/domain/filters';
 import { KIND_LABELS, PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
+import { accountInTotals, accountVisible, txLive } from '@/server/ledger';
 import { escapeLike } from './search';
-import { notSplitParent } from './split-filter';
 
 export const parentCategories = alias(categories, 'parent_categories');
 
@@ -39,12 +39,10 @@ export type WhereOptions = { forTotals: boolean; defaultKinds?: readonly string[
 export function buildTxWhere(f: TxFilters, opts: WhereOptions): SQL {
   const d = effectiveDate(f.basis);
   const conds: (SQL | undefined)[] = [
-    isNull(transactions.deletedAt),
-    notSplitParent,
+    txLive,
     sql`${d} >= ${f.from}`,
     sql`${d} <= ${f.to}`,
-    eq(accounts.isHidden, false),
-    opts.forTotals && !f.accountIds?.length ? eq(accounts.includeInTotals, true) : undefined,
+    opts.forTotals && !f.accountIds?.length ? accountInTotals : accountVisible,
     f.includeProjected ? undefined : ne(transactions.status, 'projected'),
     inArray(transactions.kind, (f.kinds ?? opts.defaultKinds ?? REPORTABLE_KINDS) as never[]),
     f.institutionIds?.length ? inArray(accounts.institutionId, f.institutionIds) : undefined,
