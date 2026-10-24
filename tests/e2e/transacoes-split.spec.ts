@@ -56,6 +56,7 @@ test.describe('Divisão de transação (B2-03b)', () => {
 
     // Busca pelas transações divididas na listagem
     await page.getByRole('searchbox', { name: 'Buscar transações' }).fill(uniqueTag);
+    await expect(page).toHaveURL(new RegExp(uniqueTag));
     await expect(page.getByText(`Divisão A ${uniqueTag}`)).toBeVisible();
     await expect(page.getByText(`Divisão B ${uniqueTag}`)).toBeVisible();
 
