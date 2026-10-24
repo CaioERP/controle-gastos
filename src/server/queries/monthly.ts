@@ -70,6 +70,14 @@ export async function getMonthlySeries(
   }
 
   const dim = dimensionSql(by);
+  const needsCategories =
+    by === 'category' || by === 'parentCategory' || Boolean(f.categoryIds?.length);
+  const needsParentCategories =
+    by === 'parentCategory' || Boolean(f.categoryIds?.length);
+  const needsInstitutions =
+    by === 'institution' || by === 'account' || Boolean(f.institutionIds?.length);
+  const needsMerchants = by === 'merchant';
+
   let query = db
     .select({
       month: monthExpr,
@@ -81,13 +89,21 @@ export async function getMonthlySeries(
     .from(transactions)
     .innerJoin(accounts, eq(accounts.id, transactions.accountId))
     .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
-    .leftJoin(institutions, eq(institutions.id, accounts.institutionId))
-    .leftJoin(categories, eq(categories.id, transactions.categoryId))
-    .leftJoin(parentCategories, eq(parentCategories.id, categories.parentId))
-    .leftJoin(merchants, eq(merchants.id, transactions.merchantId))
     .$dynamic();
 
-  if (by === 'tag') {
+  if (needsCategories) {
+    query = query.leftJoin(categories, eq(categories.id, transactions.categoryId));
+  }
+  if (needsParentCategories) {
+    query = query.leftJoin(parentCategories, eq(parentCategories.id, categories.parentId));
+  }
+  if (needsInstitutions) {
+    query = query.leftJoin(institutions, eq(institutions.id, accounts.institutionId));
+  }
+  if (needsMerchants) {
+    query = query.leftJoin(merchants, eq(merchants.id, transactions.merchantId));
+  }
+  if (by === 'tag' || Boolean(f.tagIds?.length)) {
     query = query
       .innerJoin(transactionTags, eq(transactionTags.transactionId, transactions.id))
       .innerJoin(tags, eq(tags.id, transactionTags.tagId));
