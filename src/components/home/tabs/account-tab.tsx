@@ -8,15 +8,8 @@ import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories, listTags } from '@/server/queries/catalog';
 import { categoryDimensionFor } from '@/server/queries/stats';
 import { parseFilters } from '@/server/queries/url-filters';
-import { topWithOthers } from '@/server/queries/dashboard';
 import { getAccountsOverview } from '@/server/queries/accounts';
-import {
-  accountsTotals,
-  categoryTransactionsHref,
-  parentCategoryIds,
-  paymentMethodTransactionsHref,
-} from '@/components/charts/links';
-import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
+import { accountsTotals, parentCategoryIds } from '@/components/charts/links';
 import { PeriodOnlyBar } from '@/components/home/period-only-bar';
 import { BalanceHero } from '@/components/home/account/balance-hero';
 import { FreeToSpendWidget } from '@/components/home/account/free-to-spend';
@@ -52,11 +45,12 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
     );
   }
 
-  // Lista, rosca e links só com as contas de caixa, para a lista de transações bater com a fatia.
+  // A rosca e as transações consideram as contas correntes selecionadas nesta aba.
   const accountFilters = { ...filters, accountIds: tab.accountIds };
+
   const [freeToSpend, txList, categories, tags, byCategory, byPaymentMethod, overview] =
     await Promise.all([
-      getFreeToSpend(db),
+      getFreeToSpend(db, { today: filters.to }),
       listTransactions(db, accountFilters, { limit: 5 }),
       listCategories(db),
       listTags(db),
@@ -72,44 +66,6 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
   };
 
   const totalCents = byCategory.reduce((acc, c) => acc + c.totalCents, 0);
-
-  const categorySlices = topWithOthers(byCategory, 7).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(accountFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(accountFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
-  const pmSlices = topWithOthers(byPaymentMethod, 7).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(accountFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const pmSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(accountFilters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
 
   return (
     <div className="space-y-6">
@@ -136,10 +92,10 @@ export async function AccountTab({ searchParams = {} }: AccountTabProps) {
         title="Para onde foi o dinheiro da conta"
         description="Clique numa categoria para ver as transações."
         mode={roscaMode}
-        byCategory={categorySlices}
-        byPaymentMethod={pmSlices}
-        byCategoryMobile={categorySlicesMobile}
-        byPaymentMethodMobile={pmSlicesMobile}
+        byCategory={byCategory}
+        byPaymentMethod={byPaymentMethod}
+        filters={accountFilters}
+        linkOptions={linkOpts}
         totalCents={totalCents}
       />
     </div>

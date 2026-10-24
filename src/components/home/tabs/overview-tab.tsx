@@ -4,7 +4,7 @@ import { getDb } from '@/server/db/client';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { getBreakdown } from '@/server/queries/breakdown';
 import { listCategories, listTags } from '@/server/queries/catalog';
-import { getDashboardKpis, topWithOthers } from '@/server/queries/dashboard';
+import { getDashboardKpis } from '@/server/queries/dashboard';
 import { getMonthlySeries } from '@/server/queries/monthly';
 import { previousPeriodLabel } from '@/server/queries/period-label';
 import { categoryDimensionFor, trailingMonthsRange } from '@/server/queries/stats';
@@ -15,11 +15,8 @@ import { FilterBar } from '@/components/filters';
 import { PeriodOnlyBar } from '@/components/home/period-only-bar';
 import {
   accountsTotals,
-  categoryTransactionsHref,
   parentCategoryIds,
-  paymentMethodTransactionsHref,
 } from '@/components/charts/links';
-import { NEUTRAL_COLOR, paymentMethodColor, seriesColor } from '@/components/charts/palette';
 import { SectionCard } from '@/components/charts/section-card';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { BreakdownDonut } from '@/components/charts/breakdown-donut';
@@ -79,44 +76,6 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
     ...(hasExcluded ? { totalsAccountIds } : {}),
   };
 
-  const categorySlices = topWithOthers(byCategory, 7).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const categorySlicesMobile = topWithOthers(byCategory, 5).map((item, i) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : seriesColor(item.color, i),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : categoryTransactionsHref(filters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
-  const pmSlices = topWithOthers(byPaymentMethod, 7).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-  const pmSlicesMobile = topWithOthers(byPaymentMethod, 5).map((item) => ({
-    key: item.key,
-    label: item.label,
-    color: item.isOthers ? NEUTRAL_COLOR : paymentMethodColor(item.key),
-    totalCents: item.totalCents,
-    href: item.isOthers ? null : paymentMethodTransactionsHref(filters, item.key, linkOpts),
-    isOthers: item.isOthers,
-    grouped: item.grouped,
-  }));
-
   return (
     <div className="space-y-6">
       {/* Filtros completos no desktop, apenas seletor de período no celular */}
@@ -162,10 +121,10 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
           title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
           description="Clique para ver as transações."
           mode={roscaMode}
-          byCategory={categorySlices}
-          byPaymentMethod={pmSlices}
-          byCategoryMobile={categorySlicesMobile}
-          byPaymentMethodMobile={pmSlicesMobile}
+          byCategory={byCategory}
+          byPaymentMethod={byPaymentMethod}
+          filters={filters}
+          linkOptions={linkOpts}
           totalCents={totalCents}
         />
       </div>
@@ -226,10 +185,10 @@ export async function OverviewTab({ searchParams }: OverviewTabProps) {
             title={roscaMode === 'forma' ? 'Gastos por forma de pagamento' : 'Gastos por categoria'}
             description="Clique para ver as transações."
             mode={roscaMode}
-            byCategory={categorySlices}
-            byPaymentMethod={pmSlices}
-            byCategoryMobile={categorySlicesMobile}
-            byPaymentMethodMobile={pmSlicesMobile}
+            byCategory={byCategory}
+            byPaymentMethod={byPaymentMethod}
+            filters={filters}
+            linkOptions={linkOpts}
             totalCents={totalCents}
           />
           <PaymentMethodBars
