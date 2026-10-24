@@ -681,11 +681,13 @@ deleteInvestmentTransaction(input: { investmentTransactionId: string }): Promise
 refreshMarketPrices(): Promise<PriceUpdateStats>;
 captureNetWorthSnapshot(refDate?: string): Promise<NetWorthComputation>;
 
-// Inteligência, limites e recorrências (Fase 4 — A4-01, A4-02, A4-04) — src/server/commands/
+// Inteligência, limites e recorrências (Fase 4 — A4-01, A4-02, A4-04; Fase 6.2 — A6-09) — src/server/commands/
 upsertSpendingLimit(input: { id?: string; name: string; categoryId?: string | null; paymentMethod?: PaymentMethod | null; accountId?: string | null; period?: LimitPeriod; amountCents: number; thresholds?: number[]; notifyPace?: boolean; isActive?: boolean }): Promise<{ limitId: string }>;
+setSpendingLimitActive(input: { id: string; isActive: boolean }): Promise<void>;
 deleteSpendingLimit(input: { limitId: string }): Promise<void>;
 evaluateSpendingLimits(opts?: { transactionIds?: string[]; today?: string }): Promise<{ evaluatedLimits: number; newNotifications: number }>;
 upsertRecurrence(input: { id?: string; description: string; merchantId?: string | null; categoryId?: string | null; accountId?: string | null; paymentMethod?: PaymentMethod | null; frequency?: RecurrenceFrequency; expectedDay?: number | null; amountCents: number; status?: RecurrenceStatus; isSubscription?: boolean }): Promise<{ recurrenceId: string }>;
+setRecurrenceStatus(input: { id: string; status: RecurrenceStatus }): Promise<void>;
 deleteRecurrence(input: { recurrenceId: string }): Promise<void>;
 detectRecurrences(): Promise<{ detected: number; updated: number; priceHikes: number; cancelled: number }>;
 markNotificationRead(input: { notificationId: string }): Promise<void>;
@@ -766,3 +768,4 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-21 | Coordenador | Fase 6 | Pastas novas do Agente A: `src/server/home/` (leituras do Início com regra de negócio) e `src/server/push/`. Especificação da tabela `push_subscriptions` e da coluna `notifications.push_sent_at` (aditivo; migration gerada na A6-04) |
 | 2026-10-21 | Agente A | A6-04 | Migration 0005 gerada e aplicada (`push_subscriptions` e `notifications.push_sent_at`) |
 | 2026-10-23 | Coordenador | A6-05 | Coluna `transactions.occurred_at` (timestamptz null, horário da transação) e migration 0006 (aditivo) |
+| 2026-10-24 | Agente A | A6-09 | Comandos `setSpendingLimitActive` e `setRecurrenceStatus` para alternar status sem remontar upsert |
