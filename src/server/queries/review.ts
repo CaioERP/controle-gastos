@@ -1,17 +1,17 @@
-import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
-import { transactions } from '@/server/db/schema';
+import { accounts, transactions } from '@/server/db/schema';
+import { accountVisible, txLive } from '@/server/ledger';
 import { baseTransactionQuery, toTransactionRows, type TransactionRow } from './transaction-row';
 import { decodeCursor, encodeCursor } from './transactions';
-import { notSplitParent } from './split-filter';
 
 export type ReviewQueuePage = { items: TransactionRow[]; nextCursor: string | null };
 
 /**
- * Mesmo critério de `getReviewCount`: needsReview e não excluída, de qualquer data, natureza ou conta.
- * A mãe de uma divisão ativa sai da fila (as partes entram no lugar).
+ * Mesmo critério de `getReviewCount`: needsReview e não excluída, de qualquer data ou natureza,
+ * em conta visível. A mãe de uma divisão ativa sai da fila (as partes entram no lugar).
  */
-const reviewWhere = and(eq(transactions.needsReview, true), isNull(transactions.deletedAt), notSplitParent);
+const reviewWhere = and(eq(transactions.needsReview, true), txLive, accountVisible);
 
 /**
  * Fila de revisão, da mais recente para a mais antiga, paginada por cursor (mesmo formato de listTransactions).
@@ -58,6 +58,7 @@ export async function listReviewSuggestions(db: Db, minConfidence: number): Prom
       confidence: transactions.categoryConfidence,
     })
     .from(transactions)
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
     .where(
       and(
         reviewWhere,

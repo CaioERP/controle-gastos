@@ -10,6 +10,7 @@ import { computeInvoiceStatus } from '@/server/ingestion/invoices';
 import { captureNetWorthSnapshot } from '@/server/investments/net-worth';
 import { updateMarketPricesAndBenchmarks } from '@/server/investments/update-prices';
 import { sendPendingPush } from '@/server/push/send';
+import { logServerError } from '@/server/log';
 
 export type JobName =
   | 'sync-all'
@@ -151,10 +152,7 @@ export async function runJob(
     try {
       await sendPendingPush(db);
     } catch (pushErr) {
-      console.error(
-        '[jobs] Falha ao enviar notificações push pendentes:',
-        pushErr instanceof Error ? pushErr.message : pushErr,
-      );
+      logServerError('jobs', pushErr, { action: 'sendPendingPush' });
     }
 
     return { syncRunId, result };

@@ -5,6 +5,7 @@ import { cards, transactions, transactionSources } from '@/server/db/schema';
 import { addDaysISO } from '@/server/domain/dates';
 import type { Source } from '@/server/domain/enums';
 import { normalizeForMatch } from './normalize/text';
+import { mergeIncoming, type MergePolicy } from './merge';
 import { upsertCard } from './persist';
 import type { NormalizedTransaction } from './types';
 
@@ -273,61 +274,40 @@ export async function linkSourceToTransaction(
     .where(eq(transactionSources.transactionId, transactionId));
 
   const hadPluggy = currentSources.some((s) => s.source === 'pluggy' && incoming.source !== 'pluggy');
-  const edited = new Set(existingTx.userEditedFields);
-  const patch: Partial<typeof transactions.$inferInsert> = {};
-  let updated = false;
+  const policy: MergePolicy = incoming.source === 'file' && hadPluggy ? 'fill-gaps' : 'replace';
 
-  if (incoming.source === 'file' && hadPluggy) {
-    // Existente veio do Pluggy e nova fonte é file:
-    // não sobrescreve date, description, paymentMethod; apenas preenche cardId ou installment se ausentes
-    if (!existingTx.cardId && incoming.cardLast4 && !edited.has('cardId')) {
-      patch.cardId = await upsertCard(db, existingTx.accountId, incoming.cardLast4);
-      updated = true;
+  let cardId: string | null | undefined = undefined;
+  if (incoming.cardLast4) {
+    if (policy === 'fill-gaps' && !existingTx.cardId) {
+      cardId = await upsertCard(db, existingTx.accountId, incoming.cardLast4);
+    } else if (policy === 'replace') {
+      cardId = await upsertCard(db, existingTx.accountId, incoming.cardLast4);
     }
-    if (
-      existingTx.installmentNumber == null &&
-      incoming.installment &&
-      !edited.has('installmentNumber')
-    ) {
-      patch.installmentNumber = incoming.installment.number;
-      patch.installmentTotal = incoming.installment.total;
-      updated = true;
-    }
-  } else if (incoming.source === 'pluggy') {
-    // Existente veio de file e nova fonte é pluggy: atualiza campos atualizáveis respeitando R9
-    const cardId = incoming.cardLast4
-      ? await upsertCard(db, existingTx.accountId, incoming.cardLast4)
-      : existingTx.cardId;
+  } else if (policy === 'replace') {
+    cardId = existingTx.cardId;
+  }
 
-    const candidates = {
-      date: incoming.date,
-      amountCents: incoming.amountCents,
-      status: incoming.status,
-      descriptionRaw: incoming.descriptionRaw,
-      description: incoming.description,
-      paymentMethod: incoming.paymentMethod,
-      installmentNumber: incoming.installment?.number ?? existingTx.installmentNumber,
-      installmentTotal: incoming.installment?.total ?? existingTx.installmentTotal,
+  // Pluggy sobre arquivo sem parcela ou categoria do banco: mantém o que o arquivo trouxe, em vez de apagar
+  const installment =
+    incoming.installment ??
+    (existingTx.installmentNumber != null && existingTx.installmentTotal != null
+      ? {
+          number: existingTx.installmentNumber,
+          total: existingTx.installmentTotal,
+          purchaseDate: null,
+          totalAmountCents: null,
+        }
+      : null);
+  const { patch, changed: updated } = mergeIncoming(
+    existingTx,
+    {
+      ...incoming,
+      installment,
       providerCategoryId: incoming.providerCategoryId ?? existingTx.providerCategoryId,
       cardId,
-    } as const;
-
-    for (const [key, nextVal] of Object.entries(candidates) as Array<
-      [keyof typeof candidates, (typeof candidates)[keyof typeof candidates]]
-    >) {
-      if (edited.has(key)) continue;
-      if (existingTx[key] !== nextVal) {
-        (patch as Record<string, unknown>)[key] = nextVal;
-        updated = true;
-      }
-    }
-  }
-
-  // Horário: só preenche quando ainda não há; nunca troca um já gravado.
-  if (!existingTx.occurredAt && incoming.occurredAt) {
-    patch.occurredAt = new Date(incoming.occurredAt);
-    updated = true;
-  }
+    },
+    policy,
+  );
 
   if (updated) {
     await db.update(transactions).set(patch).where(eq(transactions.id, transactionId));

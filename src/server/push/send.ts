@@ -5,6 +5,7 @@ import { notificationPreferences, notifications, pushSubscriptions } from '@/ser
 import type { NotificationType } from '@/server/domain/enums';
 import { pushEnabledFor } from './defaults';
 import { ensureVapidConfigured, pushConfigured } from './vapid';
+import { logServerError } from '@/server/log';
 
 export type PushPayload = {
   title: string;
@@ -125,10 +126,7 @@ export async function sendPendingPush(
             .delete(pushSubscriptions)
             .where(eq(pushSubscriptions.id, sub.id));
         } else {
-          console.error(
-            '[push] Falha ao enviar notificação:',
-            (err as Error)?.message ?? err,
-          );
+          logServerError('push', err, { action: 'sendNotification' });
         }
       }
     }

@@ -5,6 +5,7 @@ import { accounts, categories, spendingLimits } from '@/server/db/schema';
 import { LIMIT_PERIODS, PAYMENT_METHODS } from '@/server/domain/enums';
 import { CommandError, toCommandError } from '@/server/domain/errors';
 import { evaluateLimitsEngine, evaluateSystemAlerts } from '@/server/limits/engine';
+import { logServerError } from '@/server/log';
 
 export const upsertSpendingLimitInput = z.object({
   id: z.string().uuid().optional(),
@@ -101,6 +102,37 @@ export const deleteSpendingLimitInput = z.object({
   limitId: z.string().uuid(),
 });
 
+export const setSpendingLimitActiveInput = z.object({
+  id: z.string().uuid(),
+  isActive: z.boolean(),
+});
+
+export type SetSpendingLimitActiveInput = z.infer<typeof setSpendingLimitActiveInput>;
+
+export async function setSpendingLimitActive(
+  db: Db,
+  input: SetSpendingLimitActiveInput,
+): Promise<void> {
+  try {
+    const data = setSpendingLimitActiveInput.parse(input);
+
+    const updated = await db
+      .update(spendingLimits)
+      .set({
+        isActive: data.isActive,
+        updatedAt: new Date(),
+      })
+      .where(eq(spendingLimits.id, data.id))
+      .returning({ id: spendingLimits.id });
+
+    if (updated.length === 0) {
+      throw new CommandError('NOT_FOUND', 'Limite de gastos não encontrado');
+    }
+  } catch (err) {
+    throw toCommandError(err);
+  }
+}
+
 export async function deleteSpendingLimit(
   db: Db,
   input: z.infer<typeof deleteSpendingLimitInput>,
@@ -151,6 +183,6 @@ export async function evaluateSpendingLimitsSafely(
   try {
     await evaluateSpendingLimits(db, opts);
   } catch (err) {
-    console.error('[limits] avaliação de limites e alertas falhou', err);
+    logServerError('limits', err, { action: 'avaliação de limites e alertas' });
   }
 }

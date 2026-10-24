@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -11,6 +11,7 @@ import {
 } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
 import type { AssetClass } from '@/server/domain/enums';
+import { txLive } from '@/server/ledger';
 
 export type NetWorthComputation = {
   date: string;
@@ -149,8 +150,7 @@ export async function computeNetWorth(
     .where(
       and(
         eq(transactions.status, 'projected'),
-        isNull(transactions.deletedAt),
-        isNull(transactions.parentTransactionId),
+        txLive,
       ),
     );
 

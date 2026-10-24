@@ -25,7 +25,7 @@ export async function splitTransaction(
 
   try {
     return await db.transaction(async (tx) => {
-      // 1. Carrega a transação original (mãe)
+      // 1. Carrega a transação original (mãe) - consulta interna por ID específico
       const [mother] = await tx
         .select()
         .from(transactions)
@@ -169,6 +169,7 @@ export async function unsplitTransaction(
 
   try {
     await db.transaction(async (tx) => {
+      // Consulta interna por ID específico para localizar a transação da divisão
       const [t] = await tx
         .select({
           id: transactions.id,

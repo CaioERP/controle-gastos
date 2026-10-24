@@ -3,8 +3,8 @@ import type { Db } from '@/server/db/client';
 import { accounts, categories, invoices, transactions, transactionSources } from '@/server/db/schema';
 import { TX_KINDS, type Source } from '@/server/domain/enums';
 import type { TxFilters } from '@/server/domain/filters';
+import { accountVisible, txLive } from '@/server/ledger';
 import { buildTxWhere } from './base';
-import { notSplitParent } from './split-filter';
 import {
   baseTransactionQuery,
   loadTagsByTransaction,
@@ -84,6 +84,7 @@ export type TransactionDetail = TransactionRow & {
 
 export async function getTransaction(db: Db, id: string): Promise<TransactionDetail | null> {
   if (!UUID.test(id)) return null;
+  // Consulta interna por ID: não usa txLive pois uma transação mãe dividida ainda pode ser inspecionada no detalhe
   const [r] = await baseTransactionQuery(db).where(and(eq(transactions.id, id), isNull(transactions.deletedAt)));
   if (!r) return null;
 
@@ -105,13 +106,14 @@ export async function getTransaction(db: Db, id: string): Promise<TransactionDet
 export async function getInstallmentGroup(db: Db, groupId: string): Promise<TransactionRow[]> {
   if (!UUID.test(groupId)) return [];
   const rows = await baseTransactionQuery(db)
-    .where(and(eq(transactions.installmentGroupId, groupId), isNull(transactions.deletedAt), notSplitParent))
+    .where(and(eq(transactions.installmentGroupId, groupId), txLive))
     .orderBy(transactions.installmentNumber, transactions.date);
   return toTransactionRows(db, rows);
 }
 
 export async function getSplitParts(db: Db, parentId: string): Promise<TransactionRow[]> {
   if (!UUID.test(parentId)) return [];
+  // Consulta interna por parentTransactionId para listar filhas ativas da divisão: filhas têm parent_transaction_id preenchido
   const rows = await baseTransactionQuery(db)
     .where(and(eq(transactions.parentTransactionId, parentId), isNull(transactions.deletedAt)))
     .orderBy(transactions.id);
@@ -120,6 +122,7 @@ export async function getSplitParts(db: Db, parentId: string): Promise<Transacti
 
 export async function getParentTransaction(db: Db, childIdOrParentId: string): Promise<TransactionRow | null> {
   if (!UUID.test(childIdOrParentId)) return null;
+  // Consulta interna por ID para inspecionar a transação mãe: não usa txLive pois a mãe possui filhas ativas
   const [child] = await db
     .select({ parentTransactionId: transactions.parentTransactionId })
     .from(transactions)
@@ -137,7 +140,8 @@ export async function getReviewCount(db: Db): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
     .from(transactions)
-    .where(and(eq(transactions.needsReview, true), isNull(transactions.deletedAt), notSplitParent));
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+    .where(and(eq(transactions.needsReview, true), txLive, accountVisible));
   return Number(row?.count ?? 0);
 }
 
