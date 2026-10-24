@@ -146,7 +146,7 @@ export function AttentionStrip({ items, mode = 'all', className }: AttentionStri
     <aside aria-label="Precisa de você" className={cn('space-y-2', className)}>
       {/* Desktop: linha horizontal de chips clicáveis */}
       {showDesktop && (
-        <div className={cn(mode === 'all' ? 'hidden md:flex' : 'flex', 'flex-wrap items-center gap-2')}>
+        <div className="hidden md:flex flex-wrap items-center gap-2">
           {items.map((item, idx) => {
             const Icon = getAttentionIcon(item);
             const isCritical = item.kind === 'limit' && item.spentPercent > 100;
@@ -181,7 +181,7 @@ export function AttentionStrip({ items, mode = 'all', className }: AttentionStri
       {showMobile && (
         <div
           className={cn(
-            mode === 'all' ? 'md:hidden' : 'flex',
+            'md:hidden',
             'flex items-center gap-2 overflow-x-auto snap-x scrollbar-none pb-1 -mx-4 px-4 sm:mx-0 sm:px-0',
           )}
         >

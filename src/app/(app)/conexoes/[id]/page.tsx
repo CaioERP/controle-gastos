@@ -7,6 +7,7 @@ import { getDb } from '@/server/db/client';
 import { ACCOUNT_TYPE_LABELS, CONNECTION_STATUS_LABELS } from '@/server/domain/labels';
 import { getConnectionHealthDetail } from '@/server/queries/connections';
 import { Badge } from '@/components/ui/badge';
+import { StatStrip } from '@/components/layout/stat-strip';
 import { DateBR } from '@/components/format/date-br';
 import { Money } from '@/components/format/money';
 import { ReconnectButton, SyncConnectionButton } from '@/components/connections/reconnect-button';
@@ -159,33 +160,37 @@ export default async function ConexaoDetalhePage({ params }: Props) {
         </div>
       )}
 
-      {/* Cards de indicadores */}
-      <section aria-label="Diagnóstico da conexão" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-4 shadow-2xs space-y-1" data-testid="card-consent">
-          <p className="text-xs font-medium text-muted-foreground">Status do consentimento</p>
-          <p className="text-base font-semibold text-foreground">{consentSubtext}</p>
-          <p className="text-xs text-muted-foreground">
-            {consentDateISO ? (
-              <>
-                Vencimento: <DateBR date={consentDateISO} />
-              </>
-            ) : (
-              'Não informado pela instituição'
-            )}
-          </p>
-        </div>
-
-        <div className="rounded-xl border bg-card p-4 shadow-2xs space-y-1" data-testid="card-last-sync">
-          <p className="text-xs font-medium text-muted-foreground">Última sincronização</p>
-          <p className="text-base font-semibold text-foreground">{syncRelative}</p>
-          <p className="text-xs text-muted-foreground">{syncExact}</p>
-        </div>
-
-        <div className="rounded-xl border bg-card p-4 shadow-2xs space-y-1" data-testid="card-stability">
-          <p className="text-xs font-medium text-muted-foreground">Estabilidade</p>
-          <p className="text-base font-semibold text-foreground">{stabilityLabel}</p>
-          <p className="text-xs text-muted-foreground">{stabilitySubtext}</p>
-        </div>
+      {/* Indicadores em StatStrip */}
+      <section aria-label="Diagnóstico da conexão">
+        <StatStrip
+          items={[
+            {
+              label: 'Status do consentimento',
+              value: consentSubtext,
+              hint: consentDateISO ? (
+                <>
+                  Vencimento: <DateBR date={consentDateISO} />
+                </>
+              ) : (
+                'Não informado pela instituição'
+              ),
+              testId: 'card-consent',
+            },
+            {
+              label: 'Última sincronização',
+              value: syncRelative,
+              hint: syncExact,
+              testId: 'card-last-sync',
+            },
+            {
+              label: 'Estabilidade',
+              value: stabilityLabel,
+              hint: stabilitySubtext,
+              tone: health.isPausedByErrors ? 'negative' : health.consecutiveErrors > 0 ? 'warning' : 'default',
+              testId: 'card-stability',
+            },
+          ]}
+        />
       </section>
 
       {/* Gráfico de transações novas por dia */}

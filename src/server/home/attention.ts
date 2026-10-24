@@ -55,7 +55,7 @@ export async function getAttentionItems(
       getReviewCount(db),
       opts.overview ?? getAccountsOverview(db, { today: todayStr }),
       listConnections(db),
-      getLimitsOverview(db, todayStr),
+      getLimitsOverview(db, todayStr, { withSuggestions: false }),
       // Só a execução mais recente de cada job (a tabela cresce a cada rodada do agendador)
       db
         .selectDistinctOn([syncRuns.job], {

@@ -23,6 +23,8 @@ type TransactionRowProps = {
   onRecategorize: RecategorizeHandler;
   /** Fora da lista agrupada por dia (ex.: últimas transações), a linha mostra a data. */
   showDate?: boolean;
+  /** Coluna estreita no desktop (ex.: últimas transações do Início): usa sempre o layout de cartão do celular. */
+  compact?: boolean;
 };
 
 export const TransactionRow = React.memo(function TransactionRow({
@@ -31,6 +33,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onOpen,
   onRecategorize,
   showDate = false,
+  compact = false,
 }: TransactionRowProps) {
   const projected = tx.status === 'projected';
   const reportable = isReportable(tx.kind);
@@ -49,8 +52,8 @@ export const TransactionRow = React.memo(function TransactionRow({
       data-tx-id={tx.id}
       onClick={handleClick}
       className={cn(
-        'flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40 md:grid md:py-2 md:gap-x-3',
-        ROW_GRID,
+        'flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40',
+        !compact && ['md:grid md:py-2 md:gap-x-3', ROW_GRID],
         projected && 'italic opacity-60',
       )}
     >
@@ -80,7 +83,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   .join(' · ')}
               </span>
             )}
-            <span className="shrink-0 md:hidden">
+            <span className={cn('shrink-0', !compact && 'md:hidden')}>
               · {PAYMENT_METHOD_LABELS[tx.paymentMethod]}
             </span>
             {!reportable && (
@@ -120,29 +123,33 @@ export const TransactionRow = React.memo(function TransactionRow({
         </div>
       </div>
 
-      {/* Coluna 2 (desktop apenas): CategoryCell */}
-      <div className="hidden md:flex min-w-0 items-center">
-        <CategoryCell tx={tx} categories={categories} onRecategorize={onRecategorize} />
-      </div>
+      {!compact && (
+        <>
+          {/* Coluna 2 (desktop apenas): CategoryCell */}
+          <div className="hidden md:flex min-w-0 items-center">
+            <CategoryCell tx={tx} categories={categories} onRecategorize={onRecategorize} />
+          </div>
 
-      {/* Coluna 3 (desktop apenas): Forma de pagamento */}
-      <div className="hidden md:block truncate text-xs text-muted-foreground">
-        {PAYMENT_METHOD_LABELS[tx.paymentMethod]}
-      </div>
+          {/* Coluna 3 (desktop apenas): Forma de pagamento */}
+          <div className="hidden md:block truncate text-xs text-muted-foreground">
+            {PAYMENT_METHOD_LABELS[tx.paymentMethod]}
+          </div>
 
-      {/* Coluna 4 (desktop): Valor */}
-      <div className="hidden md:block text-right">
-        <Money
-          sensitive={false}
-          cents={tx.amountCents}
-          colored={reportable}
-          tone="flow"
-          className={cn('text-sm', !reportable && 'text-muted-foreground')}
-        />
-      </div>
+          {/* Coluna 4 (desktop): Valor */}
+          <div className="hidden md:block text-right">
+            <Money
+              sensitive={false}
+              cents={tx.amountCents}
+              colored={reportable}
+              tone="flow"
+              className={cn('text-sm', !reportable && 'text-muted-foreground')}
+            />
+          </div>
+        </>
+      )}
 
       {/* Bloco direito no celular (md:hidden): Valor + CategoryCell quando sem categoria */}
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1 text-right md:hidden">
+      <div className={cn('flex shrink-0 flex-col items-end justify-center gap-1 text-right', !compact && 'md:hidden')}>
         <Money
           sensitive={false}
           cents={tx.amountCents}

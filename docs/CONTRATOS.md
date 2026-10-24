@@ -22,7 +22,7 @@ controle-gastos/
 │   │       ├── jobs/          rotas dos jobs agendados          (A)
 │   │       ├── webhooks/      webhooks (Pluggy)                 (A)
 │   │       └── pluggy/        connect token                     (A)
-│   ├── middleware.ts          proteção de rotas (auth)          (B)
+│   ├── proxy.ts               proteção de rotas (auth; Next 16)  (B)
 │   ├── components/            componentes de UI                 (B)
 │   ├── lib/                   utilitários genéricos             (quem criar; sem lógica de domínio)
 │   └── server/
@@ -33,6 +33,9 @@ controle-gastos/
 │       ├── categorization/    regras, memória, IA               (A)
 │       ├── jobs/              lógica dos jobs                   (A)
 │       ├── investments/       cotações, rentabilidade (F3)      (A)
+│       ├── limits/            metas: período, gasto, alertas (F4) (A)
+│       ├── recurrences/       detecção de assinaturas (F4)      (A)
+│       ├── cashflow/          projeção de caixa (F4)            (A)
 │       ├── home/              leituras do Início com regra (F6) (A)
 │       ├── push/              notificações push (F6)            (A)
 │       ├── ledger/            recortes nomeados do livro-razão (F6.2) (A)

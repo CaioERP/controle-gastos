@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import {
   accounts,
@@ -12,7 +12,7 @@ import type { TxFilters } from '@/server/domain/filters';
 import { addMonthsISO, monthEnd, monthStart, today } from '@/server/domain/dates';
 import { buildTxWhere, spendValue } from './base';
 import { getBreakdown, type BreakdownItem } from './breakdown';
-import { notSplitParent } from './split-filter';
+import { accountVisible, txNotProjected } from '@/server/ledger';
 import { escapeLike } from './search';
 
 export type MerchantHistory = {
@@ -81,9 +81,9 @@ export async function getMerchantHistory(
       .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
       .where(
         and(
-          isNull(transactions.deletedAt),
-          notSplitParent,
-          eq(accounts.isHidden, false),
+          // Sem previstas: numa assinatura a próxima cobrança cairia no mês que vem como "última compra"
+          txNotProjected,
+          accountVisible,
           eq(transactions.merchantId, merchantId),
           inArray(transactions.kind, REPORTABLE_KINDS as never[]),
         ),
@@ -202,4 +202,10 @@ export async function listMerchantsWithSpend(
     count: Number(r.count),
     lastDate: r.lastDate,
   }));
+}
+
+/** Nomes dos estabelecimentos do filtro `estab`, para os chips da página de transações. */
+export async function getMerchantNames(db: Db, ids: string[]): Promise<Array<{ id: string; name: string }>> {
+  if (ids.length === 0) return [];
+  return db.select({ id: merchants.id, name: merchants.name }).from(merchants).where(inArray(merchants.id, ids));
 }

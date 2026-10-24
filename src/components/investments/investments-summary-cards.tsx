@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { StatStrip, type StatItem } from '@/components/layout/stat-strip';
 import { Money, Sensitive } from '@/components/format/money';
 import { formatBRL } from '@/server/domain/money';
 import type { InvestmentsOverview } from '@/server/queries/investments';
@@ -19,92 +18,49 @@ export function InvestmentsSummaryCards({ totals }: InvestmentsSummaryCardsProps
   const cdiPercent = (totals.cdi12mBps / 100).toFixed(2).replace('.', ',');
   const cdiText = `${totals.cdi12mBps >= 0 ? '+' : ''}${cdiPercent}%`;
 
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* 1. Patrimônio investido */}
-      <Card size="sm" className="min-w-0">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Patrimônio investido
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <Money
-            cents={totals.currentValueCents}
-            className="block text-xl font-semibold sm:text-2xl"
-          />
-          <p className="text-xs text-muted-foreground">
-            Aplicado: <Sensitive>{formatBRL(totals.investedCents)}</Sensitive> · Líquido est.:{' '}
-            <Sensitive>{formatBRL(totals.netValueCents)}</Sensitive>
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* 2. Rentabilidade bruta */}
-      <Card size="sm" className="min-w-0">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Rentabilidade bruta
-          </CardTitle>
-          <Badge
-            variant={totals.profitBps >= 0 ? 'default' : 'destructive'}
-            className="tabular-nums"
-          >
-            {profitBadgeText}
-          </Badge>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <Money
-            cents={totals.profitCents}
-            signed
-            colored
-            className="block text-xl font-semibold sm:text-2xl"
-          />
-          <p className="text-xs text-muted-foreground">Ganho sobre o total aplicado</p>
-        </CardContent>
-      </Card>
-
-      {/* 3. Desempenho 12 meses (TWR) */}
-      <Card size="sm" className="min-w-0">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Desempenho 12 meses (TWR)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <span
-            className={`block text-xl font-semibold tabular-nums sm:text-2xl ${
-              totals.twr12mBps >= 0
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-red-600 dark:text-red-400'
-            }`}
-          >
-            {twrText}
+  const items: StatItem[] = [
+    {
+      label: 'Patrimônio investido',
+      value: <Money cents={totals.currentValueCents} />,
+      hint: (
+        <>
+          Aplicado: <Sensitive>{formatBRL(totals.investedCents)}</Sensitive> · Líquido:{' '}
+          <Sensitive>{formatBRL(totals.netValueCents)}</Sensitive>
+        </>
+      ),
+    },
+    {
+      label: 'Rentabilidade bruta',
+      value: (
+        <span className="flex items-baseline gap-2">
+          <Money cents={totals.profitCents} signed colored />
+          <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+            ({profitBadgeText})
           </span>
-          <p className="text-xs text-muted-foreground tabular-nums">
-            CDI: {cdiText}
-            {totals.percentOfCdi12m !== null ? (
-              <span> ({totals.percentOfCdi12m.toString().replace('.', ',')}% do CDI)</span>
-            ) : null}
-          </p>
-        </CardContent>
-      </Card>
+        </span>
+      ),
+      hint: 'Ganho sobre o total aplicado',
+      tone: totals.profitBps >= 0 ? 'positive' : 'negative',
+    },
+    {
+      label: 'Desempenho 12 meses (TWR)',
+      value: twrText,
+      hint: (
+        <>
+          CDI: {cdiText}
+          {totals.percentOfCdi12m !== null ? (
+            <span> ({totals.percentOfCdi12m.toString().replace('.', ',')}% do CDI)</span>
+          ) : null}
+        </>
+      ),
+      tone: totals.twr12mBps >= 0 ? 'positive' : 'negative',
+    },
+    {
+      label: 'Proventos (12 meses)',
+      value: <Money cents={totals.income12mCents} />,
+      hint: 'Dividendos, JCP e rendimentos',
+    },
+  ];
 
-      {/* 4. Proventos (12 meses) */}
-      <Card size="sm" className="min-w-0">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Proventos (12 meses)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <Money
-            cents={totals.income12mCents}
-            className="block text-xl font-semibold sm:text-2xl"
-          />
-          <p className="text-xs text-muted-foreground">Dividendos, JCP e rendimentos</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <StatStrip items={items} />;
 }

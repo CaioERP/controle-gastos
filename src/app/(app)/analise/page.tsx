@@ -375,10 +375,10 @@ async function AnalysisSectionContent({
               separated
             >
               <div className="hidden md:block">
-                <CrosstabTable heatmap={pmHeatmap} filters={filters} linkOptions={linkOpts} />
+                <CrosstabTable heatmap={pmHeatmap} filters={filters} linkOptions={linkOpts} transposed />
               </div>
               <div className="md:hidden">
-                <CategoryBreakdownList heatmap={pmHeatmap} filters={filters} linkOptions={linkOpts} />
+                <CategoryBreakdownList heatmap={pmHeatmap} filters={filters} linkOptions={linkOpts} transposed />
               </div>
             </Section>
           )}

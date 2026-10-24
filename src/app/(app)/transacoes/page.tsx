@@ -1,10 +1,9 @@
-import { inArray } from 'drizzle-orm';
 import { getDb } from '@/server/db/client';
-import { merchants } from '@/server/db/schema';
 import { today } from '@/server/domain/dates';
 import { TX_KINDS } from '@/server/domain/enums';
 import { getAccountsOverview } from '@/server/queries/accounts';
 import { listCategories, listTags } from '@/server/queries/catalog';
+import { getMerchantNames } from '@/server/queries/merchant-history';
 import { getSpendingSummary } from '@/server/queries/summary';
 import { countTransactions, getReviewCount, listTransactions } from '@/server/queries/transactions';
 import { parseFilters, serializeFilters } from '@/server/queries/url-filters';
@@ -34,12 +33,7 @@ export default async function Page({ searchParams }: Props) {
     getSpendingSummary(db, filters),
     getReviewCount(db),
     countTransactions(db, filters),
-    filters.merchantIds?.length
-      ? db
-          .select({ id: merchants.id, name: merchants.name })
-          .from(merchants)
-          .where(inArray(merchants.id, filters.merchantIds))
-      : Promise.resolve([]),
+    getMerchantNames(db, filters.merchantIds ?? []),
   ]);
 
   const manualAccounts = accountsOverview.flatMap((inst) =>

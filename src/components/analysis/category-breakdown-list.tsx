@@ -10,7 +10,7 @@ import {
   isFilterableId,
   type CategoryLinkOptions,
 } from '@/components/charts/links';
-import { paymentMethodColor } from '@/components/charts/palette';
+import { paymentMethodColor, seriesColor } from '@/components/charts/palette';
 import { analysisHref, type AnalysisSection } from './links';
 import type { TxFilters } from '@/server/domain/filters';
 import type { Heatmap, AnalysisDim } from '@/server/queries/analysis';
@@ -22,6 +22,8 @@ export type CategoryBreakdownListProps = {
   dim?: AnalysisDim;
   secao?: AnalysisSection;
   drilled?: boolean;
+  /** Linhas são formas de pagamento e as barras, categorias (seção Formas) */
+  transposed?: boolean;
 };
 
 /**
@@ -37,9 +39,17 @@ export function CategoryBreakdownList({
   dim = 'category',
   secao = 'categorias',
   drilled = false,
+  transposed = false,
 }: CategoryBreakdownListProps) {
   const { rows, cols, grandTotalCents } = heatmap;
   const colLabel = (key: string) => cols.find((c) => c.key === key)?.label ?? key;
+  // Na orientação trocada as partes da barra são categorias, sem cor no heatmap: usa a paleta pela posição da coluna
+  const colColor = (key: string) =>
+    transposed ? seriesColor(null, Math.max(0, cols.findIndex((c) => c.key === key))) : paymentMethodColor(key);
+  const cellHref = (rowKey: string, colKey: string) =>
+    transposed
+      ? crossTransactionsHref(filters, colKey, rowKey, linkOptions)
+      : crossTransactionsHref(filters, rowKey, colKey, linkOptions);
   const usedCols = cols.filter((c) =>
     rows.some((r) => r.cells.some((cell) => cell.colKey === c.key && cell.cents > 0))
   );
@@ -64,7 +74,7 @@ export function CategoryBreakdownList({
                       <span
                         aria-hidden
                         className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: r.color ?? '#9CA3AF' }}
+                        style={{ backgroundColor: transposed ? paymentMethodColor(r.key) : (r.color ?? '#9CA3AF') }}
                       />
                       {isFilterableId(r.key) && !drilled ? (
                         <Link
@@ -102,7 +112,7 @@ export function CategoryBreakdownList({
                           key={c.colKey}
                           style={{
                             width: `${(c.cents / barTotal) * 100}%`,
-                            backgroundColor: paymentMethodColor(c.colKey),
+                            backgroundColor: colColor(c.colKey),
                           }}
                         />
                       ))}
@@ -112,14 +122,14 @@ export function CategoryBreakdownList({
                 <div className="px-3 pb-3 pt-1">
                   <ul className="space-y-1 md:grid md:grid-cols-2 md:gap-x-6 md:gap-y-1 md:space-y-0 text-xs">
                     {positive.map((c) => {
-                      const href = crossTransactionsHref(filters, r.key, c.colKey, linkOptions);
+                      const href = cellHref(r.key, c.colKey);
                       const content = (
                         <>
                           <span className="flex min-w-0 items-center gap-2">
                             <span
                               aria-hidden
                               className="size-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: paymentMethodColor(c.colKey) }}
+                              style={{ backgroundColor: colColor(c.colKey) }}
                             />
                             <span className="truncate text-foreground">{colLabel(c.colKey)}</span>
                           </span>
@@ -153,17 +163,17 @@ export function CategoryBreakdownList({
       </ul>
 
       {usedCols.length > 0 && (
-        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground pt-1" aria-label="Formas de pagamento">
+        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground pt-1" aria-label={transposed ? 'Categorias' : 'Formas de pagamento'}>
           {usedCols.map((c) => (
             <li key={c.key} className="flex items-center gap-1.5">
-              <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: paymentMethodColor(c.key) }} />
+              <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: colColor(c.key) }} />
               {c.label}
             </li>
           ))}
         </ul>
       )}
 
-      <div className="hidden md:block pt-1">
+      <div className={transposed ? 'hidden' : 'hidden md:block pt-1'}>
         <a
           href="#crosstab-matrix"
           className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
