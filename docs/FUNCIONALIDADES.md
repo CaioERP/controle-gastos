@@ -1,7 +1,7 @@
 # Funcionalidades — catálogo do que está pronto
 
 > **Para quê:** um agente que chega sem contexto descobre aqui o que o app já faz, onde fica cada coisa e o que não pode quebrar, sem ler o histórico das conversas.
-> **Atualizado em:** 2026-10-24, com a main em `82be103` (Fases 0 a 6.2 mescladas, exceto B6-21). 643 testes no `npm run check`.
+> **Atualizado em:** 2026-10-24, com a main em `0014e84` (Fases 0 a 6.2 mescladas). 643 testes no `npm run check`.
 > **Quem atualiza:** o coordenador, a cada rodada mesclada. Quem cria uma feature nova acrescenta a seção dela no mesmo PR.
 
 Leia junto com:
@@ -23,7 +23,7 @@ Leia junto com:
 | 4 | Limites e metas, alertas, notificações, assinaturas, projeção de caixa | ✅ (perguntas com IA fora do escopo) |
 | 5 | Deploy (Supabase, cron, CI) | ⬜ com o usuário (H-06, P5-00) |
 | 6 / 6.1 | Novo Início com abas, barra inferior, PWA, push, horário das transações | ✅ |
-| 6.2 | Refinamento visual do site inteiro + backend mais firme + estabelecimentos | ✅, exceto **B6-21** (resposta imediata), em revisão no PR #104 |
+| 6.2 | Refinamento visual do site inteiro + backend mais firme + estabelecimentos | ✅ |
 
 **IA desligada** por decisão do usuário (A1-10): nada chama a Claude API. O valor `'llm'` continua no enum `CATEGORY_SOURCES` só por contrato.
 
@@ -289,6 +289,18 @@ Maquetes aprovadas: `docs/design/fase-6-2/` (direção "livro-caixa calmo").
 
 ---
 
+## 6.1 Resposta imediata (B6-21)
+
+- **Toggles da rosca e das barras:** trocam no cliente (estado local em `BreakdownDonut` e `PaymentMethodBars`) e atualizam a URL com `window.history.replaceState`, sem ida ao servidor. Recarregar a página respeita `rosca` e `barras`.
+- **Sinal de carregando:**
+  - `useTransition` com spinner em `FilterBar`, `PeriodOnlyBar`, `InstallmentsCardPicker` e no select de `CardSelector`;
+  - `useLinkStatus` nas abas que são `<Link>` (`HomeTabs`, `SectionTabs`, `CatalogTabs`, abas de `CardSelector`).
+- **`loading.tsx`** com esqueleto do layout em `/`, `/analise`, `/transacoes` e `/limites`.
+- **Streaming:**
+  - a seção ativa da Análise fica em `<Suspense>`;
+  - o banner de sugestões dos Limites vem em streaming: a página usa `getLimitsOverview(db, d, { withSuggestions: false })` e o banner usa `getSuggestedBudgets`.
+- **Gráficos abaixo da dobra** (rosca, evolução mensal, parcelas futuras) com `next/dynamic` e esqueleto do mesmo tamanho.
+
 ## 7. Pegadinhas conhecidas
 
 - **PGlite aceita um processo por vez.** Pare o `npm run dev` antes de qualquer `npm run db:*`.
@@ -306,7 +318,7 @@ Maquetes aprovadas: `docs/design/fase-6-2/` (direção "livro-caixa calmo").
 
 ## 8. Em aberto e fora do escopo
 
-- **B6-21** (Agente B, PR #104 em revisão): toggle da rosca sem ida ao servidor, sinal de carregando, `Suspense`, esqueletos e `next/dynamic`.
+- **Pendência da B6-21:** o streaming do Início com `Suspense` ainda não separa as consultas (o herói espera os gráficos). Detalhe em *Pendências de coordenação*.
 - **Depende do usuário:**
   - F0-07 e I1-01: conta real no Pluggy;
   - A2-02 (fatura em PDF) e P2-01: amostras em `.data/samples/`;

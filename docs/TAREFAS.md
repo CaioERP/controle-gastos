@@ -2,9 +2,9 @@
 
 > **Fonte única de status.** Editado **somente no checkout de integração** (`controle-gastos/`, branch `main`) — ver `AGENTS.md` §3.
 > Especificação detalhada de cada tarefa nos arquivos da coluna **Spec**.
-> **Última atualização por:** Coordenador / Revisor (2026-10-24 — Fase 6.2 mesclada, exceto B6-21; catálogo em `FUNCIONALIDADES.md`).
+> **Última atualização por:** Coordenador / Revisor (2026-10-24 — Fase 6.2 concluída; catálogo em `FUNCIONALIDADES.md`).
 >
-> **Prioridade atual:** fechar a B6-21 (Agente B). Fases 0 a 6.2 concluídas no resto. O que já existe está em [`FUNCIONALIDADES.md`](./FUNCIONALIDADES.md); como coordenar, em [`COORDENACAO.md`](./COORDENACAO.md). A Fase 5 (deploy) fica com o usuário; o teste do PWA e do push no celular depende do deploy com HTTPS.
+> **Prioridade atual:** nenhuma rodada aberta; a próxima é decidida com o usuário (`COORDENACAO.md` §8). Fases 0 a 6.2 concluídas. O que já existe está em [`FUNCIONALIDADES.md`](./FUNCIONALIDADES.md); como coordenar, em [`COORDENACAO.md`](./COORDENACAO.md). A Fase 5 (deploy) fica com o usuário; o teste do PWA e do push no celular depende do deploy com HTTPS.
 
 **Legenda:** ⬜ livre · 🟡 em andamento (quem) · 🔴 bloqueada (motivo em Pendências) · ✅ concluída · ⏸️ fora do escopo por enquanto
 
@@ -118,7 +118,7 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 | B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | ✅ (PR #100) |
 | B6-19 | Rosca com interface profunda: `toDonutSlices` puro e `BreakdownDonut` recebendo itens brutos (fim das 13 cópias nas abas) | B | B6-13 | ✅ (PR #94) |
 | B6-20 | Histórico por estabelecimento: páginas `/estabelecimentos` e `/estabelecimentos/[id]` (12 meses, por mês, formas de pagamento, histórico), filtro `estab` (contract: `merchantIds`) e links em todo lugar onde aparece um estabelecimento | B | B6-13, B6-14 | ✅ (PR #103) |
-| B6-21 | Resposta imediata: toggle da rosca sem ida ao servidor, sinal de carregando em filtros e abas (`useTransition`/`useLinkStatus`), streaming com `Suspense` e esqueletos, gráficos abaixo da dobra com `next/dynamic` | B | B6-13 | 🟡 Agente B — PR #104 em revisão |
+| B6-21 | Resposta imediata: toggle da rosca sem ida ao servidor, sinal de carregando em filtros e abas (`useTransition`/`useLinkStatus`), streaming com `Suspense` e esqueletos, gráficos abaixo da dobra com `next/dynamic` | B | B6-13 | ✅ (PR #104) |
 | A6-06 | Resumo de contas uma vez por requisição (`getRequestAccountsOverview` com `cache`); funções do Início aceitam `overview` | A | — | ✅ (PR #90) |
 | A6-07 | Livro-razão `src/server/ledger/`: recortes nomeados (`txLive`, `txPosted`…) usados por toda consulta; corrige busca, contagem da revisão e itens de fatura com mães divididas | A | — | ✅ (PR #92) |
 | A6-08 | Mesclagem única (R9): `mergeIncoming` puro usado por `persist` e `dedupe` | A | — | ✅ (PR #93) |
@@ -268,3 +268,4 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 - [Fase 6 — revisão #77–#88] 🟠 corrigidos nas branches antes do merge: troca de categoria nas últimas transações da aba Conta não salvava; metas fictícias com `<mês>-31` quebravam o `db:reset` em meses de 30 dias; variação do ritmo exibida como fração crua; links das roscas de Conta e Cartões sem o filtro de contas; card de push travado sem SW registrado. 🟢 restantes: cada rosca desenha as versões de desktop e celular (aviso do Recharts "width(0) and height(0)"); toggle "Este cartão | Todos" sem efeito nas parcelas da aba Cartões; rótulos do eixo Y do gráfico de saldo cortados; `getFreeToSpend` consultado duas vezes na aba Conta; `savePushSubscription` aceita endpoint não https; chave Push pode ser ligada com "No app" desligado (não envia); resultado de `unsubscribePush` não conferido — Coordenador, 2026-10-22
 - [Revisão F6.2 #90–#97, #91/#94/#96] 🟢 restantes: StatStrip com células translúcidas e célula vazia quando o número de itens é ímpar (B6-13); no celular a linha "+ ⋯" da página Transações ocupa uma linha só e a primeira transação fica em ~290 px, o alvo era ~260 (B6-14) — Coordenador, 2026-10-24
 - [Revisão F6.2 #98–#102] 🟢 restantes: `InstitutionSection` sem uso e aviso "configure o ciclo" virou só texto; espaço grande entre Contas e Cartões no celular (B6-16); `<aside>` vazio da variante escondida do "Precisa de você" ocupa um `space-y`; percentual dos KPIs divide por 1 quando o mês anterior é zero (B6-15); `CrosstabMobile` virou só um repasse (B6-17); rótulos em Title Case nas faixas de números e "Variação no Semestre" fixo (B6-18) — Coordenador, 2026-10-24
+- [Revisão F6.2 #104] 🟡 B6-21: o streaming do Início não acontece — os `<Suspense>` envolvem componentes que já recebem os dados prontos; para o herói aparecer antes, cada seção precisa virar Server Component assíncrono com a própria consulta. 🟢 o `opacity-60` dos filtros vale só para os chips — Coordenador, 2026-10-24

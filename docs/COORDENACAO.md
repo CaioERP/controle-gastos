@@ -124,8 +124,8 @@ npm run dev -- -p 3002   # confira as telas tocadas em 390 px e 1440 px
 
 ## 8. Onde paramos (2026-10-24)
 
-- **Main** `82be103`: toda a Fase 6.2 mesclada, exceto a B6-21. 643 testes.
-- **Agente B:** B6-21 (resposta imediata) entregue no **PR #104** (`b/B6-21-resposta-imediata`), aguardando revisão pelo checklist (§4) e pelos critérios da seção B6-21 de `docs/tarefas/fase-6-2-visual.md`. É o próximo passo do coordenador.
+- **Main** `0014e84`: Fase 6.2 inteira mesclada (B6-21 no PR #104). 643 testes. Nenhum PR aberto.
+- **Agente B:** sem tarefa reservada; o worktree `controle-gastos-b` ainda está na branch mesclada `b/B6-21-resposta-imediata`.
 - **Agente A:** sem tarefa reservada. O worktree `controle-gastos-a` ainda está na branch mesclada `a/A6-11-faster-reads`.
 - **Próximos passos possíveis** (decidir com o usuário):
   1. Fase 5, deploy: P5-00, depois de H-06;
