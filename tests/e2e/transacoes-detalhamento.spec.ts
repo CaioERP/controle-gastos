@@ -28,7 +28,7 @@ async function listBalance(page: Page): Promise<number> {
 test.describe('Detalhamento do dashboard para /transacoes', () => {
   test('a barra "Crédito à vista" abre a lista com a natureza do gráfico e o mesmo total', async ({ page }) => {
     // Mês corrente: os dados fictícios são gerados a partir da data do db:reset.
-    await page.goto('/');
+    await page.goto('/?aba=geral');
     const bars = page.getByRole('list', { name: 'Gastos por forma de pagamento' });
     const link = bars.locator('a[href*="forma=credit_card_single"]');
     await expect(link).toBeVisible();

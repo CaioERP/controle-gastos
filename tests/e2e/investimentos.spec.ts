@@ -47,7 +47,7 @@ test.describe('Investimentos (B3-01)', () => {
     await page.getByRole('button', { name: 'Salvar posição' }).click();
 
     // Verifica que a posição aparece na tabela
-    await expect(page.getByText('CDB Teste Manual')).toBeVisible();
+    await expect(page.getByText('CDB Teste Manual').first()).toBeVisible();
 
     // Clica na aba de proventos
     await page.getByRole('tab', { name: 'Proventos' }).click();
