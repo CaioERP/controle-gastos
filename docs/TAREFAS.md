@@ -110,7 +110,7 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 
 | ID | Tarefa | Agente | Depende de | Status |
 |---|---|---|---|---|
-| B6-13 | Fundação: `<Money tone="flow">`, `StatStrip`, `Section`, `SectionCard` leve, `PageHeader` novo, título da tela na barra do celular, privacidade/tema no Mais, barra inferior alinhada | B | — | ⬜ |
+| B6-13 | Fundação: `<Money tone="flow">`, `StatStrip`, `Section`, `SectionCard` leve, `PageHeader` novo, título da tela na barra do celular, privacidade/tema no Mais, barra inferior alinhada | B | — | 🟡 Agente B |
 | B6-14 | Linha de transação compacta (avatar da categoria, "Total do dia") e página Transações (busca + filtros numa linha, ⋯ Exportar, resumo; filtros em Sheet no celular) | B | B6-13 | ⬜ |
 | B6-15 | Início: abas + período numa linha, "Precisa de você" em chips, herói "Livre para gastar", saldo sem eixo Y, fluxo em linha, desktop em 2 colunas; Cartões e Visão geral no estilo novo | B | B6-13, B6-14, B6-19, A6-06 | ⬜ |
 | B6-16 | Contas e cartões: faixa de 4 números, listas por tipo, cartão em linha com barra de limite, desktop em 2 colunas | B | B6-13 | ⬜ |
