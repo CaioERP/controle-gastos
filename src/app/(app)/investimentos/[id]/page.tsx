@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getDb } from '@/server/db/client';
 import { getHoldingDetail } from '@/server/queries/investments';
 import { PageHeader } from '@/components/layout/page-header';
+import { StatStrip } from '@/components/layout/stat-strip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -76,57 +77,35 @@ export default async function HoldingDetailPage({ params }: HoldingDetailPagePro
         }
       />
 
-      {/* Cards de resumo da posição */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Posição atual
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Money cents={holding.currentValueCents} className="text-xl font-semibold sm:text-2xl" />
-          </CardContent>
-        </Card>
-
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Valor aplicado
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Money cents={holding.investedCents} className="text-xl font-semibold sm:text-2xl" />
-          </CardContent>
-        </Card>
-
-        <Card size="sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Resultado
-            </CardTitle>
-            <Badge variant={holding.profitBps >= 0 ? 'default' : 'destructive'}>
-              {profitBadge}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <Money cents={holding.profitCents} signed colored className="text-xl font-semibold sm:text-2xl" />
-          </CardContent>
-        </Card>
-
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Quantidade em custódia
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-xl font-semibold font-mono sm:text-2xl">
-              {formatQtyBR(holding.quantity)}
-            </span>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Resumo da posição em StatStrip */}
+      <StatStrip
+        items={[
+          {
+            label: 'Posição atual',
+            value: <Money cents={holding.currentValueCents} />,
+          },
+          {
+            label: 'Valor aplicado',
+            value: <Money cents={holding.investedCents} />,
+          },
+          {
+            label: 'Resultado',
+            value: (
+              <span className="flex items-baseline gap-2">
+                <Money cents={holding.profitCents} signed colored />
+                <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                  ({profitBadge})
+                </span>
+              </span>
+            ),
+            tone: holding.profitBps >= 0 ? 'positive' : 'negative',
+          },
+          {
+            label: 'Quantidade em custódia',
+            value: <span className="font-mono">{formatQtyBR(holding.quantity)}</span>,
+          },
+        ]}
+      />
 
       {/* Informações detalhadas do ativo */}
       <Card>

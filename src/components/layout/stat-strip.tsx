@@ -5,6 +5,8 @@ export type StatItem = {
   label: string;
   value: React.ReactNode;
   hint?: React.ReactNode;
+  testId?: string;
+  tone?: 'default' | 'positive' | 'warning' | 'negative' | 'flow';
 };
 
 const MD_COLS: Record<number, string> = {
@@ -12,6 +14,14 @@ const MD_COLS: Record<number, string> = {
   2: 'md:grid-cols-2',
   3: 'md:grid-cols-3',
   4: 'md:grid-cols-4',
+};
+
+const TONE_CLASSES: Record<NonNullable<StatItem['tone']>, string> = {
+  default: 'text-foreground',
+  positive: 'text-emerald-600 dark:text-emerald-400',
+  warning: 'text-amber-600 dark:text-amber-400',
+  negative: 'text-red-600 dark:text-red-400',
+  flow: 'text-foreground',
 };
 
 export function StatStrip({ items, className }: { items: StatItem[]; className?: string }) {
@@ -26,9 +36,18 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
       )}
     >
       {items.map((item, index) => (
-        <div key={index} className="bg-muted/40 p-4 md:p-5 flex flex-col justify-between min-w-0">
+        <div
+          key={index}
+          data-testid={item.testId}
+          className="bg-muted/40 p-4 md:p-5 flex flex-col justify-between min-w-0"
+        >
           <div className="text-xs text-muted-foreground">{item.label}</div>
-          <div className="text-xl md:text-2xl font-semibold tabular-nums tracking-tight mt-0.5 text-foreground truncate">
+          <div
+            className={cn(
+              'text-xl md:text-2xl font-semibold tabular-nums tracking-tight mt-0.5 truncate',
+              item.tone ? TONE_CLASSES[item.tone] : 'text-foreground'
+            )}
+          >
             {item.value}
           </div>
           {item.hint ? (

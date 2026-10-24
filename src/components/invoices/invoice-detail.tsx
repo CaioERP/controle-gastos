@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateBR } from '@/components/format/date-br';
 import { Money } from '@/components/format/money';
 import { EmptyState } from '@/components/states/empty-state';
+import { CategoryAvatar } from '@/components/transactions/category-avatar';
 import { formatDateBR } from '@/server/domain/dates';
 import { INVOICE_STATUS_LABELS } from '@/server/domain/labels';
 import type { InvoiceSummary } from '@/server/queries/invoices';
@@ -124,9 +125,9 @@ export function InvoiceDetail({ invoice, extras, items, rootColors }: InvoiceDet
                 <section key={g.date} aria-label={`Compras de ${formatDateBR(g.date)}`}>
                   <div className="flex items-center justify-between border-b pb-1 text-xs text-muted-foreground">
                     <DateBR date={g.date} />
-                    <Money cents={g.totalCents} className="font-normal" />
+                    {g.items.length > 1 && <Money cents={g.totalCents} className="font-normal" />}
                   </div>
-                  <ul className="divide-y">
+                  <ul className="divide-y divide-border/40">
                     {g.items.map((t) => {
                       const projected = t.status === 'projected';
                       return (
@@ -134,39 +135,43 @@ export function InvoiceDetail({ invoice, extras, items, rootColors }: InvoiceDet
                           key={t.id}
                           data-testid="invoice-item"
                           data-status={t.status}
-                          className={cn('flex items-start justify-between gap-3 py-2', projected && 'italic text-muted-foreground')}
+                          className={cn('flex items-center justify-between gap-3 py-2', projected && 'italic text-muted-foreground')}
                         >
-                          <div className="min-w-0 space-y-0.5">
-                            <div className="flex flex-wrap items-center gap-1.5 text-sm">
-                              <span className="truncate">{t.description}</span>
-                              {t.installment && (
-                                <Badge variant="outline" className="h-4 px-1 text-[10px] not-italic tabular-nums">
-                                  {t.installment.number}/{t.installment.total}
-                                </Badge>
-                              )}
-                              {projected && <span className="text-[10px]">(prevista)</span>}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground not-italic">
-                              {t.category ? (
-                                <span className="flex items-center gap-1">
-                                  <span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: t.category.color }} />
-                                  {t.category.parentName ? `${t.category.parentName} › ` : ''}
-                                  {t.category.name}
-                                </span>
-                              ) : (
-                                <span>Sem categoria</span>
-                              )}
-                              {t.card && (
-                                <span>
-                                  · cartão •{t.card.last4}
-                                  {t.card.isVirtual ? ' virtual' : ''}
-                                </span>
-                              )}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <CategoryAvatar category={t.category} />
+                            <div className="min-w-0 space-y-0.5">
+                              <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                                <span className="truncate font-medium text-foreground">{t.description}</span>
+                                {t.installment && (
+                                  <Badge variant="outline" className="h-4 px-1 text-[10px] not-italic tabular-nums">
+                                    {t.installment.number}/{t.installment.total}
+                                  </Badge>
+                                )}
+                                {projected && <span className="text-[10px] text-muted-foreground">(prevista)</span>}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground not-italic">
+                                {t.category ? (
+                                  <span>
+                                    {t.category.parentName ? `${t.category.parentName} › ` : ''}
+                                    {t.category.name}
+                                  </span>
+                                ) : (
+                                  <span>Sem categoria</span>
+                                )}
+                                {t.card && (
+                                  <span>
+                                    · cartão •{t.card.last4}
+                                    {t.card.isVirtual ? ' virtual' : ''}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          <Money sensitive={false}
+                          <Money
+                            sensitive={false}
                             cents={invoiceItemValue(t)}
-                            className={cn('shrink-0 text-sm', invoiceItemValue(t) < 0 && 'text-emerald-600 dark:text-emerald-400')}
+                            tone="flow"
+                            className={cn('shrink-0 text-sm font-medium', invoiceItemValue(t) < 0 && 'text-emerald-600 dark:text-emerald-400')}
                           />
                         </li>
                       );
