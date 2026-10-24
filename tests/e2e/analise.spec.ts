@@ -51,13 +51,43 @@ test.describe('Análise', () => {
   });
 
   test('seletor de dimensão da evolução vai para a URL', async ({ page }) => {
-    await page.goto('/analise');
+    await page.goto('/analise?secao=evolucao');
     const nav = page.getByRole('navigation', { name: 'Dimensão da evolução' });
     await nav.getByRole('link', { name: 'Forma de pagamento' }).click();
     await expect(page).toHaveURL(/dim=paymentMethod/);
     await expect(nav.getByRole('link', { name: 'Forma de pagamento' })).toHaveAttribute('aria-current', 'true');
     await page.getByRole('button', { name: 'Linhas' }).click();
     await expect(page.getByRole('button', { name: 'Linhas' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('trocar de seção preserva período e filtros na URL', async ({ page }) => {
+    await page.goto('/analise?mes=2026-09');
+    const nav = page.getByRole('navigation', { name: 'Seções da análise' });
+
+    // Troca para Formas
+    await nav.getByRole('link', { name: /Formas/ }).click();
+    await expect(page).toHaveURL(/secao=formas/);
+    expect(page.url()).toContain('mes=2026-09');
+
+    // Troca para Lojas
+    await nav.getByRole('link', { name: 'Lojas' }).click();
+    await expect(page).toHaveURL(/secao=lojas/);
+    expect(page.url()).toContain('mes=2026-09');
+
+    // Troca para Evolução
+    await nav.getByRole('link', { name: 'Evolução' }).click();
+    await expect(page).toHaveURL(/secao=evolucao/);
+    expect(page.url()).toContain('mes=2026-09');
+
+    // Troca para Comparar
+    await nav.getByRole('link', { name: /Comparar/ }).click();
+    await expect(page).toHaveURL(/secao=comparar/);
+    expect(page.url()).toContain('mes=2026-09');
+
+    // Volta para Categorias
+    await nav.getByRole('link', { name: 'Categorias' }).click();
+    expect(page.url()).toContain('mes=2026-09');
+    await expect(page.getByRole('list', { name: 'Gastos por categoria' })).toBeVisible();
   });
 
   test('em 390 px a página não rola na horizontal (matriz vira lista)', async ({ page }) => {
