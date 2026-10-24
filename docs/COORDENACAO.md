@@ -132,7 +132,6 @@ npm run dev -- -p 3002   # confira as telas tocadas em 390 px e 1440 px
   2. F0-07 e I1-01 com conta real do Pluggy (H-01, H-02);
   3. A2-02, fatura em PDF (H-04);
   4. uma nova fase de produto, a partir de `MELHORIAS.md`.
-- **Limpeza pendente:**
-  - worktree `controle-gastos-review` (temporário);
+- **Limpeza pendente** (o worktree `controle-gastos-review` já foi removido):
   - branch remota `a/A6-11-faster-reads`, já mesclada;
   - cache do npm (cerca de 1,7 GB), quando os agentes pararem.
