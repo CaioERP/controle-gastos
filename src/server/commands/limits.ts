@@ -102,6 +102,37 @@ export const deleteSpendingLimitInput = z.object({
   limitId: z.string().uuid(),
 });
 
+export const setSpendingLimitActiveInput = z.object({
+  id: z.string().uuid(),
+  isActive: z.boolean(),
+});
+
+export type SetSpendingLimitActiveInput = z.infer<typeof setSpendingLimitActiveInput>;
+
+export async function setSpendingLimitActive(
+  db: Db,
+  input: SetSpendingLimitActiveInput,
+): Promise<void> {
+  try {
+    const data = setSpendingLimitActiveInput.parse(input);
+
+    const updated = await db
+      .update(spendingLimits)
+      .set({
+        isActive: data.isActive,
+        updatedAt: new Date(),
+      })
+      .where(eq(spendingLimits.id, data.id))
+      .returning({ id: spendingLimits.id });
+
+    if (updated.length === 0) {
+      throw new CommandError('NOT_FOUND', 'Limite de gastos não encontrado');
+    }
+  } catch (err) {
+    throw toCommandError(err);
+  }
+}
+
 export async function deleteSpendingLimit(
   db: Db,
   input: z.infer<typeof deleteSpendingLimitInput>,

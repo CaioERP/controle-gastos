@@ -1,9 +1,9 @@
-import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { transactions } from '@/server/db/schema';
 import { addDaysISO, today as getToday } from '@/server/domain/dates';
-import { getAccountsOverview } from '@/server/queries/accounts';
-import { notSplitParent } from '@/server/queries/split-filter';
+import { txPosted } from '@/server/ledger';
+import { getAccountsOverview, type InstitutionWithAccounts } from '@/server/queries/accounts';
 import { cashAccountIds } from './accounts';
 import { getFreeToSpend } from './free-to-spend';
 
@@ -78,10 +78,10 @@ export function rebuildDailyBalance(
 export async function getCashAccountsTab(
   db: Db,
   period: { from: string; to: string },
-  opts: { today?: string } = {},
+  opts: { today?: string; overview?: InstitutionWithAccounts[] } = {},
 ): Promise<CashAccountsTab> {
   const todayStr = opts.today ?? getToday();
-  const overview = await getAccountsOverview(db, { today: todayStr });
+  const overview = opts.overview ?? (await getAccountsOverview(db, { today: todayStr }));
   const cashIds = cashAccountIds(overview);
   const cashIdSet = new Set(cashIds);
 
@@ -118,9 +118,7 @@ export async function getCashAccountsTab(
           .where(
             and(
               inArray(transactions.accountId, cashIds),
-              isNull(transactions.deletedAt),
-              notSplitParent,
-              eq(transactions.status, 'posted'),
+              txPosted,
               sql`${transactions.date} > ${historyFrom}`,
               sql`${transactions.date} <= ${todayStr}`,
             ),
@@ -143,7 +141,7 @@ export async function getCashAccountsTab(
   );
 
   // 3. Linha de previsão até o fim do mês com eventos do Livre para gastar
-  const fts = await getFreeToSpend(db, opts);
+  const fts = await getFreeToSpend(db, { ...opts, overview });
   const untilDate = fts.untilDate;
 
   const projectedPoints: BalancePoint[] = [
@@ -189,9 +187,7 @@ export async function getCashAccountsTab(
           .where(
             and(
               inArray(transactions.accountId, cashIds),
-              isNull(transactions.deletedAt),
-              notSplitParent,
-              eq(transactions.status, 'posted'),
+              txPosted,
               gte(transactions.date, period.from),
               lte(transactions.date, period.to),
               ne(transactions.kind, 'transfer'),

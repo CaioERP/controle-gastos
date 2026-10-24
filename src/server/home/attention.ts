@@ -4,7 +4,7 @@ import type { Db } from '@/server/db/client';
 import { syncRuns } from '@/server/db/schema';
 import { addDaysISO, today as getToday } from '@/server/domain/dates';
 import type { ConnectionStatus } from '@/server/domain/enums';
-import { getAccountsOverview } from '@/server/queries/accounts';
+import { getAccountsOverview, type InstitutionWithAccounts } from '@/server/queries/accounts';
 import { listConnections } from '@/server/queries/connections';
 import { summarizeAccounts } from '@/server/queries/dashboard';
 import { getLimitsOverview } from '@/server/queries/limits';
@@ -45,7 +45,7 @@ export type AttentionItem =
 
 export async function getAttentionItems(
   db: Db,
-  opts: { today?: string; now?: Date } = {},
+  opts: { today?: string; now?: Date; overview?: InstitutionWithAccounts[] } = {},
 ): Promise<AttentionItem[]> {
   const todayStr = opts.today ?? getToday();
   const maxDue = addDaysISO(todayStr, 7);
@@ -53,7 +53,7 @@ export async function getAttentionItems(
   const [reviewCount, accountsOverview, connectionsList, limitsOverview, recentRuns] =
     await Promise.all([
       getReviewCount(db),
-      getAccountsOverview(db, { today: todayStr }),
+      opts.overview ?? getAccountsOverview(db, { today: todayStr }),
       listConnections(db),
       getLimitsOverview(db, todayStr),
       // Só a execução mais recente de cada job (a tabela cresce a cada rodada do agendador)
