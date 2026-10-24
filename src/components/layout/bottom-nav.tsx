@@ -35,7 +35,7 @@ export function BottomNav({ reviewCount = 0, footerSlot }: BottomNavProps) {
   return (
     <nav
       aria-label="Navegação inferior"
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur border-t border-border h-16 pb-2 grid grid-cols-5 items-end"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur border-t border-border h-[calc(4rem+env(safe-area-inset-bottom))] pb-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-5 items-end"
     >
       {PRIMARY_NAV.map((item) => {
         const active = isNavItemActive(item.href, pathname);
