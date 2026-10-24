@@ -11,27 +11,22 @@ import { formatBRL } from '@/server/domain/money';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SectionCard, SectionEmpty } from '@/components/charts/section-card';
 import { BreakdownToggle, type BreakdownDimension } from '@/components/charts/breakdown-toggle';
+import { toDonutSlices, type DonutSlice } from '@/components/charts/donut-slices';
 import { cn } from '@/lib/utils';
 import type { BreakdownItem } from '@/server/queries/breakdown';
+import type { TxFilters } from '@/server/domain/filters';
+import type { CategoryLinkOptions } from '@/components/charts/links';
 
-export type DonutSlice = {
-  key: string;
-  label: string;
-  color: string;
-  totalCents: number;
-  href: string | null;
-  isOthers?: boolean;
-  grouped?: BreakdownItem[];
-};
+export type { DonutSlice };
 
 export type BreakdownDonutProps = {
   title: string;
   description?: React.ReactNode;
   mode: BreakdownDimension;
-  byCategory: DonutSlice[];
-  byPaymentMethod: DonutSlice[];
-  byCategoryMobile?: DonutSlice[];
-  byPaymentMethodMobile?: DonutSlice[];
+  byCategory: BreakdownItem[];
+  byPaymentMethod: BreakdownItem[];
+  filters: TxFilters;
+  linkOptions?: CategoryLinkOptions;
   totalCents: number;
   className?: string;
 };
@@ -219,8 +214,8 @@ function DonutView({ slices, totalCents, ariaLabel, variant }: DonutViewProps) {
 
 /**
  * Rosca de gastos com toggle Categoria | Forma de pagamento e detalhe de "Outras".
- * No desktop, mostra até 7 fatias + Outras (com hover na fatia e na legenda).
- * No celular, mostra até 5 fatias + Outras (com toque na legenda para expandir).
+ * Recebe os itens brutos de categoria e forma de pagamento e gera as fatias
+ * para desktop (7 itens) e mobile (5 itens) internamente via `toDonutSlices`.
  */
 export function BreakdownDonut({
   title,
@@ -228,13 +223,30 @@ export function BreakdownDonut({
   mode,
   byCategory,
   byPaymentMethod,
-  byCategoryMobile,
-  byPaymentMethodMobile,
+  filters,
+  linkOptions,
   totalCents,
   className,
 }: BreakdownDonutProps) {
-  const desktopSlices = mode === 'forma' ? byPaymentMethod : byCategory;
-  const mobileSlices = mode === 'forma' ? (byPaymentMethodMobile ?? byPaymentMethod) : (byCategoryMobile ?? byCategory);
+  const desktopCategory = React.useMemo(
+    () => toDonutSlices({ items: byCategory, dimension: 'categoria', filters, linkOptions, limit: 7 }),
+    [byCategory, filters, linkOptions]
+  );
+  const mobileCategory = React.useMemo(
+    () => toDonutSlices({ items: byCategory, dimension: 'categoria', filters, linkOptions, limit: 5 }),
+    [byCategory, filters, linkOptions]
+  );
+  const desktopPm = React.useMemo(
+    () => toDonutSlices({ items: byPaymentMethod, dimension: 'forma', filters, linkOptions, limit: 7 }),
+    [byPaymentMethod, filters, linkOptions]
+  );
+  const mobilePm = React.useMemo(
+    () => toDonutSlices({ items: byPaymentMethod, dimension: 'forma', filters, linkOptions, limit: 5 }),
+    [byPaymentMethod, filters, linkOptions]
+  );
+
+  const desktopSlices = mode === 'forma' ? desktopPm : desktopCategory;
+  const mobileSlices = mode === 'forma' ? mobilePm : mobileCategory;
   const activeLabel = mode === 'forma' ? 'gastos por forma de pagamento' : 'gastos por categoria';
 
   return (

@@ -1,5 +1,6 @@
 import type { CategorizationRule } from '@/server/domain/types';
 import { normalizeForMatch } from '@/server/ingestion/normalize/text';
+import { logServerWarn } from '@/server/log';
 
 export type RuleTx = {
   description: string;
@@ -25,7 +26,7 @@ function compileRegex(pattern: string): RegExp | null {
       regexCache.set(pattern, new RegExp(pattern, 'i'));
     } catch {
       // Regex inválida não quebra a categorização: a regra simplesmente não casa (aviso uma única vez)
-      console.warn(`[categorização] regra com expressão regular inválida ignorada: ${pattern}`);
+      logServerWarn('categorização', `regra com expressão regular inválida ignorada: ${pattern}`);
       regexCache.set(pattern, null);
     }
   }

@@ -1,6 +1,7 @@
 import { categorizeTransactions } from '@/server/categorization/engine';
 import { evaluateSpendingLimits } from '@/server/commands/limits';
 import type { Db } from '@/server/db/client';
+import { logServerError } from '@/server/log';
 import { runClassifyKindPipelineStep } from './classify-kind';
 import { runInstallmentsPipelineStep } from './installments';
 import { runInvoicesPipelineStep } from './invoices';
@@ -58,7 +59,7 @@ export async function runPipeline(ctx: PipelineContext, steps = PIPELINE_STEPS):
       await step.run(ctx);
     } catch (err) {
       ctx.stats[`error:${step.name}`] = 1;
-      console.error(`[pipeline] passo ${step.name} falhou`, err);
+      logServerError('pipeline', err, { step: step.name });
     }
   }
 }
