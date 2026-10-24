@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { z } from 'zod';
 import { TZ, today } from '@/server/domain/dates';
 import { toCents } from '@/server/domain/money';
+import { logServerWarn } from '@/server/log';
 import type { QuoteResult } from './types';
 
 export const FREE_BRAPI_TICKERS = ['PETR4', 'VALE3', 'MGLU3', 'ITUB4'] as const;
@@ -89,8 +90,9 @@ export async function fetchB3Quotes(
   if (!token) {
     const skipped = uniqueTickers.filter((t) => !FREE_TICKERS_SET.has(t));
     if (skipped.length > 0 && !hasWarnedBrapiToken) {
-      console.warn(
-        `[brapi] BRAPI_TOKEN não configurado. Apenas ${FREE_BRAPI_TICKERS.join(', ')} estão disponíveis sem token. Ignorando: ${skipped.join(', ')}`,
+      logServerWarn(
+        'brapi',
+        `BRAPI_TOKEN não configurado. Apenas ${FREE_BRAPI_TICKERS.join(', ')} estão disponíveis sem token. Ignorando: ${skipped.join(', ')}`,
       );
       hasWarnedBrapiToken = true;
     }
@@ -137,7 +139,7 @@ export async function fetchB3Quotes(
     const summary = `brapi: ${failures.join('; ')}`;
     // Sem nenhuma cotação, a falha precisa chegar a stats.errors (ex.: 401/429 em todos).
     if (results.length === 0) throw new Error(summary);
-    console.warn(`[brapi] cotações parciais (${results.length} ok). ${summary}`);
+    logServerWarn('brapi', `cotações parciais (${results.length} ok). ${summary}`);
   }
 
   return results;

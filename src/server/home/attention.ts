@@ -1,5 +1,7 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns';
+import { desc } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
+import { syncRuns } from '@/server/db/schema';
 import { addDaysISO, today as getToday } from '@/server/domain/dates';
 import type { ConnectionStatus } from '@/server/domain/enums';
 import { getAccountsOverview } from '@/server/queries/accounts';
@@ -33,21 +35,36 @@ export type AttentionItem =
       name: string;
       spentPercent: number;
       href: string;
+    }
+  | {
+      kind: 'job_error';
+      job: string;
+      failedAt: string;
+      href: '/conexoes';
     };
 
 export async function getAttentionItems(
   db: Db,
-  opts: { today?: string } = {},
+  opts: { today?: string; now?: Date } = {},
 ): Promise<AttentionItem[]> {
   const todayStr = opts.today ?? getToday();
   const maxDue = addDaysISO(todayStr, 7);
 
-  const [reviewCount, accountsOverview, connectionsList, limitsOverview] =
+  const [reviewCount, accountsOverview, connectionsList, limitsOverview, recentRuns] =
     await Promise.all([
       getReviewCount(db),
       getAccountsOverview(db, { today: todayStr }),
       listConnections(db),
       getLimitsOverview(db, todayStr),
+      db
+        .select({
+          job: syncRuns.job,
+          status: syncRuns.status,
+          finishedAt: syncRuns.finishedAt,
+          startedAt: syncRuns.startedAt,
+        })
+        .from(syncRuns)
+        .orderBy(desc(syncRuns.startedAt)),
     ]);
 
   const items: AttentionItem[] = [];
@@ -112,6 +129,29 @@ export async function getAttentionItems(
         name: lim.name,
         spentPercent: lim.spentPercent,
         href: lim.actionUrl,
+      });
+    }
+  }
+
+  // 5. job_error: execução mais recente de cada job em sync_runs que falhou nas últimas 48 h
+  const latestByJob = new Map<string, (typeof recentRuns)[number]>();
+  for (const run of recentRuns) {
+    if (!latestByJob.has(run.job)) {
+      latestByJob.set(run.job, run);
+    }
+  }
+
+  const now = opts.now ?? new Date();
+  const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+  for (const [job, run] of latestByJob) {
+    const failedDate = run.finishedAt ?? run.startedAt;
+    if (run.status === 'error' && failedDate && failedDate >= fortyEightHoursAgo && failedDate <= now) {
+      items.push({
+        kind: 'job_error',
+        job,
+        failedAt: failedDate.toISOString(),
+        href: '/conexoes',
       });
     }
   }
