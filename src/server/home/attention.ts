@@ -56,15 +56,16 @@ export async function getAttentionItems(
       getAccountsOverview(db, { today: todayStr }),
       listConnections(db),
       getLimitsOverview(db, todayStr),
+      // Só a execução mais recente de cada job (a tabela cresce a cada rodada do agendador)
       db
-        .select({
+        .selectDistinctOn([syncRuns.job], {
           job: syncRuns.job,
           status: syncRuns.status,
           finishedAt: syncRuns.finishedAt,
           startedAt: syncRuns.startedAt,
         })
         .from(syncRuns)
-        .orderBy(desc(syncRuns.startedAt)),
+        .orderBy(syncRuns.job, desc(syncRuns.startedAt)),
     ]);
 
   const items: AttentionItem[] = [];
