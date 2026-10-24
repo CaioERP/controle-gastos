@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { MoreVerticalIcon, ArrowUpRightIcon, EyeOffIcon, EyeIcon } from 'lucide-react';
+import { ArrowUpRightIcon, EyeIcon, EyeOffIcon, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -22,12 +22,22 @@ import { formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type AccountRowProps = {
-  account: InstitutionWithAccounts['accounts'][number];
+  account: InstitutionWithAccounts['accounts'][number] & {
+    institutionColor?: string;
+    institutionName?: string;
+  };
+  institution?: {
+    name: string;
+    color: string;
+  };
 };
 
-export function AccountRow({ account }: AccountRowProps) {
+export function AccountRow({ account, institution }: AccountRowProps) {
   const [renameOpen, setRenameOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
+
+  const instName = institution?.name ?? account.institutionName ?? '';
+  const instColor = institution?.color ?? account.institutionColor ?? '#71717a';
 
   const handleToggleIncludeInTotals = (checked: boolean) => {
     startTransition(async () => {
@@ -58,37 +68,44 @@ export function AccountRow({ account }: AccountRowProps) {
     });
   };
 
-  const timeAgo = account.balanceUpdatedAt && isValid(new Date(account.balanceUpdatedAt))
-    ? formatDistanceToNow(new Date(account.balanceUpdatedAt), { addSuffix: true, locale: ptBR })
-    : null;
+  const timeAgo =
+    account.balanceUpdatedAt && isValid(new Date(account.balanceUpdatedAt))
+      ? formatDistanceToNow(new Date(account.balanceUpdatedAt), { addSuffix: true, locale: ptBR })
+      : null;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg border bg-card gap-3 hover:border-foreground/20 transition-colors shadow-2xs">
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm text-foreground">
-            {account.displayName ?? account.name}
-          </span>
-          {account.displayName && (
-            <span className="text-[11px] text-muted-foreground">({account.name})</span>
-          )}
-          {account.isHidden && (
-            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-              Oculta
+    <div className="flex items-center justify-between gap-3 py-3 border-b border-border/40 last:border-b-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <span
+          className="size-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: instColor }}
+          aria-hidden="true"
+        />
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-medium text-sm text-foreground truncate">
+              {account.displayName ?? account.name}
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{ACCOUNT_TYPE_LABELS[account.type]}</span>
-          {timeAgo && <span>· atualizado {timeAgo}</span>}
+            {account.displayName && (
+              <span className="text-xs text-muted-foreground truncate">({account.name})</span>
+            )}
+            {account.isHidden && (
+              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
+                Oculta
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">
+            {instName ? `${instName} · ` : ''}
+            {ACCOUNT_TYPE_LABELS[account.type]}
+            {timeAgo && ` · sincronizado ${timeAgo}`}
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between sm:justify-end gap-4">
+      <div className="flex items-center gap-2 shrink-0">
         <div className="text-right">
-          <div className="text-sm font-semibold tabular-nums">
-            <Money cents={account.balanceCents} />
-          </div>
+          <Money cents={account.balanceCents} className="text-sm font-semibold tabular-nums" />
         </div>
 
         <DropdownMenu>
@@ -97,17 +114,15 @@ export function AccountRow({ account }: AccountRowProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className="size-8 text-muted-foreground hover:text-foreground"
                 aria-label={`Opções da conta ${account.displayName ?? account.name}`}
               >
-                <MoreVerticalIcon className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             }
           />
           <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-              Renomear
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRenameOpen(true)}>Renomear</DropdownMenuItem>
 
             <div className="flex items-center justify-between px-2 py-1.5 text-xs">
               <span className="text-muted-foreground">Incluir nos totais</span>
