@@ -163,7 +163,7 @@ export function ManualTransactionDialog({ accounts, categories, today }: ManualT
         render={
           <Button variant="default" size="sm" className="gap-1.5">
             <Plus className="size-4" />
-            <span>Novo lançamento</span>
+            <span className="hidden sm:inline">Novo lançamento</span>
           </Button>
         }
       />

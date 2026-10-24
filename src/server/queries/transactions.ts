@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
-import { accounts, transactions, transactionSources } from '@/server/db/schema';
+import { accounts, categories, invoices, transactions, transactionSources } from '@/server/db/schema';
 import { TX_KINDS, type Source } from '@/server/domain/enums';
 import type { TxFilters } from '@/server/domain/filters';
 import { accountVisible, txLive } from '@/server/ledger';
@@ -142,5 +142,17 @@ export async function getReviewCount(db: Db): Promise<number> {
     .from(transactions)
     .innerJoin(accounts, eq(accounts.id, transactions.accountId))
     .where(and(eq(transactions.needsReview, true), txLive, accountVisible));
+  return Number(row?.count ?? 0);
+}
+
+/** Quantos lançamentos a lista de Transações tem com estes filtros (mesmo critério de `listTransactions`). */
+export async function countTransactions(db: Db, f: TxFilters): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(transactions)
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+    .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
+    .leftJoin(categories, eq(categories.id, transactions.categoryId))
+    .where(buildTxWhere(f, { forTotals: false, defaultKinds: TX_KINDS }));
   return Number(row?.count ?? 0);
 }

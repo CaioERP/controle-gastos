@@ -68,10 +68,11 @@ type CategoryBadgeProps = {
   category: BadgeCategory;
   source?: CategorySource;
   className?: string;
+  emptyLabel?: string;
 };
 
 /** Visual do badge de categoria (sem comportamento: quem usa decide se é botão). */
-export function CategoryBadgeContent({ category, source, className }: CategoryBadgeProps) {
+export function CategoryBadgeContent({ category, source, className, emptyLabel = 'Categorizar' }: CategoryBadgeProps) {
   if (!category) {
     return (
       <span
@@ -82,7 +83,7 @@ export function CategoryBadgeContent({ category, source, className }: CategoryBa
         )}
       >
         <TagIcon className="size-3" aria-hidden="true" />
-        Sem categoria
+        {emptyLabel}
       </span>
     );
   }

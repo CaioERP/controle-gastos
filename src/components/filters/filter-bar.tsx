@@ -22,6 +22,7 @@ type FilterBarProps = {
    * Agregações: reportáveis (R2, padrão). Lista de transações: todas.
    */
   defaultKinds?: readonly TxKind[];
+  children?: React.ReactNode;
 };
 
 export function FilterBar({
@@ -29,6 +30,7 @@ export function FilterBar({
   categories,
   tags,
   defaultKinds = REPORTABLE_KINDS,
+  children,
 }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -98,6 +100,8 @@ export function FilterBar({
           tags={tags}
           onChange={(patch) => updateFilters(patch)}
         />
+
+        {children && <div className="flex-1 min-w-[200px]">{children}</div>}
       </div>
 
       <ActiveFilterChips
