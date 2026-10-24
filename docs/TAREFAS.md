@@ -115,7 +115,7 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 | B6-15 | Início: abas + período numa linha, "Precisa de você" em chips, herói "Livre para gastar", saldo sem eixo Y, fluxo em linha, desktop em 2 colunas; Cartões e Visão geral no estilo novo | B | B6-13, B6-14, B6-19, A6-06 | ⬜ |
 | B6-16 | Contas e cartões: faixa de 4 números, listas por tipo, cartão em linha com barra de limite, desktop em 2 colunas | B | B6-13 | 🟡 Agente B — PR #98 em revisão |
 | B6-17 | Análise por seções (`secao`): Categorias com lista + barra por forma, total e "o que mais mudou"; tabela categoria × forma mantida no desktop | B | B6-13 | 🟡 Agente B — PR #99 em revisão |
-| B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | 🟡 Agente B |
+| B6-18 | Demais páginas: Faturas, Revisão, Limites, Assinaturas, Projeção, Investimentos, Patrimônio, Categorias, Conexões, Importar, Notificações | B | B6-13 | 🟡 Agente B — PR #100 em revisão |
 | B6-19 | Rosca com interface profunda: `toDonutSlices` puro e `BreakdownDonut` recebendo itens brutos (fim das 13 cópias nas abas) | B | B6-13 | 🟡 Agente B — PR #94 em revisão |
 | B6-20 | Histórico por estabelecimento: páginas `/estabelecimentos` e `/estabelecimentos/[id]` (12 meses, por mês, formas de pagamento, histórico), filtro `estab` (contract: `merchantIds`) e links em todo lugar onde aparece um estabelecimento | B | B6-13, B6-14 | ⬜ |
 | B6-21 | Resposta imediata: toggle da rosca sem ida ao servidor, sinal de carregando em filtros e abas (`useTransition`/`useLinkStatus`), streaming com `Suspense` e esqueletos, gráficos abaixo da dobra com `next/dynamic` | B | B6-13 | ⬜ |
