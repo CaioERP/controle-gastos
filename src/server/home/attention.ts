@@ -47,7 +47,7 @@ export async function getAttentionItems(
       getReviewCount(db),
       getAccountsOverview(db, { today: todayStr }),
       listConnections(db),
-      getLimitsOverview(db, todayStr),
+      getLimitsOverview(db, todayStr, { withSuggestions: false }),
     ]);
 
   const items: AttentionItem[] = [];

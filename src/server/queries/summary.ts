@@ -40,8 +40,9 @@ export async function getSpendingSummary(db: Db, f: TxFilters): Promise<Spending
   const prev = previousRange(f.from, f.to);
   const wherePrev = buildTxWhere({ ...f, from: prev.from, to: prev.to }, { forTotals: true });
 
-  const queryTotals = (where: SQL) =>
-    db
+  const needsCategories = Boolean(f.categoryIds?.length);
+  const queryTotals = (where: SQL) => {
+    let q = db
       .select({
         expenseCents: sql<number>`coalesce(sum(${spendValue}), 0)`,
         incomeCents: sql<number>`coalesce(sum(${incomeValue}), 0)`,
@@ -49,8 +50,13 @@ export async function getSpendingSummary(db: Db, f: TxFilters): Promise<Spending
       .from(transactions)
       .innerJoin(accounts, eq(accounts.id, transactions.accountId))
       .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
-      .leftJoin(categories, eq(categories.id, transactions.categoryId))
-      .where(where);
+      .$dynamic();
+
+    if (needsCategories) {
+      q = q.leftJoin(categories, eq(categories.id, transactions.categoryId));
+    }
+    return q.where(where);
+  };
 
   const [[curr], [previous]] = await Promise.all([queryTotals(whereCurr), queryTotals(wherePrev)]);
 

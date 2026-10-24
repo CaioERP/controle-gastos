@@ -1,12 +1,14 @@
 import { eq, sql } from 'drizzle-orm';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import type { Db } from '@/server/db/client';
-import { accounts, categories, spendingLimits } from '@/server/db/schema';
+import { accounts, categories, invoices, spendingLimits, transactions } from '@/server/db/schema';
 import { today as getToday } from '@/server/domain/dates';
 import type { LimitPeriod, PaymentMethod } from '@/server/domain/enums';
 import { PAYMENT_METHOD_LABELS } from '@/server/domain/labels';
-import { buildLimitActionUrl, getLimitPeriodRange, getLimitSpent } from '@/server/limits/engine';
+import { buildLimitActionUrl, getLimitPeriodRange } from '@/server/limits/engine';
 import { suggestBudgets } from '@/server/limits/suggest';
+import { spentForLimit, type SpentRow } from '@/server/limits/spent';
+import { buildTxWhere, spendValue } from '@/server/queries/base';
 
 export type SpendingLimitRow = {
   id: string;
@@ -66,6 +68,7 @@ export function limitStatus(
 export async function getLimitsOverview(
   db: Db,
   refDate: string = getToday(),
+  opts?: { withSuggestions?: boolean },
 ): Promise<LimitsOverview> {
   const dbLimits = await db
     .select({
@@ -87,18 +90,67 @@ export async function getLimitsOverview(
     .leftJoin(categories, eq(categories.id, spendingLimits.categoryId))
     .leftJoin(accounts, eq(accounts.id, spendingLimits.accountId));
 
+  // Gasto das metas em lote (fim do N+1): agrupa períodos e executa uma consulta por janela
+  const uniquePeriods = [...new Set(dbLimits.map((l) => l.period))];
+  const rowsByPeriod = new Map<LimitPeriod, SpentRow[]>();
+
+  await Promise.all(
+    uniquePeriods.map(async (period) => {
+      const range = getLimitPeriodRange(period, refDate);
+      const where = buildTxWhere(
+        {
+          from: range.from,
+          to: range.to,
+          basis: 'accrual',
+        },
+        { forTotals: true },
+      );
+
+      const rows = await db
+        .select({
+          categoryId: transactions.categoryId,
+          categoryParentId: categories.parentId,
+          paymentMethod: transactions.paymentMethod,
+          accountId: transactions.accountId,
+          spentCents: sql<number>`coalesce(sum(${spendValue}), 0)`,
+        })
+        .from(transactions)
+        .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+        .leftJoin(invoices, eq(invoices.id, transactions.invoiceId))
+        .leftJoin(categories, eq(categories.id, transactions.categoryId))
+        .where(where)
+        .groupBy(
+          transactions.categoryId,
+          categories.parentId,
+          transactions.paymentMethod,
+          transactions.accountId,
+        );
+
+      rowsByPeriod.set(
+        period,
+        rows.map((r) => ({
+          categoryId: r.categoryId,
+          categoryParentId: r.categoryParentId,
+          paymentMethod: r.paymentMethod,
+          accountId: r.accountId,
+          spentCents: Number(r.spentCents ?? 0),
+        })),
+      );
+    }),
+  );
+
   const limits: SpendingLimitRow[] = [];
 
   for (const limit of dbLimits) {
     const range = getLimitPeriodRange(limit.period, refDate);
-    const spentCents = await getLimitSpent(
-      db,
+    const rows = rowsByPeriod.get(limit.period) ?? [];
+    const spentCents = spentForLimit(
       {
         categoryId: limit.categoryId,
         paymentMethod: limit.paymentMethod,
         accountId: limit.accountId,
       },
-      range,
+      rows,
     );
 
     const spentPercent =
@@ -178,15 +230,19 @@ export async function getLimitsOverview(
     return a.name.localeCompare(b.name);
   });
 
-  const rawSuggestions = await suggestBudgets(db, refDate);
-  const suggestions: SuggestedBudgetRow[] = rawSuggestions.map((s) => ({
-    categoryId: s.categoryId,
-    categoryName: s.categoryName,
-    categoryColor: s.categoryColor,
-    average3mCents: s.averageCents,
-    suggestedCents: s.suggestedAmountCents,
-    currentLimitCents: s.currentLimitCents,
-  }));
+  const withSuggestions = opts?.withSuggestions ?? true;
+  let suggestions: SuggestedBudgetRow[] = [];
+  if (withSuggestions) {
+    const rawSuggestions = await suggestBudgets(db, refDate);
+    suggestions = rawSuggestions.map((s) => ({
+      categoryId: s.categoryId,
+      categoryName: s.categoryName,
+      categoryColor: s.categoryColor,
+      average3mCents: s.averageCents,
+      suggestedCents: s.suggestedAmountCents,
+      currentLimitCents: s.currentLimitCents,
+    }));
+  }
 
   const activeLimits = limits.filter((l) => l.isActive);
   const totalBudgetedCents = activeLimits.reduce((acc, l) => acc + l.amountCents, 0);
