@@ -42,7 +42,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | H-03 | Criar chave da Claude API; colocar `ANTHROPIC_API_KEY` no `.env.local` | — | ⏸️ adiada: IA fora do escopo por enquanto (decisão do usuário, 2026-10-20) |
 | H-04 | Exportar 1 fatura e 1 extrato de cada banco (PDF/CSV/OFX) para `.data/samples/` | Fase 2 | ⬜ |
 | H-05 | Conectar Inter/PagBank no Meu Pluggy quando abrir as contas | — | ⬜ |
-| H-06 | Criar contas GitHub, hospedagem (Vercel ou Railway) e Supabase | Fase 5 | ⬜ |
+| H-06 | Criar contas Cloudflare (Workers + Hyperdrive) e Supabase; GitHub já existe | Fase 5 | ⬜ |
 | H-07 | Revisar a fila de categorização nas primeiras semanas | Após M1 | ⬜ |
 
 ---
@@ -222,7 +222,7 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 | B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | ✅ (#66, via #68) |
 | B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | ✅ (#67, via #68) |
 | B4-04 | Tela de perguntas / chat (`/perguntas`) | B | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
-| P5-00 | Detalhar a Fase 5 | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | ⬜ |
+| P5-00 | Detalhar a Fase 5 — hospedagem decidida: **Cloudflare Workers (plano grátis) + Supabase** (usuário, 2026-11-18). Coordenador detalha e implementa A5-01/A5-02 num PR só | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | 🟡 Coordenador |
 | A5-01 | Banco Supabase, driver de produção, migrations no deploy | A | P5-00, H-06 | ⬜ |
 | A5-02 | Jobs agendados na hospedagem, webhook Pluggy, segredos | A | A5-01 | ⬜ |
 | B5-01 | Endurecimento da autenticação e PWA | B | P5-00 | ✅ autenticação no PR #75 (2FA, limite de tentativas, cabeçalhos); o PWA passou para a B6-07 |
