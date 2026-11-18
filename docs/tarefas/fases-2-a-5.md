@@ -114,21 +114,34 @@ Limites e orçamentos (B4-01: criar, editar e pausar limites por categoria e/ou 
 
 ---
 
-## Fase 5 — Deploy (GitHub + Supabase + hospedagem a definir)
+## Fase 5 — Deploy (Cloudflare Workers + Supabase)
 
-> **Desatualizado:** o banco de produção passou a ser o Supabase e a hospedagem (Vercel ou Railway) ainda não foi escolhida. O texto abaixo ainda cita Neon e Vercel Cron; a P5-00 reescreve esta seção quando a hospedagem for decidida.
+### P5-00 — Detalhar a Fase 5 ✅ decisões (coordenador, 2026-11-18)
 
-### P5-00 — Detalhar a Fase 5 (modelo forte)
-Pode ser antecipada se o usuário quiser acessar pelo celular fora de casa. Verificar limites atuais dos planos gratuitos da Vercel e do Neon (duração de funções, número de crons).
+- **Hospedagem:** Cloudflare Workers, **plano grátis** (decisão do usuário; ele já usa a Cloudflare). Adaptador `@opennextjs/cloudflare`. Se um limite do plano grátis estourar (3 MiB comprimido, 10 ms de CPU), o usuário decide entre enxugar, pagar o Workers Paid ou voltar para Railway.
+- **Banco:** Supabase, região São Paulo. Worker usa o *transaction pooler*; migrations rodam do computador pelo *session pooler*. Hyperdrive é opcional.
+- **Implementação:** feita pelo coordenador num PR só (A5-01 + A5-02), a pedido do usuário. Guia operacional: [`docs/DEPLOY.md`](../DEPLOY.md).
+- Medido no primeiro build: o `next build` com `DEPLOY_TARGET=cloudflare` passa e o PGlite fica fora do pacote. O empacotamento do OpenNext no Windows exige symlink (Modo de Desenvolvedor) ou build em Linux (Workers Builds/CI).
 
-### A5-01 — Banco Neon e migrations no deploy
-`DATABASE_URL` do Neon (com pooling); migrations rodando no build ou num passo separado de CI; script para **migrar os dados do PGlite local para o Neon** (dump/restore), executado uma única vez com confirmação do usuário.
+### A5-01 — Driver de produção e migrations ✅ no PR da P5-00
+- `src/server/db/client.ts` delega a `@/server/db/driver`: `driver.ts` (Node: PGlite/pg, singleton) ou `driver.cloudflare.ts` (Worker: `pg` com `maxUses: 1`, conexão por requisição, Hyperdrive ou `DATABASE_URL`). A troca é `turbopack.resolveAlias` no `next.config.ts`.
+- Migrations: `npm run db:migrate` com `DATABASE_URL` do session pooler, antes de cada deploy que traga migration nova.
 
-### A5-02 — Vercel Cron, webhook Pluggy e segredos
-`vercel.json` com os crons (`/api/jobs/sync-all` etc.) usando `CRON_SECRET`; cadastrar o webhook na Pluggy apontando para `/api/webhooks/pluggy?secret=...`; todas as variáveis de ambiente no painel da Vercel; nada de segredo no repositório.
+### A5-02 — Jobs, webhook e segredos ✅ no PR da P5-00
+- `cloudflare-worker.js` envolve o worker do OpenNext e trata o Cron Trigger (`*/15 * * * *`): `GET /api/jobs/due` lista os vencidos (`listDueJobs` em `schedule.ts`) e cada um vai num `POST /api/jobs/<job>` próprio pelo binding `WORKER_SELF_REFERENCE`.
+- Webhook do Pluggy: `void triggerSync` virou `after(...)` (no Worker vira `waitUntil`).
+- Segredos via `wrangler secret put` (lista em `DEPLOY.md`); nada no repositório.
 
-### B5-01 — Endurecimento da autenticação e PWA
-Limite de tentativas de login (ex.: 5 por 15 min por IP), cookies `secure`, cabeçalhos de segurança (CSP, HSTS), 2FA/passkey (ver MELHORIAS), manifest + ícones para instalar no celular.
+### A5-03 — Copiar dados do PGlite local para o Supabase ⬜
+Script de cópia única (com confirmação do usuário) para levar correções, regras e histórico que a ressincronização do Pluggy não recupera. Respeitar R9/R10.
 
-### B5-02 — CI no GitHub Actions
-Em todo push/PR: `npm ci`, `npm run check`, `npm run test:e2e` com dados fictícios. A branch `main` protegida exige CI verde.
+### A5-04 — Pendências do Worker ⬜
+1. Limite de tentativas de login no banco (tabela nova, commit `contract:`), porque cada instância do Worker tem memória própria.
+2. Conferir `web-push` no `cf:preview`; se falhar, trocar por Web Crypto (VAPID com `jose` + aes128gcm).
+3. `proxy.ts` roda como middleware Node, que o OpenNext marca como experimental. Validar no preview; se der problema, avaliar `middleware.ts` em runtime edge (pasta do Agente B).
+
+### B5-01 — Endurecimento da autenticação e PWA ✅
+Feita no PR #75 (2FA, limite de tentativas, cabeçalhos); o PWA passou para a B6-07.
+
+### B5-02 — CI no GitHub Actions ⬜
+Em todo push/PR: `npm ci`, `npm run check`, `npm run test:e2e` com dados fictícios. A branch `main` protegida exige CI verde. Pode também rodar `npm run cf:build` em Linux para medir o tamanho do Worker.

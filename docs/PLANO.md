@@ -29,7 +29,7 @@ Nenhuma instituição é fixa no código: todas são **cadastro**. Adicionar o I
 4. Gastos por **categoria**: alimentação, saúde, lazer, transporte etc.
 5. Investimentos e patrimônio.
 6. Automação máxima.
-7. Roda **local** agora; deploy futuro via **GitHub + Supabase** e hospedagem a definir (Vercel ou Railway).
+7. Roda **local** em dev; produção no **Cloudflare Workers (plano grátis) + Supabase** (decisão do usuário, 2026-11-18). Guia: `docs/DEPLOY.md`.
 
 ---
 
@@ -40,13 +40,13 @@ Nenhuma instituição é fixa no código: todas são **cadastro**. Adicionar o I
 | Linguagem / framework | **TypeScript + Next.js** (App Router) | Front e back no mesmo projeto, Server Actions, deploy nativo na Vercel |
 | Banco de dados | **PostgreSQL + Drizzle ORM** | Tipado, migrations versionadas |
 | Banco local | **PGlite** (Postgres embutido, arquivo em `.data/`) | Zero instalação (Docker não está instalado na máquina) e mesmo dialeto SQL da produção |
-| Banco produção | **Supabase** (Postgres gerenciado, plano gratuito) | Decisão do usuário; a hospedagem do app (Vercel ou Railway) ainda está em aberto e é detalhada na P5-00 |
+| Banco produção | **Supabase** (Postgres gerenciado, plano gratuito) | Decisão do usuário. App no **Cloudflare Workers** via OpenNext (2026-11-18, P5-00); no Worker o driver abre uma conexão por requisição |
 | UI | **Tailwind + shadcn/ui + Recharts** | Componentes prontos, gráficos consistentes, tema claro/escuro |
 | Validação | **Zod** | Valida entradas de APIs, arquivos e formulários |
 | Testes | **Vitest** (PGlite em memória) + **Playwright** (e2e) | Testes rápidos sem infraestrutura |
 | Dinheiro | **Inteiros em centavos** (`bigint`) | Nunca `float` para dinheiro |
 | Datas | Tipo `date`, fuso `America/Sao_Paulo`, `date-fns` | Evita erro de fuso em virada de dia/mês |
-| Jobs agendados | Funções em `server/jobs`, expostas em `/api/jobs/*` | Local: agendador dentro do processo Next (`instrumentation.ts`). Produção: o agendador da hospedagem chama as mesmas rotas |
+| Jobs agendados | Funções em `server/jobs`, expostas em `/api/jobs/*` | Local: agendador dentro do processo Next (`instrumentation.ts`). Produção: Cron Trigger da Cloudflare a cada 15 min pergunta `/api/jobs/due` e chama cada job vencido (`cloudflare-worker.js`) |
 | Open Finance | **Pluggy via Meu Pluggy** (gratuito, uso pessoal) | Único caminho oficial e automático; fica atrás da interface `SourceAdapter` para ser substituível |
 | IA | **Desligada por enquanto** (decisão do usuário, 2026-10-20). Tudo é feito em código: categorização por regras, memória e categoria da fonte, com o resto na fila de revisão; PDF por parser de cada banco. A integração com a Claude API está guardada em `MELHORIAS.md` | Custo zero e nenhum dado enviado a terceiros |
 | Autenticação | Senha única + cookie de sessão assinado; desligável em dev | Usuário único. 2FA/passkey listado em MELHORIAS |
