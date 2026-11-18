@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+// Build para o Cloudflare Workers (scripts/cf-build.mjs define DEPLOY_TARGET=cloudflare).
+const isCloudflare = process.env.DEPLOY_TARGET === "cloudflare";
+
 // Cabeçalhos de segurança em todas as respostas. A CSP aqui só proíbe embutir o app em iframe
 // de outro site e limita <form>/<base>; não restringe scripts para não quebrar o widget do Pluggy.
 const securityHeaders = [
@@ -25,7 +28,9 @@ const nextConfig: NextConfig = {
       { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }] },
     ];
   },
-  serverExternalPackages: ['@electric-sql/pglite'],
+  // Valor fixado no build: o instrumentation.ts usa para não ligar o agendador interno no Worker.
+  env: { DEPLOY_TARGET: isCloudflare ? "cloudflare" : "node" },
+  serverExternalPackages: isCloudflare ? [] : ['@electric-sql/pglite'],
   agentRules: false,
   experimental: {
     // A importação manda o arquivo (até 5 MB; PDF em base64 fica ~6,7 MB) por Server Action. O padrão é 1 MB.
@@ -33,6 +38,10 @@ const nextConfig: NextConfig = {
   },
   /* config options here */
   turbopack: {
+    // No Worker não há PGlite nem processo contínuo: troca o driver do banco (ver src/server/db/client.ts).
+    resolveAlias: isCloudflare
+      ? { "@/server/db/driver": "./src/server/db/driver.cloudflare.ts" }
+      : {},
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

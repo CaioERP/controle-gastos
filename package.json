@@ -18,7 +18,10 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:fixtures": "tsx tests/fixtures/load-cli.ts",
     "db:wipe": "tsx scripts/db-wipe.ts",
-    "db:reset": "npm run db:wipe && npm run db:migrate && npm run db:seed && npm run db:fixtures"
+    "db:reset": "npm run db:wipe && npm run db:migrate && npm run db:seed && npm run db:fixtures",
+    "cf:build": "node scripts/cf-build.mjs",
+    "cf:preview": "node scripts/cf-build.mjs && opennextjs-cloudflare preview",
+    "cf:deploy": "node scripts/cf-build.mjs && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

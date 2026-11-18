@@ -18,6 +18,11 @@ next-env.d.ts
 # produção
 /build
 
+# cloudflare (saída do OpenNext, estado local do wrangler e segredos do preview)
+/.open-next/
+/.wrangler/
+.dev.vars*
+
 # diversos
 .DS_Store
 *.pem

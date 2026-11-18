@@ -55,6 +55,11 @@ async function fetchLastSuccess(db: Db): Promise<Record<string, Date | null>> {
   return map;
 }
 
+/** Jobs vencidos agora, pela data do último sucesso em sync_runs. O Cron Trigger da Cloudflare usa via /api/jobs/due. */
+export async function listDueJobs(db: Db, jobs: JobDef[] = JOBS): Promise<JobName[]> {
+  return dueJobs(jobs, await fetchLastSuccess(db), new Date());
+}
+
 export function startScheduler(db: Db, jobs: JobDef[] = JOBS): void {
   if (globalForScheduler.__controleGastosSchedulerTimer) {
     return;
@@ -64,8 +69,7 @@ export function startScheduler(db: Db, jobs: JobDef[] = JOBS): void {
     if (globalForScheduler.__controleGastosSchedulerRunning) return;
     globalForScheduler.__controleGastosSchedulerRunning = true;
     try {
-      const lastSuccess = await fetchLastSuccess(db);
-      const due = dueJobs(jobs, lastSuccess, new Date());
+      const due = await listDueJobs(db, jobs);
       for (const jobName of due) {
         try {
           await runJob(db, jobName, jobs);

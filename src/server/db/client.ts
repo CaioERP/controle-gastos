@@ -1,37 +1,20 @@
-import { mkdirSync } from 'node:fs';
-import { PGlite } from '@electric-sql/pglite';
-import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
-import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import { Pool } from 'pg';
-import * as schema from './schema';
+import type * as schema from './schema';
+// O driver muda conforme o alvo do build: Node (PGlite/pg com singleton) ou Cloudflare Workers
+// (uma conexão por requisição, sem PGlite). A troca fica em next.config.ts → turbopack.resolveAlias.
+import { createDb as createDriverDb, getDb as getDriverDb } from '@/server/db/driver';
+
+export { isPgliteUrl } from './url';
 
 /** Tipo comum aos dois drivers. Use sempre `Db` nas assinaturas. */
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-const PGLITE_PREFIX = 'pglite://';
-
-export function isPgliteUrl(url: string): boolean {
-  return url.startsWith(PGLITE_PREFIX);
-}
-
 /** `pglite://memory` = banco em memória (testes). `pglite://<pasta>` = arquivo local. Outro = Postgres. */
 export function createDb(url: string): Db {
-  if (isPgliteUrl(url)) {
-    const path = url.slice(PGLITE_PREFIX.length);
-    if (path === 'memory') return drizzlePglite(new PGlite(), { schema }) as unknown as Db;
-    mkdirSync(path, { recursive: true });
-    return drizzlePglite(new PGlite(path), { schema }) as unknown as Db;
-  }
-  return drizzlePg(new Pool({ connectionString: url }), { schema }) as unknown as Db;
+  return createDriverDb(url);
 }
 
-// Singleton que sobrevive ao hot reload do Next em dev (PGlite aceita um processo só).
-const globalForDb = globalThis as unknown as { __cgDb?: Db };
-
+/** Banco da requisição atual (Node: singleton do processo; Cloudflare: conexão da requisição). */
 export function getDb(): Db {
-  if (!globalForDb.__cgDb) {
-    globalForDb.__cgDb = createDb(process.env.DATABASE_URL || 'pglite://.data/pglite');
-  }
-  return globalForDb.__cgDb;
+  return getDriverDb();
 }
