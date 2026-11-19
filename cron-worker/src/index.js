@@ -28,8 +28,10 @@ async function runDueJobs(env) {
   }
 }
 
-export default {
+const worker = {
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(runDueJobs(env));
   },
 };
+
+export default worker;
