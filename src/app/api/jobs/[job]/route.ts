@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { env } from '@/lib/env';
 import { getDb } from '@/server/db/client';
 import { JOBS, type JobDef, type JobName, runJob } from '@/server/jobs/registry';
+import { listDueJobs } from '@/server/jobs/schedule';
 
 export const maxDuration = 300;
 
@@ -32,6 +33,14 @@ export async function handleJobRequest(
 
   const { job } = await context.params;
   const jobs = deps.jobs ?? JOBS;
+
+  // /api/jobs/due só lista os jobs vencidos; quem chama (Cron Trigger da Cloudflare) dispara cada um
+  // numa requisição própria, para cada job ter o seu limite de CPU e de subrequisições.
+  if (job === 'due') {
+    const due = await listDueJobs(deps.db ?? getDb(), jobs);
+    return NextResponse.json({ due }, { status: 200 });
+  }
+
   const jobDef = jobs.find((j) => j.name === job);
   if (!jobDef) {
     return NextResponse.json({ error: 'Job desconhecido' }, { status: 404 });

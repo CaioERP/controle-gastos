@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { env } from '@/lib/env';
 import { triggerSync } from '@/server/commands/sync';
 import { getDb } from '@/server/db/client';
@@ -50,9 +50,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     .where(and(eq(connections.provider, 'pluggy'), eq(connections.externalId, itemId)));
 
   if (conn) {
-    void triggerSync(db, { connectionId: conn.id }).catch((err) => {
-      console.error('[webhook pluggy] erro no triggerSync:', err);
-    });
+    // after(): responde 202 na hora e segue sincronizando. Em serverless (Cloudflare) um `void`
+    // solto seria cortado quando a resposta sai; o after() vira waitUntil e mantém o trabalho vivo.
+    after(() =>
+      triggerSync(db, { connectionId: conn.id }).catch((err) => {
+        console.error('[webhook pluggy] erro no triggerSync:', err);
+      }),
+    );
   }
 
   return NextResponse.json({ ok: true }, { status: 202 });
