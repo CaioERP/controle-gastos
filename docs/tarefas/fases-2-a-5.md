@@ -114,34 +114,33 @@ Limites e orçamentos (B4-01: criar, editar e pausar limites por categoria e/ou 
 
 ---
 
-## Fase 5 — Deploy (Cloudflare Workers + Supabase)
+## Fase 5 — Deploy (Vercel + Supabase + cron na Cloudflare)
 
-### P5-00 — Detalhar a Fase 5 ✅ decisões (coordenador, 2026-11-18)
+### P5-00 — Detalhar a Fase 5 ✅ decisões (coordenador, 2026-11-19)
 
-- **Hospedagem:** Cloudflare Workers, **plano grátis** (decisão do usuário; ele já usa a Cloudflare). Adaptador `@opennextjs/cloudflare`. Se um limite do plano grátis estourar (3 MiB comprimido, 10 ms de CPU), o usuário decide entre enxugar, pagar o Workers Paid ou voltar para Railway.
-- **Banco:** Supabase, região São Paulo. Worker usa o *transaction pooler*; migrations rodam do computador pelo *session pooler*. Hyperdrive é opcional.
+- **Tudo no plano grátis** (pedido do usuário): app na **Vercel Hobby** (região `gru1`), banco no **Supabase** (São Paulo) e agendamento num **Worker de cron da Cloudflare**, porque o Hobby só permite cron diário.
+- **Cloudflare Workers para o app inteiro foi testado e descartado:** o Worker mediu 3,98 MiB comprimido (limite grátis de 3 MiB; pesam o `@vercel/og` dos ícones, ~760 KiB, e o Recharts copiado em 4 rotas, ~380 KiB), e o login com `scrypt` passaria dos 10 ms de CPU.
 - **Implementação:** feita pelo coordenador num PR só (A5-01 + A5-02), a pedido do usuário. Guia operacional: [`docs/DEPLOY.md`](../DEPLOY.md).
-- Medido no primeiro build: o `next build` com `DEPLOY_TARGET=cloudflare` passa e o PGlite fica fora do pacote. O empacotamento do OpenNext no Windows exige symlink (Modo de Desenvolvedor) ou build em Linux (Workers Builds/CI).
 
-### A5-01 — Driver de produção e migrations ✅ no PR da P5-00
-- `src/server/db/client.ts` delega a `@/server/db/driver`: `driver.ts` (Node: PGlite/pg, singleton) ou `driver.cloudflare.ts` (Worker: `pg` com `maxUses: 1`, conexão por requisição, Hyperdrive ou `DATABASE_URL`). A troca é `turbopack.resolveAlias` no `next.config.ts`.
-- Migrations: `npm run db:migrate` com `DATABASE_URL` do session pooler, antes de cada deploy que traga migration nova.
+### A5-01 — Banco de produção e migrations ✅ no PR da P5-00
+- Sem mudança de código: o driver atual (`pg` com `Pool`) já atende a Vercel. `DATABASE_URL` = transaction pooler do Supabase.
+- Migrations: `npm run db:migrate` com o session pooler, rodado do computador antes do merge que trouxer migration nova.
 
 ### A5-02 — Jobs, webhook e segredos ✅ no PR da P5-00
-- `cloudflare-worker.js` envolve o worker do OpenNext e trata o Cron Trigger (`*/15 * * * *`): `GET /api/jobs/due` lista os vencidos (`listDueJobs` em `schedule.ts`) e cada um vai num `POST /api/jobs/<job>` próprio pelo binding `WORKER_SELF_REFERENCE`.
-- Webhook do Pluggy: `void triggerSync` virou `after(...)` (no Worker vira `waitUntil`).
-- Segredos via `wrangler secret put` (lista em `DEPLOY.md`); nada no repositório.
+- `GET /api/jobs/due` (mesma rota `[job]`, protegida por `CRON_SECRET`) lista os jobs vencidos com `listDueJobs` (`schedule.ts`), a mesma regra do agendador local.
+- `cron-worker/`: Worker da Cloudflare (`*/15 * * * *`) que chama `/api/jobs/due` e faz um `POST /api/jobs/<job>` por job vencido. Segredos `APP_URL` e `CRON_SECRET`; deploy com `npm run cron:deploy`.
+- Webhook do Pluggy: `void triggerSync` virou `after(...)`, para a sincronização não ser cortada quando a resposta sai (serverless).
+- Variáveis no painel da Vercel (lista em `DEPLOY.md`); nada no repositório.
 
 ### A5-03 — Copiar dados do PGlite local para o Supabase ⬜
 Script de cópia única (com confirmação do usuário) para levar correções, regras e histórico que a ressincronização do Pluggy não recupera. Respeitar R9/R10.
 
-### A5-04 — Pendências do Worker ⬜
-1. Limite de tentativas de login no banco (tabela nova, commit `contract:`), porque cada instância do Worker tem memória própria.
-2. Conferir `web-push` no `cf:preview`; se falhar, trocar por Web Crypto (VAPID com `jose` + aes128gcm).
-3. `proxy.ts` roda como middleware Node, que o OpenNext marca como experimental. Validar no preview; se der problema, avaliar `middleware.ts` em runtime edge (pasta do Agente B).
+### A5-04 — Pendências de produção ⬜
+1. Limite de tentativas de login no banco (tabela nova, commit `contract:`), porque a Vercel pode rodar várias instâncias.
+2. Backup do Supabase: `pg_dump` agendado (o plano grátis não tem restauração própria).
 
 ### B5-01 — Endurecimento da autenticação e PWA ✅
 Feita no PR #75 (2FA, limite de tentativas, cabeçalhos); o PWA passou para a B6-07.
 
 ### B5-02 — CI no GitHub Actions ⬜
-Em todo push/PR: `npm ci`, `npm run check`, `npm run test:e2e` com dados fictícios. A branch `main` protegida exige CI verde. Pode também rodar `npm run cf:build` em Linux para medir o tamanho do Worker.
+Em todo push/PR: `npm ci`, `npm run check`, `npm run test:e2e` com dados fictícios. A branch `main` protegida exige CI verde.

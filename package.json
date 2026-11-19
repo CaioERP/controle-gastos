@@ -19,9 +19,7 @@
     "db:fixtures": "tsx tests/fixtures/load-cli.ts",
     "db:wipe": "tsx scripts/db-wipe.ts",
     "db:reset": "npm run db:wipe && npm run db:migrate && npm run db:seed && npm run db:fixtures",
-    "cf:build": "node scripts/cf-build.mjs",
-    "cf:preview": "node scripts/cf-build.mjs && opennextjs-cloudflare preview",
-    "cf:deploy": "node scripts/cf-build.mjs && opennextjs-cloudflare deploy"
+    "cron:deploy": "wrangler deploy --config cron-worker/wrangler.jsonc"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -52,7 +50,6 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "1.20.17",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",

@@ -1,0 +1,17 @@
+// Worker de cron (Cloudflare, plano grátis). Só agenda: o app roda na Vercel.
+// A cada 15 min chama o app em APP_URL e dispara os jobs vencidos. Guia em docs/DEPLOY.md.
+// APP_URL e CRON_SECRET entram como segredo:  npx wrangler secret put <NOME> --config cron-worker/wrangler.jsonc
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "controle-gastos-cron",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  // Sem endereço público: o Worker só roda pelo Cron Trigger.
+  "workers_dev": false,
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

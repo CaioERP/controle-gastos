@@ -777,4 +777,3 @@ Todo comando: valida a entrada com Zod, lança `CommandError(code, message)` em 
 | 2026-10-24 | Agente B | B6-20 | Índice `transactions_merchant_idx` em `transactions(merchant_id)` (migration 0007) e campo `merchantIds` no `txFiltersSchema` (aditivo) |
 | 2026-10-24 | Agente A | A6-09 | Comandos `setSpendingLimitActive` e `setRecurrenceStatus` para alternar status sem remontar upsert |
 | 2026-10-24 | Agente A | A6-10 | Utilitário `src/server/log.ts` com `logServerError`, `logServerWarn` e `redact` |
-| 2026-11-18 | Coordenador | P5-00 | `src/server/db/client.ts` passa a delegar a um driver trocável (`driver.ts` no Node, `driver.cloudflare.ts` no build da Cloudflare). Assinaturas de `createDb`, `getDb`, `isPgliteUrl` e o tipo `Db` sem mudança; `isPgliteUrl` mora em `url.ts` e é reexportado |

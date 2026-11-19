@@ -1,86 +1,83 @@
-# Deploy — Cloudflare Workers + Supabase
+# Deploy — Vercel + Supabase + cron na Cloudflare (tudo no plano grátis)
 
-> Decisão do usuário em 2026-11-18 (P5-00): o app roda no **Cloudflare Workers (plano grátis)** e o banco no **Supabase**.
-> O Next é empacotado pelo adaptador **OpenNext** (`@opennextjs/cloudflare`). Em dev nada muda: `npm run dev` continua com PGlite.
+> Decisão do usuário em 2026-11-19 (P5-00). Em dev nada muda: `npm run dev` continua com PGlite.
+> A primeira tentativa foi rodar o app inteiro no Cloudflare Workers grátis. Não coube: o Worker mediu **3,98 MiB comprimido** (limite de 3 MiB) e o login com `scrypt` passaria dos 10 ms de CPU do plano grátis.
 
-## Como o app se comporta no Worker
+## Quem faz o quê
 
-| Peça | Local (Node) | Cloudflare Workers |
+| Peça | Onde | Observação |
 |---|---|---|
-| Banco | PGlite em `.data/pglite`, singleton do processo | Postgres do Supabase, **uma conexão por requisição** (`src/server/db/driver.cloudflare.ts`) |
-| Troca do driver | `src/server/db/driver.ts` | `next.config.ts` → `turbopack.resolveAlias` quando `DEPLOY_TARGET=cloudflare` |
-| Jobs agendados | `setInterval` no `instrumentation.ts` | Cron Trigger a cada 15 min (`wrangler.jsonc`) → `cloudflare-worker.js` pergunta `/api/jobs/due` e chama cada job vencido numa requisição própria |
-| Webhook do Pluggy | sincroniza em segundo plano | igual, via `after()` (vira `waitUntil` no Worker) |
+| App Next (telas, Server Actions, rotas) | **Vercel Hobby**, região São Paulo (`gru1`, em `vercel.json`) | O Hobby é para uso pessoal sem fins comerciais, que é o caso |
+| Banco | **Supabase grátis**, região São Paulo | O app usa o *transaction pooler* |
+| Agendamento dos jobs | **Worker de cron na Cloudflare** (`cron-worker/`) | O Hobby só permite cron diário. A cada 15 min o Worker pergunta `/api/jobs/due` e chama cada job vencido numa requisição própria |
+| Webhook do Pluggy | Vercel | A sincronização segue em segundo plano via `after()` |
 
-## Limites do plano grátis (conferir no painel antes de confiar)
+A regra de quando cada job vence continua no app (`src/server/jobs/schedule.ts → listDueJobs`). O Worker só dispara.
 
-- **Tamanho do Worker:** 3 MiB comprimido (o que conta é o `gzip` que o wrangler imprime no deploy).
-- **CPU por requisição:** 10 ms. Espera de rede (banco, Pluggy) não conta, mas renderização e `scrypt` do login contam.
-- **Subrequisições por requisição:** limitadas. Por isso cada job roda numa requisição própria.
-- Se algum limite estourar, as saídas são: enxugar o pacote, o plano **Workers Paid (US$ 5/mês)** ou voltar para uma hospedagem Node (Railway) com a Cloudflare só na frente.
+## Limites do plano grátis que importam (conferir nos painéis)
+
+- **Vercel Hobby:** duração máxima por requisição de até 300 s com Fluid Compute. A rota de jobs declara `maxDuration = 300`, e cada job roda numa requisição própria.
+- **Supabase grátis:** 500 MB de banco, **sem backup que você possa restaurar sozinho** e pausa após 7 dias sem uso. O cron a cada 15 min mantém o projeto acordado.
+- **Cloudflare grátis:** um número limitado de Cron Triggers por conta. Este Worker usa um.
 
 ## Passo a passo (uma vez) — tarefa H-06 do usuário
 
 ### 1. Supabase
 
-1. Crie o projeto na região **South America (São Paulo)**, perto do Worker que atende o Brasil.
+1. Crie o projeto na região **South America (São Paulo)**.
 2. Em *Connect*, copie duas URLs:
-   - **Transaction pooler** (porta `6543`): é a `DATABASE_URL` do Worker.
-   - **Session pooler** (porta `5432`): use só para rodar migrations do seu computador. A conexão direta do plano grátis é só IPv6.
+   - **Transaction pooler** (porta `6543`): é a `DATABASE_URL` da Vercel.
+   - **Session pooler** (porta `5432`): só para rodar migrations do seu computador. A conexão direta do plano grátis é só IPv6.
 3. Rode as migrations a partir do seu computador, com o app parado:
    ```powershell
    $env:DATABASE_URL = "<session pooler>"; npm run db:migrate; npm run db:seed
    ```
    Não rode `db:fixtures` em produção: são dados fictícios.
 
-### 2. Cloudflare
+### 2. Vercel
 
-1. `npx wrangler login`
-2. Cadastre os segredos (um comando por variável; o wrangler pede o valor):
-   ```powershell
-   npx wrangler secret put DATABASE_URL          # transaction pooler do Supabase
-   npx wrangler secret put SESSION_SECRET
-   npx wrangler secret put APP_PASSWORD_HASH
-   npx wrangler secret put APP_TOTP_SECRET
-   npx wrangler secret put CRON_SECRET
-   npx wrangler secret put PLUGGY_CLIENT_ID
-   npx wrangler secret put PLUGGY_CLIENT_SECRET
-   npx wrangler secret put PLUGGY_WEBHOOK_SECRET
-   npx wrangler secret put BRAPI_TOKEN           # opcionais daqui para baixo
-   npx wrangler secret put COINGECKO_API_KEY
-   npx wrangler secret put VAPID_PUBLIC_KEY
-   npx wrangler secret put VAPID_PRIVATE_KEY
-   npx wrangler secret put VAPID_SUBJECT
-   ```
+1. *Add New → Project* → importe o repositório `CaioERP/controle-gastos` do GitHub. O framework é detectado como Next.js; deixe os comandos padrão.
+2. Em *Settings → Environment Variables* (ambiente **Production**), cadastre:
+
+   | Variável | Valor |
+   |---|---|
+   | `DATABASE_URL` | transaction pooler do Supabase |
+   | `SESSION_SECRET`, `APP_PASSWORD_HASH`, `APP_TOTP_SECRET` | os mesmos do `.env.local` (ou novos) |
+   | `CRON_SECRET` | um valor longo e aleatório (o Worker de cron usa o mesmo) |
+   | `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET`, `PLUGGY_WEBHOOK_SECRET` | do painel da Pluggy |
+   | `BRAPI_TOKEN`, `COINGECKO_API_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | opcionais |
+
    **Nunca** cadastre `AUTH_DISABLED` em produção.
-   O primeiro `secret put` pode pedir para criar o Worker: confirme.
-3. Deploy: `npm run cf:deploy`. No fim o wrangler imprime o endereço `https://controle-gastos.<sua-conta>.workers.dev` e o tamanho do pacote.
-4. (Opcional) Domínio próprio: no painel do Worker → *Settings → Domains & Routes*.
-5. (Opcional, recomendado) **Cloudflare Access** na frente do app: exige seu login (e-mail/Google) antes de qualquer requisição chegar ao app. Deixe **fora** do Access os caminhos `/api/jobs/*` e `/api/webhooks/*`, que já têm segredo próprio.
+3. Em *Settings → Functions*, confirme que **Fluid Compute** está ligado e que a região é São Paulo (`gru1`).
+4. Faça o deploy. Cada push na `main` publica sozinho. O endereço fica `https://<projeto>.vercel.app`.
+5. (Opcional) Domínio próprio em *Settings → Domains*. Se o DNS está na Cloudflare, crie o registro que a Vercel pedir com o proxy (nuvem laranja) **desligado**.
 
-### 3. Pluggy
+### 3. Worker de cron (Cloudflare)
+
+```powershell
+npx wrangler login
+npx wrangler secret put APP_URL --config cron-worker/wrangler.jsonc      # https://<projeto>.vercel.app (sem barra no fim)
+npx wrangler secret put CRON_SECRET --config cron-worker/wrangler.jsonc  # o mesmo da Vercel
+npm run cron:deploy
+```
+
+O primeiro `secret put` pode pedir para criar o Worker: confirme. Para conferir, abra o Worker no painel → *Logs* e espere a próxima volta dos 15 min. Um `[cron]` com erro aparece ali.
+
+### 4. Pluggy
 
 Cadastre o webhook apontando para `https://<seu endereço>/api/webhooks/pluggy?secret=<PLUGGY_WEBHOOK_SECRET>`.
-
-## Build no Windows
-
-O empacotamento do OpenNext cria *symlinks*, e o Windows só permite isso com o **Modo de Desenvolvedor** ligado (*Configurações → Sistema → Para desenvolvedores*). Sem ele, o `cf:build` falha com `EPERM: operation not permitted, symlink`. Alternativa sem mexer no Windows: **Workers Builds** (painel do Worker → *Settings → Build*, conectado ao GitHub), com build `npm run cf:build` e deploy `npx opennextjs-cloudflare deploy`. Ele roda em Linux na Cloudflare.
-
-## Testar antes de publicar
-
-Crie um `.dev.vars` (já ignorado pelo Git) com `DATABASE_URL=<transaction pooler>` e os outros segredos e rode `npm run cf:preview`. Ele roda o Worker de verdade (workerd) na sua máquina.
 
 ## Deploys seguintes
 
 ```powershell
 npm run check          # como sempre
-# migrations novas? rode o db:migrate do passo 1.3 ANTES do deploy
-npm run cf:deploy
+# migrations novas? rode o db:migrate do passo 1.3 ANTES do merge na main
+# merge na main → a Vercel publica sozinha
+# mudou o cron-worker/? npm run cron:deploy
 ```
 
 ## Pendências conhecidas (ver `docs/TAREFAS.md`)
 
-- **Push no celular (`web-push`):** a biblioteca usa APIs de criptografia do Node que podem não existir no Worker. Testar no `cf:preview`; se falhar, trocar por implementação com Web Crypto.
-- **Limite de tentativas de login** fica em memória, e no Worker cada instância tem a sua. Mover para o banco (mudança de contrato: tabela nova).
-- **`proxy.ts` (login obrigatório)** roda como middleware Node, que o OpenNext marca como experimental no build. Validar no `cf:preview` que o redirecionamento para `/login` funciona.
+- **Backup do Supabase:** o plano grátis não tem restauração própria. Recomendado: `pg_dump` agendado (por exemplo, GitHub Actions gravando num local privado).
+- **Limite de tentativas de login** fica em memória, e a Vercel pode rodar várias instâncias ao mesmo tempo. Mover para o banco (mudança de contrato: tabela nova).
 - **Dados que já estão no PGlite local** (categorias corrigidas, regras etc.) não vão sozinhos para o Supabase. Precisa de um script de cópia única.
