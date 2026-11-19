@@ -42,7 +42,7 @@ Se o usuário ainda não fez H-01/H-02, o Agente A adianta A1-06 e A1-08, que n�
 | H-03 | Criar chave da Claude API; colocar `ANTHROPIC_API_KEY` no `.env.local` | — | ⏸️ adiada: IA fora do escopo por enquanto (decisão do usuário, 2026-10-20) |
 | H-04 | Exportar 1 fatura e 1 extrato de cada banco (PDF/CSV/OFX) para `.data/samples/` | Fase 2 | ⬜ |
 | H-05 | Conectar Inter/PagBank no Meu Pluggy quando abrir as contas | — | ⬜ |
-| H-06 | Criar contas Cloudflare (Workers + Hyperdrive) e Supabase; GitHub já existe | Fase 5 | ⬜ |
+| H-06 | Criar o Supabase e o projeto na Vercel, cadastrar variáveis e subir o Worker de cron (passo a passo em `docs/DEPLOY.md`) | PR #106 | ⬜ |
 | H-07 | Revisar a fila de categorização nas primeiras semanas | Após M1 | ⬜ |
 
 ---
@@ -222,19 +222,19 @@ Onda 3   A6-10 falhas visíveis · A6-11 desempenho │  B6-15 Início (precisa 
 | B4-02 | Tela de assinaturas (`/assinaturas`) | B | P4-00, A4-01 | ✅ (#66, via #68) |
 | B4-03 | Tela de projeção (`/projecao`) | B | P4-00, A4-03 | ✅ (#67, via #68) |
 | B4-04 | Tela de perguntas / chat (`/perguntas`) | B | — | ⏸️ fora do escopo por enquanto (IA desligada); ver MELHORIAS |
-| P5-00 | Detalhar a Fase 5 — hospedagem decidida: **Cloudflare Workers (plano grátis) + Supabase** (usuário, 2026-11-18). Coordenador detalha e implementa A5-01/A5-02 num PR só | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | 🟡 Coordenador — branch `deploy/P5-cloudflare` (sem PR: falta `npm run check` e medir o tamanho do Worker) |
-| A5-01 | Banco Supabase, driver de produção, migrations no deploy | A | P5-00, H-06 | 🟡 na branch da P5-00 |
-| A5-02 | Jobs agendados na hospedagem, webhook Pluggy, segredos | A | A5-01 | 🟡 na branch da P5-00 |
+| P5-00 | Detalhar a Fase 5 — hospedagem decidida: **Vercel Hobby + Supabase + cron num Worker da Cloudflare**, tudo grátis (usuário, 2026-11-19). Coordenador detalha e implementa A5-01/A5-02 num PR só | forte | Fase 4 (ou antes, se o usuário quiser deploy cedo) | 🟡 Coordenador — PR #106 em revisão |
+| A5-01 | Banco Supabase, driver de produção, migrations no deploy | A | P5-00, H-06 | 🟡 no PR #106 |
+| A5-02 | Jobs agendados na hospedagem, webhook Pluggy, segredos | A | A5-01 | 🟡 no PR #106 |
 | B5-01 | Endurecimento da autenticação e PWA | B | P5-00 | ✅ autenticação no PR #75 (2FA, limite de tentativas, cabeçalhos); o PWA passou para a B6-07 |
 | B5-02 | CI no GitHub Actions (check + e2e) | B | P5-00, H-06 | ⬜ |
 | A5-03 | Copiar dados do PGlite local para o Supabase (cópia única, com confirmação) | A | A5-01, H-06 | ⬜ |
-| A5-04 | Pendências do Worker: limite de login no banco, `web-push` no Worker, validar `proxy.ts` (middleware Node experimental no OpenNext) | A | A5-01 | ⬜ |
+| A5-04 | Pendências de produção: limite de tentativas de login no banco e backup do Supabase (`pg_dump` agendado) | A | A5-01 | ⬜ |
 
 ---
 
 ## Pendências de coordenação
 
-- [P5-00] Build da Cloudflare no Windows falha com `EPERM ... symlink` no empacotamento do OpenNext: ligar o Modo de Desenvolvedor do Windows ou buildar em Linux (Workers Builds/CI). O `next build` com `DEPLOY_TARGET=cloudflare` já passa e o PGlite fica fora do pacote; falta medir o tamanho comprimido (limite de 3 MiB no plano grátis) — Coordenador, 2026-11-18
+- [P5-00] Cloudflare Workers para o app inteiro descartado: 3,98 MiB comprimido (limite grátis 3 MiB) e scrypt acima de 10 ms de CPU. Se um dia quiser voltar: trocar os ícones `next/og` por PNG fixo (~760 KiB) e gráficos só no navegador (~380 KiB) — Coordenador, 2026-11-19
 
 > Formato: `- [ID] pergunta ou pedido objetivo — Agente X, AAAA-MM-DD`. Quem resolver, risca (`~~...~~`) e anota a decisão.
 
